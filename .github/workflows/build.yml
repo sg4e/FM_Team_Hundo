@@ -1,0 +1,103 @@
+name: Build
+
+on: [push, pull_request]
+
+env: 
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-bizhawk:
+    name: Build Bizhawk plugin DLL
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Visual Studio 2022
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: '17.0'  # VS 2022
+
+    - name: Create BizHawk directory
+      run: mkdir bizhawk_plugin\BizHawk
+      working-directory: ${{ github.workspace }}
+
+    - name: Download BizHawk
+      run: |
+        $url = "https://github.com/TASEmulators/BizHawk/releases/download/2.10/BizHawk-2.10-win-x64.zip"
+        $output = "${{ github.workspace }}\bizhawk_plugin\BizHawk\BizHawk.zip"
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Expand-Archive -Path $output -DestinationPath "${{ github.workspace }}\bizhawk_plugin\BizHawk\" -Force
+        Remove-Item $output
+
+    - name: Build project
+      run: dotnet build -c Release
+      working-directory: ${{ github.workspace }}/bizhawk_plugin/src
+
+    - name: Upload YGOFMPlugin.dll as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: YGOFMPlugin
+        path: ${{ github.workspace }}/bizhawk_plugin/src/bin/Release/net48/YGOFMPlugin.dll
+
+  build-rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+        toolchain:
+          - stable
+          - beta
+          - nightly
+    name: Build middleware for ${{ matrix.os }} on Rust ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup cargo
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
+      - name: Build for Rust ${{ matrix.toolchain }}
+        run: |
+          cd middleware
+          cargo build --verbose
+
+  create-rust-artifacts:
+    needs: build-rust
+    strategy:
+      matrix:
+        os:
+          - { pretty-name: Windows, ci-name: windows-latest }
+          - { pretty-name: Linux, ci-name: ubuntu-latest }
+    name: Release Build for ${{ matrix.os.ci-name }}
+    runs-on: ${{ matrix.os.ci-name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust stable
+        run: rustup update stable && rustup default stable
+
+      - name: Build (release)
+        working-directory: ./middleware
+        run: cargo build --release --verbose
+      
+      - name: Prepare Artifact
+        shell: bash
+        run: |
+          mkdir artifact
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp middleware/target/release/middleware.exe artifact/
+          else
+            cp middleware/target/release/middleware artifact/
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: middleware-${{ matrix.os.pretty-name }}
+          path: artifact/
