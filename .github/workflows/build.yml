@@ -101,3 +101,29 @@ jobs:
         with:
           name: middleware-${{ matrix.os.pretty-name }}
           path: artifact/
+
+  build-java:
+    name: Build Java server JAR file
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'corretto'
+        java-version: '24'
+    
+    - name: Build JAR
+      run: |
+        cd server
+        ./mvnw -Pproduction package
+        mv target/server-1.0-SNAPSHOT.jar target/server.jar
+    
+    - name: Upload JAR as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: server
+        path: server/target/server.jar
