@@ -15,3 +15,4 @@ vite.generated.ts
 
 src/main/bundles/dev.bundle
 src/main/bundles/prod.bundle
+src/main/resources/application-private.yml
