@@ -13,6 +13,5 @@ node_modules/
 src/main/frontend/generated/
 vite.generated.ts
 
-src/main/bundles/dev.bundle
-src/main/bundles/prod.bundle
+src/main/bundles
 src/main/resources/application-private.yml
