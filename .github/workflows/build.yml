@@ -114,7 +114,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'corretto'
-        java-version: '24'
+        java-version: '25'
     
     - name: Build JAR
       run: |
