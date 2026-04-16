@@ -97,7 +97,7 @@ jobs:
           fi
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: middleware-${{ matrix.os.pretty-name }}
           path: artifact/
@@ -123,7 +123,7 @@ jobs:
         mv target/server-1.0-SNAPSHOT.jar target/server.jar
     
     - name: Upload JAR as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: server
         path: server/target/server.jar
