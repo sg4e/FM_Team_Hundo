@@ -82,8 +82,9 @@ async fn consume_cards(mut receiver: mpsc::Receiver<String>) -> Result<(), Box<d
 }
 
 async fn listen_for_emu_connection(sender: mpsc::Sender<String>) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
-    println!("Listening on 127.0.0.1:8080 (single connection at a time)");
+    let port = 51155;
+    let listener = TcpListener::bind(format!("127.0.0.1:{port}")).await?;
+    println!("Listening on 127.0.0.1:{port} (single connection at a time)");
 
     loop {
         // Wait for a new connection

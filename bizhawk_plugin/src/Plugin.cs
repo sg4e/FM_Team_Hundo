@@ -31,7 +31,7 @@ public sealed class FMTeamHundoForm : ToolFormBase, IExternalToolForm
     public ApiContainer? _maybeAPIContainer { get; set; }
 
     public const string ServerIp = "127.0.0.1";
-    public const int ServerPort = 8080;
+    public const int ServerPort = 51155;
 
     private readonly Label _lblLevel = new() { AutoSize = true };
 
