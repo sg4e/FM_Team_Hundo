@@ -28,9 +28,12 @@ public class SecurityConfiguration extends VaadinWebSecurity {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        super.configure(http); 
+        
         
         http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/**").permitAll()
+            )
             .oauth2Client(oauth2 -> oauth2
                 .authorizationCodeGrant(codeGrant -> codeGrant
                     .accessTokenResponseClient(this.accessTokenResponseClient())
@@ -44,6 +47,7 @@ public class SecurityConfiguration extends VaadinWebSecurity {
                     .userService(customOAuth2UserService)
                 );
             });
+        super.configure(http); 
     }
     
     /**

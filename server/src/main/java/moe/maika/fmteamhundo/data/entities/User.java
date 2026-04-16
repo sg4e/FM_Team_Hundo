@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -41,6 +42,8 @@ public class User implements OAuth2User, Serializable {
     @JoinColumn(name = "twitch_id", referencedColumnName = "twitch_id")
     private LiveStatus liveStatus;
     private boolean isAdmin = false;
+    @Column(name = "api_key_hash")
+    private String apiKeyHash;
     //These 2 fields are taken from the OAuth2 flow and not persisted in the DB
     //If these fields ever need to be persisted in the DB, the order of setting and save
     //needs to be adjusted in getFromOAuth below
@@ -100,6 +103,10 @@ public class User implements OAuth2User, Serializable {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return oauth2GrantedAuthorities;
+    }
+
+    public boolean hasApiKey() {
+        return apiKeyHash != null && !apiKeyHash.isBlank();
     }
     
     public String getStreamUrl() {

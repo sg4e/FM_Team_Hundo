@@ -15,8 +15,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use serde::Deserialize;
+use serde::{Deserialize};
+use reqwest::Client;
 use std::error::Error;
+use std::fs::File;
+use std::process;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -30,6 +33,19 @@ struct EmuMessage {
     #[serde(rename = "type")]
     message_type: String,
     value: i32
+}
+
+#[derive(Debug, Deserialize)]
+struct Credentials {
+    key: String,
+    url: String,
+    username: String
+}
+
+#[derive(Debug, Deserialize)]
+struct ApiResponse {
+    result: String,
+    message: Option<String>
 }
 
 async fn handle_connection(mut stream: TcpStream, sender: &mpsc::Sender<String>) -> Result<(), Box<dyn Error>> {
@@ -55,6 +71,76 @@ async fn handle_connection(mut stream: TcpStream, sender: &mpsc::Sender<String>)
 }
 
 async fn consume_cards(mut receiver: mpsc::Receiver<String>) -> Result<(), Box<dyn Error + Send + Sync>> {
+    // start by validating credentials
+    let credential_file = match File::open("credentials.json") {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("Error opening credentials file: {}", e);
+            process::exit(1);
+        }
+    };
+    let credentials: Credentials = match serde_json::from_reader(std::io::BufReader::new(credential_file)) {
+        Ok(json) => json,
+        Err(e) => {
+            eprintln!("Error parsing credentials file: {}", e);
+            process::exit(1);
+        }
+    };
+    let http_client = Client::new();
+    let send_request = match http_client
+            .get(credentials.url + "/validate")
+            .header("X-API-Key", credentials.key)
+            .send()
+            .await {
+                Ok(req) => req,
+                Err(e) => {
+                    eprintln!("Error sending validation request: {}", e);
+                    process::exit(1);
+            }
+    };
+    let validation_response = match send_request.text().await {
+        Ok(text) => text,
+        Err(e) => {
+            eprintln!("Error receiving validation response: {}", e);
+            process::exit(1);
+        }
+    };
+    let validation_parsed: ApiResponse = match serde_json::from_str(&validation_response) {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("Error parsing validation response from server: {}", e);
+            eprintln!("Response was: {}", validation_response);
+            process::exit(1);
+        }
+    };
+    match validation_parsed.result.as_str() {
+        "ok" =>  {
+            println!("Successfully connected to FM Hundo website");
+            match validation_parsed.message {
+                Some(message) => {
+                    if message == credentials.username {
+                        println!("Welcome, {}.", message);
+                    }
+                    else {
+                        println!("WARNING: Username provided by server does not match username in credentials file. This may cause issues with card tracking.");
+                    }
+                },
+                None => println!("WARNING: No username provided by server. This may cause issues with card tracking.")
+            }
+        }
+        "error" => {
+            println!("Validation failed: {}", match validation_parsed.message {
+                Some(message) => message,
+                None => "Unspecified error".to_string()
+            });
+            process::exit(1);
+        }
+        _ => {
+            println!("Unexpected response from server: {}", validation_parsed.result);
+            process::exit(1);
+        }
+    };
+
     let mut buffer: Vec<String> = Vec::with_capacity(EMU_MESSAGE_BUFFER_SIZE);
     while !receiver.is_closed() {
         receiver.recv_many(&mut buffer, EMU_MESSAGE_BUFFER_SIZE).await;
