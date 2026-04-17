@@ -27,6 +27,7 @@ use tokio::sync::mpsc;
 mod cards;
 
 const EMU_MESSAGE_BUFFER_SIZE: usize = 100;
+const CREDENTIALS_FILENAME: &str = "credentials_FM_Team_Hundo.json";
 
 #[derive(Debug, Deserialize)]
 struct EmuMessage {
@@ -72,7 +73,7 @@ async fn handle_connection(mut stream: TcpStream, sender: &mpsc::Sender<String>)
 
 async fn consume_cards(mut receiver: mpsc::Receiver<String>) -> Result<(), Box<dyn Error + Send + Sync>> {
     // start by validating credentials
-    let credential_file = match File::open("credentials.json") {
+    let credential_file = match File::open(CREDENTIALS_FILENAME) {
         Ok(file) => file,
         Err(e) => {
             eprintln!("Error opening credentials file: {}", e);

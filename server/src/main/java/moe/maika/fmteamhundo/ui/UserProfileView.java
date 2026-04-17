@@ -26,6 +26,8 @@ import java.nio.charset.StandardCharsets;
 @AnonymousAllowed
 public class UserProfileView extends VerticalLayout {
 
+    private static final String CREDENTIALS_FILENAME = "credentials_FM_Team_Hundo.json";
+
     private final UserRepository userRepository;
     private final ApiKeyService apiKeyService;
     private final ObjectMapper objectMapper;
@@ -86,7 +88,7 @@ public class UserProfileView extends VerticalLayout {
 
     private StreamResource createCredentialsResource(String apiKey, String username) {
         String json = buildCredentialsJson(apiKey, username);
-        return new StreamResource("credentials.json", () -> new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+        return new StreamResource(CREDENTIALS_FILENAME, () -> new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
     }
 
     private String buildCredentialsJson(String apiKey, String username) {
