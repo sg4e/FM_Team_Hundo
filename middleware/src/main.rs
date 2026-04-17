@@ -91,8 +91,8 @@ async fn consume_cards(mut receiver: mpsc::Receiver<String>) -> Result<(), Box<d
     };
     let http_client = Client::new();
     let send_request = match http_client
-            .get(credentials.url + "/validate")
-            .header("X-API-Key", credentials.key)
+            .get(format!("{}{}", credentials.url, "/validate"))
+            .header("X-API-Key", &credentials.key)
             .send()
             .await {
                 Ok(req) => req,
@@ -162,7 +162,45 @@ async fn consume_cards(mut receiver: mpsc::Receiver<String>) -> Result<(), Box<d
                     eprintln!("Error parsing JSON: {}", e);
                 }
             }
-            // TODO: forward raw_message to collection server
+            // Forward emu messages to collection server
+            if !buffer.is_empty() {
+                let messages = format!("[{}]", buffer.join(","));
+                match http_client.post(format!("{}{}", credentials.url, "/update"))
+                    .header("X-API-Key", &credentials.key)
+                    .header("Content-Type", "application/json")
+                    .body(messages)
+                    .send()
+                    .await {
+                        Ok(resp) => {
+                            let status = resp.status();
+                            match resp.text().await {
+                                Ok(text) => {
+                                    let api_response: ApiResponse = match serde_json::from_str(&text) {
+                                        Ok(res) => res,
+                                        Err(e) => {
+                                            eprintln!("Error parsing API response: {}", e);
+                                            eprintln!("HTTP code was: {}", status);
+                                            eprintln!("Response was: {}", text);
+                                            return Ok(());
+                                        }
+                                    };
+                                    match api_response.result.as_str() {
+                                        "ok" => (),
+                                        "error" => eprintln!("Server returned error: {}", match api_response.message {
+                                            Some(message) => message,
+                                            None => "Unspecified error".to_string()
+                                        }),
+                                        _ => eprintln!("Unexpected response from server: {}", api_response.result)
+                                    }
+                                },
+                                Err(e) => eprintln!("Error reading API response text: {}", e)
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error sending request to server: {}\nSubmit your latest card manually.", e);
+                        }
+                    }
+            }
         }
         buffer.clear();
     }

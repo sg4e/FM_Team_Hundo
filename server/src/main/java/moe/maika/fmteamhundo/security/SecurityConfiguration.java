@@ -47,6 +47,9 @@ public class SecurityConfiguration extends VaadinWebSecurity {
                     .userService(customOAuth2UserService)
                 );
             });
+        http.csrf(csrf -> csrf
+            .ignoringRequestMatchers("/api/**")  // Only disable for API paths
+        );
         super.configure(http); 
     }
     
