@@ -24,7 +24,7 @@ public class ApiController {
         this.apiKeyService = apiKeyService;
     }
 
-    @GetMapping("/v1/validate")
+    @GetMapping("/validate")
     public Map<String, String> validateCredential(
             @RequestHeader(value = "X-API-Key", required = false) String apiKey) {
         HashMap<String, String> result = new HashMap<>();

@@ -20,3 +20,5 @@ spring:
             provider: twitch
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
+ygo:
+  api_url: http://localhost:8080/api

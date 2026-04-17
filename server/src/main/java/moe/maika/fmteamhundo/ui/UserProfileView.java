@@ -16,6 +16,7 @@ import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.ByteArrayInputStream;
@@ -31,13 +32,16 @@ public class UserProfileView extends VerticalLayout {
     private final UserRepository userRepository;
     private final ApiKeyService apiKeyService;
     private final ObjectMapper objectMapper;
+    private final String apiUrl;
     private final Anchor downloadAnchor;
 
     @Autowired
-    public UserProfileView(UserRepository userRepository, ApiKeyService apiKeyService, ObjectMapper objectMapper) {
+    public UserProfileView(UserRepository userRepository, ApiKeyService apiKeyService, ObjectMapper objectMapper,
+                           @Value("${ygo.api_url}") String apiUrl) {
         this.userRepository = userRepository;
         this.apiKeyService = apiKeyService;
         this.objectMapper = objectMapper;
+        this.apiUrl = apiUrl;
         this.downloadAnchor = new Anchor();
 
         setSizeFull();
@@ -51,7 +55,7 @@ public class UserProfileView extends VerticalLayout {
             add(new Div(new Div("Username: " + username)));
             Button downloadButton = new Button("Download credentials file", event -> openDownloadDialog(user));
             downloadAnchor.setId("credential-download-anchor");
-            downloadAnchor.getElement().setAttribute("download", "credentials.json");
+            downloadAnchor.getElement().setAttribute("download", CREDENTIALS_FILENAME);
             downloadAnchor.getStyle().set("display", "none");
             add(downloadButton, downloadAnchor);
         } else {
@@ -93,7 +97,7 @@ public class UserProfileView extends VerticalLayout {
 
     private String buildCredentialsJson(String apiKey, String username) {
         try {
-            Credentials dto = new Credentials(apiKey, "http://localhost:8080/api/v1", username);
+            Credentials dto = new Credentials(apiKey, apiUrl, username);
             return objectMapper.writeValueAsString(dto);
         } catch (IOException e) {
             throw new RuntimeException("Failed to serialize credentials", e);
