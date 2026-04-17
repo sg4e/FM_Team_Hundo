@@ -23,6 +23,8 @@ use std::process;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
+use tokio::time::{interval, Duration};
+use tokio::select;
 
 mod cards;
 
@@ -173,22 +175,31 @@ async fn listen_for_emu_connection(sender: mpsc::Sender<String>) -> Result<(), B
     let listener = TcpListener::bind(format!("127.0.0.1:{port}")).await?;
     println!("Listening on 127.0.0.1:{port} (single connection at a time)");
 
+    let mut interval = interval(Duration::from_secs(10));
+
     loop {
-        // Wait for a new connection
-        match listener.accept().await {
-            Ok((stream, addr)) => {
-                println!("Accepted connection from: {}", addr);
-                
-                // Handle this connection (this will block until client disconnects)
-                if let Err(e) = handle_connection(stream, &sender).await {
-                    eprintln!("Error handling connection: {}", e);
+        select! {
+            // Wait for a new connection
+            accepted = listener.accept() => {
+                match accepted {
+                    Ok((stream, addr)) => {
+                        println!("Accepted connection from: {}", addr);
+                        
+                        // Handle this connection (this will block until client disconnects)
+                        if let Err(e) = handle_connection(stream, &sender).await {
+                            eprintln!("Error handling connection: {}", e);
+                        }
+                        
+                        println!("Ready for new connection...");
+                    }
+                    Err(e) => {
+                        eprintln!("Error accepting connection: {}", e);
+                        // Continue listening despite the error
+                    }
                 }
-                
-                println!("Ready for new connection...");
             }
-            Err(e) => {
-                eprintln!("Error accepting connection: {}", e);
-                // Continue listening despite the error
+            _ = interval.tick() => {
+                println!("Waiting for connection from emulator...");
             }
         }
     }
