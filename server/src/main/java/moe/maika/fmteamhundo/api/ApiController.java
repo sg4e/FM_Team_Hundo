@@ -1,9 +1,11 @@
 package moe.maika.fmteamhundo.api;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -15,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.Getter;
+import moe.maika.fmteamhundo.data.entities.CardUnlock;
 import moe.maika.fmteamhundo.data.entities.User;
+import moe.maika.fmteamhundo.data.repos.CardUnlockRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
 
 @RestController
@@ -23,10 +27,12 @@ import moe.maika.fmteamhundo.service.ApiKeyService;
 public class ApiController {
 
     private final ApiKeyService apiKeyService;
+    private final CardUnlockRepository cardUnlockRepository;
 
     @Autowired
-    public ApiController(ApiKeyService apiKeyService) {
+    public ApiController(ApiKeyService apiKeyService, CardUnlockRepository cardUnlockRepository) {
         this.apiKeyService = apiKeyService;
+        this.cardUnlockRepository = cardUnlockRepository;
     }
 
     @GetMapping("/validate")
@@ -46,8 +52,9 @@ public class ApiController {
         HashMap<String, String> response = validation.getResponse();
         if(validation.isValid()) {
             User user = validation.getUser().get();
-            System.out.println(emuMessages);
-            // Perform update logic here
+            Instant now = Instant.now();
+            List<CardUnlock> cardUnlocks = emuMessages.stream().map(emu -> new CardUnlock(user, emu, now)).collect(Collectors.toList());
+            cardUnlockRepository.saveAll(cardUnlocks);
         }
         return response;
     }
