@@ -15,6 +15,12 @@ To build the application in production mode, run:
 ./mvnw -Pproduction package
 ```
 
+For tests:
+
+```bash
+./mvnw clean verify -Pintegration-test
+```
+
 ## Getting Started
 
 The [Getting Started](https://vaadin.com/docs/latest/getting-started) guide will quickly familiarize you with your new

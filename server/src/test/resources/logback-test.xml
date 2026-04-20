@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Suppress verbose output from Spring and MockMvc -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor" level="OFF"/>
+    <logger name="org.springframework.test.web.servlet.result.MockMvcResultHandlers" level="OFF"/>
+    <logger name="org.springframework.test.web.servlet" level="WARN"/>
+    <logger name="org.springframework.boot" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.testcontainers" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,22 +18,22 @@ import moe.maika.fmteamhundo.api.MessageType;
 @Setter
 @ToString
 @NoArgsConstructor
-public class CardUnlock {
+public class PlayerUpdate {
     @Id
-    @GeneratedValue
-    private long databaseId;
-    private int cardId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)  // IDENTITY over SEQUENCE
+    private Long databaseId;
+    private int value;
     private MessageType source;
-    private String participantId;
-    private Instant unlockTime;
+    private long participantId;
+    private Instant time;
     private int lastRng;
     private int nowRng;
 
-    public CardUnlock(User user, EmuMessage message, Instant unlockTime) {
-        this.cardId = message.getValue();
+    public PlayerUpdate(User user, EmuMessage message, Instant time) {
+        this.value = message.getValue();
         this.source = message.getType();
-        this.participantId = user.getTwitchId();
-        this.unlockTime = unlockTime;
+        this.participantId = user.getDatabaseId();
+        this.time = time;
         this.lastRng = message.getLastRng();
         this.nowRng = message.getNowRng();
     }

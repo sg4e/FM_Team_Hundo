@@ -116,6 +116,11 @@ jobs:
         distribution: 'corretto'
         java-version: '25'
     
+    - name: Run integration tests
+      run: |
+        cd server
+        ./mvnw clean verify -Pintegration-test
+    
     - name: Build JAR
       run: |
         cd server

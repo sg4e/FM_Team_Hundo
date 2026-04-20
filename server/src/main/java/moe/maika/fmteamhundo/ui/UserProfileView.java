@@ -50,7 +50,7 @@ public class UserProfileView extends VerticalLayout {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if(principal instanceof User) {
             User user = (User) principal;
-            String username = user.getTwitchInfo().getDisplayName();
+            String username = user.getName();
             add(new H2("User Profile"));
             add(new Div(new Div("Username: " + username)));
             Button downloadButton = new Button("Download credentials file", event -> openDownloadDialog(user));
@@ -78,7 +78,7 @@ public class UserProfileView extends VerticalLayout {
 
         Button acknowledgeButton = new Button("Acknowledge and Download", event -> {
             String apiKey = apiKeyService.generateNewApiKey(user);
-            StreamResource resource = createCredentialsResource(apiKey, user.getTwitchInfo().getDisplayName());
+            StreamResource resource = createCredentialsResource(apiKey, user.getName());
             downloadAnchor.setHref(resource);
             confirmDialog.close();
             UI.getCurrent().getPage().executeJs("document.getElementById($0).click();", downloadAnchor.getId().orElse(""));

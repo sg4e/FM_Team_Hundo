@@ -8,7 +8,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,46 +19,59 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.Getter;
-import moe.maika.fmteamhundo.data.entities.CardUnlock;
+import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.data.entities.User;
-import moe.maika.fmteamhundo.data.repos.CardUnlockRepository;
+import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
+import moe.maika.fmteamhundo.state.GameStateService;
 
 @RestController
 @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class ApiController {
 
     private final ApiKeyService apiKeyService;
-    private final CardUnlockRepository cardUnlockRepository;
+    private final PlayerUpdateRepository playerUpdateRepository;
+    private final GameStateService gameStateService;
 
     @Autowired
-    public ApiController(ApiKeyService apiKeyService, CardUnlockRepository cardUnlockRepository) {
+    public ApiController(ApiKeyService apiKeyService, PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService) {
         this.apiKeyService = apiKeyService;
-        this.cardUnlockRepository = cardUnlockRepository;
+        this.playerUpdateRepository = playerUpdateRepository;
+        this.gameStateService = gameStateService;
     }
 
     @GetMapping("/validate")
-    public Map<String, String> validateCredential(
+    public ResponseEntity<Map<String, String>> validateCredential(
             @RequestHeader(value = "X-API-Key", required = false) String apiKey) {
         Validation validation = new Validation(apiKeyService, apiKey);
         HashMap<String, String> response = validation.getResponse();
-        validation.getUser().ifPresent(user -> response.put("message", user.getTwitchInfo().getDisplayName()));
-        return response;
+        validation.getUser().ifPresent(user -> response.put("message", user.getName()));
+        
+        if (validation.isValid()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
     }
 
     @PostMapping(value = "/update", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, String> update(
+    public ResponseEntity<Map<String, String>> update(
             @RequestHeader(value = "X-API-Key", required = false) String apiKey,
             @RequestBody List<EmuMessage> emuMessages) {
         Validation validation = new Validation(apiKeyService, apiKey);
         HashMap<String, String> response = validation.getResponse();
-        if(validation.isValid()) {
+        validation.getUser().ifPresent(user -> response.put("message", user.getName()));
+        
+        if (validation.isValid()) {
             User user = validation.getUser().get();
             Instant now = Instant.now();
-            List<CardUnlock> cardUnlocks = emuMessages.stream().map(emu -> new CardUnlock(user, emu, now)).collect(Collectors.toList());
-            cardUnlockRepository.saveAll(cardUnlocks);
+            List<PlayerUpdate> updates = emuMessages.stream().map(emu -> new PlayerUpdate(user, emu, now)).collect(Collectors.toList());
+            playerUpdateRepository.saveAll(updates);
+            gameStateService.update(updates);
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
-        return response;
     }
 
     @Getter

@@ -2,9 +2,13 @@ package moe.maika.fmteamhundo.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class EmuMessage {
     private MessageType type;
     private int value;

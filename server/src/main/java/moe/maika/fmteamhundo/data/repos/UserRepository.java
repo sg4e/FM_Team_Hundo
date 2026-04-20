@@ -9,7 +9,8 @@ import moe.maika.fmteamhundo.data.entities.User;
  *
  * @author sg4e
  */
-public interface UserRepository extends JpaRepository<User,String> {
+public interface UserRepository extends JpaRepository<User,Long> {
     Optional<User> findByApiKeyHash(String apiKeyHash);
+    Optional<User> findByTwitchId(String twitchId);
 }
 
