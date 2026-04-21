@@ -1,9 +1,13 @@
 spring:
-  config:
-    import: optional:application-private.yml  # Has to be optional for CI test run
+  datasource:
+    url: jdbc:h2:mem:testdb;NON_KEYWORDS=VALUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: as
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
   security:
     oauth2:
       client:
@@ -20,5 +24,8 @@ spring:
             provider: twitch
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
+            client-id: fake
+            client-secret: fake
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
 ygo:
   api_url: http://localhost:8080/api

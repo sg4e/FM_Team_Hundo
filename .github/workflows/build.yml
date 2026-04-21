@@ -124,7 +124,7 @@ jobs:
     - name: Build JAR
       run: |
         cd server
-        ./mvnw -Pproduction package
+        ./mvnw -Pproduction package -DskipTests
         mv target/server-1.0-SNAPSHOT.jar target/server.jar
     
     - name: Upload JAR as artifact
