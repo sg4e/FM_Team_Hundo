@@ -95,6 +95,7 @@ public class GameStateService {
     public synchronized List<Integer> getKnownTeamIds() {
         TreeSet<Integer> teamIds = new TreeSet<>(teamMembers.keySet());
         teamIds.addAll(teamLibraries.keySet());
+        teamIds.remove(0);  // Exclude team 0 (no team)
         return List.copyOf(teamIds);
     }
 

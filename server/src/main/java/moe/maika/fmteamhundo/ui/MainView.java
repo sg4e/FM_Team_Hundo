@@ -16,6 +16,10 @@ import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.shared.Registration;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
+import moe.maika.fmteamhundo.data.entities.Team;
+import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.state.CardAcquisitionView;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
@@ -25,12 +29,15 @@ import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 public class MainView extends VerticalLayout {
 
     private final GameStateService gameStateService;
+    private final TeamRepository teamRepository;
     private final VerticalLayout content;
     private long renderedVersion = -1;
     private Registration pollRegistration;
 
-    public MainView(GameStateService gameStateService) {
+    @Autowired
+    public MainView(GameStateService gameStateService, TeamRepository teamRepository) {
         this.gameStateService = gameStateService;
+        this.teamRepository = teamRepository;
         setSizeFull();
         setPadding(false);
         setSpacing(false);
@@ -77,12 +84,13 @@ public class MainView extends VerticalLayout {
         Paragraph subtitle = new Paragraph("Live team progress.");
         content.add(title, subtitle);
 
-        for(int teamId : gameStateService.getKnownTeamIds()) {
-            content.add(createTeamCard(gameStateService.getTeamPageSnapshot(teamId)));
+        for(Team team : teamRepository.findAll()) {
+            TeamPageSnapshot snapshot = gameStateService.getTeamPageSnapshot(team.getTeamId());
+            content.add(createTeamCard(team, snapshot));
         }
     }
 
-    private Div createTeamCard(TeamPageSnapshot snapshot) {
+    private Div createTeamCard(Team team, TeamPageSnapshot snapshot) {
         Div card = new Div();
         card.getStyle().set("border", "1px solid #d0d7de");
         card.getStyle().set("border-radius", "12px");
@@ -91,8 +99,8 @@ public class MainView extends VerticalLayout {
 
         H3 heading = new H3();
         RouterLink link = new RouterLink();
-        link.setText("Team " + snapshot.teamId());
-        link.setRoute(TeamView.class, String.valueOf(snapshot.teamId()));
+        link.setText(team.getName());
+        link.setRoute(TeamView.class, String.valueOf(team.getTeamId()));
         heading.add(link);
 
         Div stats = new Div(

@@ -60,10 +60,17 @@ public class ApiController {
             @RequestBody List<EmuMessage> emuMessages) {
         Validation validation = new Validation(apiKeyService, apiKey);
         HashMap<String, String> response = validation.getResponse();
-        validation.getUser().ifPresent(user -> response.put("message", user.getName()));
         
         if (validation.isValid()) {
             User user = validation.getUser().get();
+            response.put("message", user.getName());
+            
+            // Check if user is on team 0 (no team)
+            if (user.getTeamId() == 0) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("result", "error", "message", "User is not assigned to a team"));
+            }
+            
             Instant now = Instant.now();
             List<PlayerUpdate> updates = emuMessages.stream().map(emu -> new PlayerUpdate(user, emu, now)).collect(Collectors.toList());
             playerUpdateRepository.saveAll(updates);

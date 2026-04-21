@@ -22,6 +22,7 @@ final class ViewSupport {
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         .withZone(ZoneId.systemDefault());
+    private static final String ADMIN_TWITCH_ID = "73758417";
 
     private ViewSupport() { }
 
@@ -42,6 +43,12 @@ final class ViewSupport {
             MenuBar menuBar = new MenuBar();
             MenuItem userMenu = menuBar.addItem((String) user.getAttribute("preferred_username"), event -> { });
             userMenu.getSubMenu().addItem("Profile", event -> UI.getCurrent().navigate(UserProfileView.class));
+            
+            String twitchId = (String) user.getAttribute("sub");
+            if(ADMIN_TWITCH_ID.equals(twitchId)) {
+                userMenu.getSubMenu().addItem("Admin", event -> UI.getCurrent().navigate(AdminView.class));
+            }
+            
             userMenu.getSubMenu().addItem("Logout", event -> UI.getCurrent().getPage().setLocation("/logout"));
             topBar.add(menuBar);
         }

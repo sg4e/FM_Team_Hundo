@@ -1,6 +1,10 @@
 package moe.maika.fmteamhundo.ui;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -19,9 +23,12 @@ import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.shared.Registration;
 
+import moe.maika.fmteamhundo.data.entities.Team;
+import moe.maika.fmteamhundo.data.entities.User;
+import moe.maika.fmteamhundo.data.repos.TeamRepository;
+import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.state.CardAcquisitionView;
 import moe.maika.fmteamhundo.state.GameStateService;
-import moe.maika.fmteamhundo.state.TeamMember;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
 @Route("teams")
@@ -32,14 +39,20 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
     private static final int TOTAL_CARDS = 722;
 
     private final GameStateService gameStateService;
+    private final TeamRepository teamRepository;
+    private final UserRepository userRepository;
     private final VerticalLayout content;
 
     private Integer teamId;
+    private String teamName;
     private long renderedVersion = -1;
     private Registration pollRegistration;
 
-    public TeamView(GameStateService gameStateService) {
+    @Autowired
+    public TeamView(GameStateService gameStateService, TeamRepository teamRepository, UserRepository userRepository) {
         this.gameStateService = gameStateService;
+        this.teamRepository = teamRepository;
+        this.userRepository = userRepository;
 
         setSizeFull();
         setPadding(false);
@@ -59,9 +72,18 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
     public void setParameter(BeforeEvent event, String parameter) {
         try {
             teamId = Integer.parseInt(parameter);
+            // Check if team exists in database
+            Optional<Team> team = teamRepository.findById(teamId);
+            if (team.isPresent()) {
+                teamName = team.get().getName();
+            } else {
+                teamId = null;
+                teamName = null;
+            }
         }
         catch (NumberFormatException ex) {
-            teamId = 0;
+            teamId = null;
+            teamName = null;
         }
         renderedVersion = -1;
         refreshIfNeeded();
@@ -83,7 +105,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
     }
 
     private void refreshIfNeeded() {
-        if(teamId == null || teamId <= 0) {
+        if(teamId == null || teamName == null) {
             renderMissingTeam();
             return;
         }
@@ -104,14 +126,14 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
     private void render(TeamPageSnapshot snapshot) {
         content.removeAll();
 
-        H1 title = new H1("Team " + snapshot.teamId());
+        H1 title = new H1(teamName);
         HorizontalLayout stats = new HorizontalLayout(
             ViewSupport.createStat("Starchips", Long.toString(snapshot.totalStarchips())),
             ViewSupport.createStat("Unique Cards", Integer.toString(snapshot.uniqueCardCount()))
         );
         stats.setWrap(true);
 
-        content.add(title, stats, createLatestAcquisitions(snapshot), createMembers(snapshot), createCardGrids(snapshot.acquiredCards()));
+        content.add(title, stats, createLatestAcquisitions(snapshot), createMembers(), createCardGrids(snapshot.acquiredCards()));
     }
 
     private Component createLatestAcquisitions(TeamPageSnapshot snapshot) {
@@ -137,21 +159,22 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
         return section;
     }
 
-    private Component createMembers(TeamPageSnapshot snapshot) {
+    private Component createMembers() {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(false);
         section.add(new H3("Team Members"));
 
         UnorderedList list = new UnorderedList();
-        if(snapshot.members().isEmpty()) {
+        List<User> members = userRepository.findByTeamId(teamId);
+        if(members.isEmpty()) {
             list.add(new ListItem("No team members known yet."));
         }
         else {
-            for(TeamMember member : snapshot.members()) {
+            for(User member : members) {
                 RouterLink playerLink = new RouterLink();
-                playerLink.setText(member.playerName());
-                playerLink.setRoute(PlayerView.class, String.valueOf(member.playerId()));
+                playerLink.setText(member.getName());
+                playerLink.setRoute(PlayerView.class, String.valueOf(member.getDatabaseId()));
                 ListItem item = new ListItem(playerLink);
                 list.add(item);
             }

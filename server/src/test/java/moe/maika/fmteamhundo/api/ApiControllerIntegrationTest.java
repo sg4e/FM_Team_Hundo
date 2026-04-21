@@ -214,4 +214,34 @@ class ApiControllerIntegrationTest {
         assertThat(update.getTime()).isNotNull();
     }
 
+    @Test
+    void testUpdateEndpointRejectsUserWithNoTeam() throws Exception {
+        // Create a user with teamId 0 (no team)
+        User noTeamUser = new User();
+        noTeamUser.setTwitchId("no_team_user");
+        noTeamUser.setName("NoTeamUser");
+        noTeamUser.setTeamId(0);
+        noTeamUser.setOauth("test_oauth_token");
+        noTeamUser = userRepository.save(noTeamUser);
+
+        // Generate a valid API key for this user
+        String noTeamApiKey = apiKeyService.generateNewApiKey(noTeamUser);
+
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, 122, 0, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", noTeamApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("User is not assigned to a team"));
+
+        // Verify no database insertions
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
 }
