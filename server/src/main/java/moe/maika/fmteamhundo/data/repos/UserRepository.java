@@ -14,5 +14,6 @@ public interface UserRepository extends JpaRepository<User,Long> {
     Optional<User> findByApiKeyHash(String apiKeyHash);
     Optional<User> findByTwitchId(String twitchId);
     List<User> findByTeamId(int teamId);
+    Optional<User> getByDatabaseId(long databaseId);
 }
 

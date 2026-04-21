@@ -16,6 +16,8 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
+import moe.maika.fmteamhundo.state.TeamMapping;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,15 +33,17 @@ public class UserProfileView extends VerticalLayout {
     private static final String CREDENTIALS_FILENAME = "credentials_FM_Team_Hundo.json";
 
     private final UserRepository userRepository;
+    private final TeamMapping teamMapping;
     private final ApiKeyService apiKeyService;
     private final ObjectMapper objectMapper;
     private final String apiUrl;
     private final Anchor downloadAnchor;
 
     @Autowired
-    public UserProfileView(UserRepository userRepository, ApiKeyService apiKeyService, ObjectMapper objectMapper,
+    public UserProfileView(UserRepository userRepository, TeamMapping teamMapping, ApiKeyService apiKeyService, ObjectMapper objectMapper,
                            @Value("${ygo.api_url}") String apiUrl) {
         this.userRepository = userRepository;
+        this.teamMapping = teamMapping;
         this.apiKeyService = apiKeyService;
         this.objectMapper = objectMapper;
         this.apiUrl = apiUrl;
@@ -54,6 +58,7 @@ public class UserProfileView extends VerticalLayout {
             String username = user.getName();
             add(new H2("User Profile"));
             add(new Div(new Div("Username: " + username)));
+            add(new Div(new Div("Team: " + teamMapping.getTeamNameForTeamId(user.getTeamId()))));
             RouterLink playerLink = new RouterLink();
             playerLink.setText("View public player page");
             playerLink.setRoute(PlayerView.class, String.valueOf(user.getDatabaseId()));

@@ -16,20 +16,23 @@ import com.vaadin.flow.shared.Registration;
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.PlayerPageSnapshot;
+import moe.maika.fmteamhundo.state.TeamMapping;
 
 @Route("players")
 @AnonymousAllowed
 public class PlayerView extends VerticalLayout implements HasUrlParameter<String> {
 
     private final GameStateService gameStateService;
+    private final TeamMapping teamMapping;
     private final VerticalLayout content;
 
     private Long playerId;
     private long renderedVersion = -1;
     private Registration pollRegistration;
 
-    public PlayerView(GameStateService gameStateService) {
+    public PlayerView(GameStateService gameStateService, TeamMapping teamMapping) {
         this.gameStateService = gameStateService;
+        this.teamMapping = teamMapping;
 
         setSizeFull();
         setPadding(false);
@@ -96,7 +99,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
 
         content.add(
             new H1(snapshot.playerName()),
-            new Paragraph("Team " + snapshot.teamId()),
+            new Paragraph("Team " + teamMapping.getTeamNameForTeamId(snapshot.teamId())),
             new H3("Latest 10 player updates")
         );
 
