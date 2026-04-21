@@ -9,6 +9,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -53,6 +54,10 @@ public class UserProfileView extends VerticalLayout {
             String username = user.getName();
             add(new H2("User Profile"));
             add(new Div(new Div("Username: " + username)));
+            RouterLink playerLink = new RouterLink();
+            playerLink.setText("View public player page");
+            playerLink.setRoute(PlayerView.class, String.valueOf(user.getDatabaseId()));
+            add(playerLink);
             Button downloadButton = new Button("Download credentials file", event -> openDownloadDialog(user));
             downloadAnchor.setId("credential-download-anchor");
             downloadAnchor.getElement().setAttribute("download", CREDENTIALS_FILENAME);

@@ -3,6 +3,7 @@ package moe.maika.fmteamhundo.security;
 import lombok.extern.slf4j.Slf4j;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.state.GameStateService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -23,6 +24,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private final DefaultOAuth2UserService defaultService = new DefaultOAuth2UserService();
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private GameStateService gameStateService;
 
     @Override
     public User loadUser(OAuth2UserRequest r) throws OAuth2AuthenticationException {
@@ -35,7 +38,9 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         // sub=73758417(twitch id), azp=[CLIENT_ID], preferred_username=sg4e}]
 
         // opportunity to create/query user from database
-        return User.getFromOAuth(user, token, userRepository);
+        User loadedUser = User.getFromOAuth(user, token, userRepository);
+        gameStateService.recordKnownUser(loadedUser);
+        return loadedUser;
 
         // Has to be a subclass of OAuth2User:
     }

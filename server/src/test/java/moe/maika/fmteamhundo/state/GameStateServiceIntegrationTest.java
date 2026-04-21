@@ -89,6 +89,7 @@ class GameStateServiceIntegrationTest {
             user.setTeamId(1);
             user.setOauth("oauth_token_team1_" + i);
             user = userRepository.save(user);
+            gameStateService.recordKnownUser(user);
             team1Users.add(user);
             team1ApiKeys.add(apiKeyService.generateNewApiKey(user));
         }
@@ -101,6 +102,7 @@ class GameStateServiceIntegrationTest {
             user.setTeamId(2);
             user.setOauth("oauth_token_team2_" + i);
             user = userRepository.save(user);
+            gameStateService.recordKnownUser(user);
             team2Users.add(user);
             team2ApiKeys.add(apiKeyService.generateNewApiKey(user));
         }
@@ -428,6 +430,61 @@ class GameStateServiceIntegrationTest {
         assertThat(team1Library.getTotalTeamStarchips()).isEqualTo(1000);
         assertThat(team1Library.getAcquiredCards()).containsKey(777);
         assertThat(team1Library.getAcquiredCards().get(777).playerId()).isEqualTo(team1Users.get(1).getDatabaseId());
+    }
+
+    @Test
+    void testTeamPageSnapshotIncludesRosterAndLatestAcquisitions() throws Exception {
+        List<EmuMessage> user1Messages = Arrays.asList(
+            createEmuMessage(MessageType.DROP, 100, 0, 1),
+            createEmuMessage(MessageType.FUSE, 200, 0, 1)
+        );
+        mockMvc.perform(post("/api/update")
+            .header("X-API-Key", team1ApiKeys.get(0))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(user1Messages)))
+            .andExpect(status().isOk());
+
+        List<EmuMessage> user2Messages = Arrays.asList(
+            createEmuMessage(MessageType.STARCHIPS, 75, 0, 0),
+            createEmuMessage(MessageType.RITUAL, 300, 0, 1)
+        );
+        mockMvc.perform(post("/api/update")
+            .header("X-API-Key", team1ApiKeys.get(1))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(user2Messages)))
+            .andExpect(status().isOk());
+
+        TeamPageSnapshot snapshot = gameStateService.getTeamPageSnapshot(1);
+
+        assertThat(snapshot.teamId()).isEqualTo(1);
+        assertThat(snapshot.totalStarchips()).isEqualTo(75);
+        assertThat(snapshot.uniqueCardCount()).isEqualTo(3);
+        assertThat(snapshot.members()).extracting(member -> member.playerName()).contains("Team1User1", "Team1User2", "Team1User3");
+        assertThat(snapshot.latestAcquisitions()).hasSize(3);
+        assertThat(snapshot.latestAcquisitions().get(0).cardId()).isEqualTo(300);
+        assertThat(snapshot.acquiredCards()).containsKeys(100, 200, 300);
+    }
+
+    @Test
+    void testPlayerPageSnapshotTracksLatestTenNonStarchipUpdates() {
+        Instant baseTime = Instant.now();
+        List<PlayerUpdate> updates = new ArrayList<>();
+
+        for (int i = 0; i < 12; i++) {
+            updates.add(createPlayerUpdate(team1Users.get(0), MessageType.DROP, 100 + i, baseTime.plusSeconds(i)));
+        }
+        updates.add(createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, 999, baseTime.plusSeconds(20)));
+
+        gameStateService.update(updates);
+
+        PlayerPageSnapshot snapshot = gameStateService.getPlayerPageSnapshot(team1Users.get(0).getDatabaseId());
+
+        assertThat(snapshot.playerId()).isEqualTo(team1Users.get(0).getDatabaseId());
+        assertThat(snapshot.playerName()).isEqualTo("Team1User1");
+        assertThat(snapshot.latestUpdates()).hasSize(10);
+        assertThat(snapshot.latestUpdates()).allMatch(update -> update.getSource() != MessageType.STARCHIPS);
+        assertThat(snapshot.latestUpdates().get(0).getValue()).isEqualTo(111);
+        assertThat(snapshot.latestUpdates().get(9).getValue()).isEqualTo(102);
     }
 
     private EmuMessage createEmuMessage(MessageType type, int value, int lastRng, int nowRng) {
