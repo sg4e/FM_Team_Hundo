@@ -12,6 +12,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +34,8 @@ import moe.maika.fmteamhundo.service.ApiKeyService;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@ParameterizedClass
+@ValueSource(booleans = { false, true })
 class GameStateServiceIntegrationTest {
 
     @Autowired
@@ -56,6 +60,12 @@ class GameStateServiceIntegrationTest {
     private List<User> team2Users;
     private List<String> team1ApiKeys;
     private List<String> team2ApiKeys;
+
+    private final boolean flushGameState;
+
+    GameStateServiceIntegrationTest(boolean flushGameState) {
+        this.flushGameState = flushGameState;
+    }
 
     @BeforeEach
     void setUp() {
@@ -93,6 +103,10 @@ class GameStateServiceIntegrationTest {
             user = userRepository.save(user);
             team2Users.add(user);
             team2ApiKeys.add(apiKeyService.generateNewApiKey(user));
+        }
+        if(flushGameState) {
+            gameStateService.reset();
+            gameStateService.reloadFromDatabase();
         }
     }
 
@@ -392,6 +406,28 @@ class GameStateServiceIntegrationTest {
         // Verify Team 2
         assertThat(team2Library.getTotalTeamStarchips()).isEqualTo(100);
         assertThat(team2Library.getAcquiredCards()).hasSize(2).containsKeys(150, 250);
+    }
+
+    @Test
+    void testStateCanBeReloadedFromDatabaseInBatches() {
+        Instant baseTime = Instant.now();
+        List<PlayerUpdate> updates = new ArrayList<>();
+
+        for (int i = 0; i < 1001; i++) {
+            updates.add(createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, i, baseTime.plusSeconds(i)));
+        }
+        updates.add(createPlayerUpdate(team1Users.get(1), MessageType.DROP, 777, baseTime.plusSeconds(2000)));
+
+        playerUpdateRepository.saveAll(updates);
+
+        gameStateService.reset();
+        gameStateService.reloadFromDatabase();
+
+        Library team1Library = gameStateService.getLibrary(1);
+        assertThat(team1Library.getStarchips(team1Users.get(0).getDatabaseId())).isEqualTo(1000);
+        assertThat(team1Library.getTotalTeamStarchips()).isEqualTo(1000);
+        assertThat(team1Library.getAcquiredCards()).containsKey(777);
+        assertThat(team1Library.getAcquiredCards().get(777).playerId()).isEqualTo(team1Users.get(1).getDatabaseId());
     }
 
     private EmuMessage createEmuMessage(MessageType type, int value, int lastRng, int nowRng) {
