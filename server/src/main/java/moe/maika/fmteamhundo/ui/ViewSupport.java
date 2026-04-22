@@ -80,8 +80,12 @@ final class ViewSupport {
     static List<Component> createAllStats(TeamPageSnapshot snapshot, HundoConstants hundoConstants) {
         return List.of(
             createStat("Cards", String.format("%d/%d", snapshot.uniqueCardCount(), hundoConstants.getTotalObtainableCards())),
-            createStat("Starchips", Long.toString(snapshot.totalStarchips()))
+            createStarchipsStat(snapshot.totalStarchips())
         );
+    }
+
+    static Component createStarchipsStat(long starchips) {
+        return createStat("Starchips", Long.toString(starchips));
     }
 
     static Component externalLink(String text, String href) {

@@ -4,12 +4,12 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.ListItem;
-import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.shared.communication.PushMode;
 
@@ -108,11 +108,13 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
     private void render(PlayerPageSnapshot snapshot) {
         content.removeAll();
 
+        RouterLink teamLink = new RouterLink("Team " + teamMapping.getTeamNameForTeamId(snapshot.teamId()), TeamView.class, String.valueOf(snapshot.teamId()));
+
         content.add(
             new H1(snapshot.playerName()),
-            new Paragraph("Team " + teamMapping.getTeamNameForTeamId(snapshot.teamId())),
-            new Paragraph("Starchips: " + snapshot.starchips()),
-            new H3("Latest 10 player updates")
+            teamLink,
+            ViewSupport.createStarchipsStat(snapshot.starchips()),
+            new H3("Latest updates")
         );
 
         UnorderedList updates = new UnorderedList();
