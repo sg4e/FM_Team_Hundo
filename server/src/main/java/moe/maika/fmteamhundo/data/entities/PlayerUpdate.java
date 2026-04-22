@@ -28,6 +28,7 @@ public class PlayerUpdate {
     private Instant time;
     private int lastRng;
     private int nowRng;
+    private int opponentId;
 
     public PlayerUpdate(User user, EmuMessage message, Instant time) {
         this.value = message.getValue();
@@ -36,5 +37,6 @@ public class PlayerUpdate {
         this.time = time;
         this.lastRng = message.getLastRng();
         this.nowRng = message.getNowRng();
+        this.opponentId = message.getOpponentId();
     }
 }

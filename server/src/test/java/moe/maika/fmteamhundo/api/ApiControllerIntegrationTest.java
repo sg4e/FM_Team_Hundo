@@ -109,8 +109,8 @@ class ApiControllerIntegrationTest {
     @Test
     void testUpdateEndpointWithValidApiKey() throws Exception {
         List<EmuMessage> messages = Arrays.asList(
-                new EmuMessage(MessageType.DROP, 122, 0, 1),
-                new EmuMessage(MessageType.STARCHIPS, 5, 0, 0)
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1),
+                new EmuMessage(MessageType.STARCHIPS, 5, 0, 0, 1)
         );
 
         mockMvc.perform(post("/api/update")
@@ -141,7 +141,7 @@ class ApiControllerIntegrationTest {
     @Test
     void testUpdateEndpointWithInvalidApiKey() throws Exception {
         List<EmuMessage> messages = Arrays.asList(
-                new EmuMessage(MessageType.DROP, 122, 0, 1)
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1)
         );
 
         mockMvc.perform(post("/api/update")
@@ -160,7 +160,7 @@ class ApiControllerIntegrationTest {
     @Test
     void testUpdateEndpointWithMissingApiKey() throws Exception {
         List<EmuMessage> messages = Arrays.asList(
-                new EmuMessage(MessageType.DROP, 122, 0, 1)
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1)
         );
 
         mockMvc.perform(post("/api/update")
@@ -176,10 +176,10 @@ class ApiControllerIntegrationTest {
     @Test
     void testUpdateEndpointWithMultipleMessages() throws Exception {
         List<EmuMessage> messages = Arrays.asList(
-                new EmuMessage(MessageType.DROP, 100, 5, 6),
-                new EmuMessage(MessageType.FUSE, 50, 10, 11),
-                new EmuMessage(MessageType.RITUAL, 75, 20, 21),
-                new EmuMessage(MessageType.STARCHIPS, 10, 0, 0)
+                new EmuMessage(MessageType.DROP, 100, 5, 6, 1),
+                new EmuMessage(MessageType.FUSE, 50, 10, 11, 1),
+                new EmuMessage(MessageType.RITUAL, 75, 20, 21, 1),
+                new EmuMessage(MessageType.STARCHIPS, 10, 0, 0, 1)
         );
 
         mockMvc.perform(post("/api/update")
@@ -201,7 +201,7 @@ class ApiControllerIntegrationTest {
     @Test
     void testUpdateEndpointPreservesTimestamp() throws Exception {
         List<EmuMessage> messages = Arrays.asList(
-                new EmuMessage(MessageType.STARCHIPS, 5, 0, 0)
+                new EmuMessage(MessageType.STARCHIPS, 5, 0, 0, 1)
         );
 
         mockMvc.perform(post("/api/update")
@@ -232,7 +232,7 @@ class ApiControllerIntegrationTest {
         String noTeamApiKey = apiKeyService.generateNewApiKey(noTeamUser);
 
         List<EmuMessage> messages = Arrays.asList(
-                new EmuMessage(MessageType.DROP, 122, 0, 1)
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1)
         );
 
         mockMvc.perform(post("/api/update")
@@ -251,7 +251,7 @@ class ApiControllerIntegrationTest {
     @Test
     void testUpdateEndpointRejectsUnobtainableCards() throws Exception {
         List<EmuMessage> messages = Arrays.asList(
-                new EmuMessage(MessageType.DROP, hundoConstants.getUnobtainableCards().iterator().next(), 0, 1)
+                new EmuMessage(MessageType.DROP, hundoConstants.getUnobtainableCards().iterator().next(), 0, 1, 1)
         );
 
         mockMvc.perform(post("/api/update")

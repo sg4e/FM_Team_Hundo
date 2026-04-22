@@ -73,7 +73,7 @@ public sealed class FMTeamHundoForm : ToolFormBase, IExternalToolForm
     private readonly TcpClient client;
     private readonly HashSet<int> idsSent = [];  // only used for Ritual Summons for now
 
-    private MemoryElement fuseEquipRitualMemory, dropMemory, starchipMemory, rngMemory, menuIdMemory, playerFusionCount;
+    private MemoryElement fuseEquipRitualMemory, dropMemory, starchipMemory, rngMemory, menuIdMemory, playerFusionCount, opponentIdMemory;
     private MemoryElement monster1, monster2, monster3, monster4, monster5;
     private MemoryElement[] fmMemory, playerMonsters;
 
@@ -111,12 +111,14 @@ public sealed class FMTeamHundoForm : ToolFormBase, IExternalToolForm
         monster3 = new MemoryElement(APIs, 0x1a7ba8, 2);
         monster4 = new MemoryElement(APIs, 0x1a7bc4, 2);
         monster5 = new MemoryElement(APIs, 0x1a7be0, 2);
+        opponentIdMemory = new MemoryElement(APIs, 0x9B361, 1);
         fmMemory = [
             fuseEquipRitualMemory,
             dropMemory,
             starchipMemory,
             rngMemory,
             playerFusionCount,
+            opponentIdMemory,
             // menuIdMemory is excluded
             monster1,
             monster2,
@@ -166,6 +168,9 @@ public sealed class FMTeamHundoForm : ToolFormBase, IExternalToolForm
             s.Append(",\"now_rng\":");
             s.Append(rngMemory.Now);
         }
+        // add opponent duelist
+        s.Append(",\"opp_id\":");
+        s.Append(opponentIdMemory.Now);
         s.Append("}\n");
         SendJsonMessage(s.ToString());
     }

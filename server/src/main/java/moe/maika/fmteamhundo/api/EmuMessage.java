@@ -16,4 +16,6 @@ public class EmuMessage {
     private int lastRng;
     @JsonProperty("now_rng")
     private int nowRng;
+    @JsonProperty("opp_id")
+    private int opponentId;
 }

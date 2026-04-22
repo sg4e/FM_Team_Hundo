@@ -14,7 +14,8 @@ def create_emu_message(card_id: int, starchips: int = 3):
             "type": "drop",
             "value": card_id,  # Yamatano
             "last_rng": 0,
-            "now_rng": 1
+            "now_rng": 1,
+            "opp_id": 1
         },
         {
             "type": "starchips",
