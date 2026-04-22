@@ -25,6 +25,7 @@ import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
+import moe.maika.fmteamhundo.state.HundoConstants;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -45,6 +46,9 @@ class ApiControllerIntegrationTest {
 
     @Autowired
     private ApiKeyService apiKeyService;
+
+    @Autowired
+    private HundoConstants hundoConstants;
 
     private User testUser;
     private String validApiKey;
@@ -238,6 +242,42 @@ class ApiControllerIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.result").value("error"))
                 .andExpect(jsonPath("$.message").value("User is not assigned to a team"));
+
+        // Verify no database insertions
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
+    @Test
+    void testUpdateEndpointRejectsUnobtainableCards() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, hundoConstants.getUnobtainableCards().iterator().next(), 0, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Update contains unobtainable cards"));
+
+        // Verify no database insertions
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
+    @Test
+    void testUpdateEndpointRejectsEmptyMessageList() throws Exception {
+        List<EmuMessage> messages = List.of();
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("No updates provided"));
 
         // Verify no database insertions
         List<PlayerUpdate> updates = playerUpdateRepository.findAll();

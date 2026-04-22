@@ -28,4 +28,39 @@ spring:
             client-secret: fake
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
 ygo:
-  api_url: http://localhost:8080/api
+  apiUrl: http://localhost:8080/api
+  totalObtainableCards: 689
+  unobtainableCards:
+    - 7
+    - 17
+    - 18
+    - 28
+    - 51
+    - 52
+    - 56
+    - 57
+    - 60
+    - 62
+    - 63
+    - 67
+    - 235
+    - 252
+    - 284
+    - 288
+    - 299
+    - 369
+    - 428
+    - 429
+    - 499
+    - 541
+    - 554
+    - 555
+    - 562
+    - 603
+    - 628
+    - 640
+    - 709
+    - 711
+    - 717
+    - 721
+    - 722

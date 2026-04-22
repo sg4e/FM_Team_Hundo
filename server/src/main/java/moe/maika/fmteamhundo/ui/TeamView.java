@@ -2,12 +2,15 @@ package moe.maika.fmteamhundo.ui;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -34,6 +37,7 @@ import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.state.CardAcquisitionView;
 import moe.maika.fmteamhundo.state.GameStateService;
+import moe.maika.fmteamhundo.state.HundoConstants;
 import moe.maika.fmteamhundo.state.StateChangeListener;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
@@ -47,6 +51,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     private final GameStateService gameStateService;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
+    private final HundoConstants hundoConstants;
     private final VerticalLayout content;
 
     private Integer teamId;
@@ -55,10 +60,12 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     private UI currentUI;
 
     @Autowired
-    public TeamView(GameStateService gameStateService, TeamRepository teamRepository, UserRepository userRepository) {
+    public TeamView(GameStateService gameStateService, TeamRepository teamRepository, UserRepository userRepository,
+        HundoConstants hundoConstants) {
         this.gameStateService = gameStateService;
         this.teamRepository = teamRepository;
         this.userRepository = userRepository;
+        this.hundoConstants = hundoConstants;
 
         setSizeFull();
         setPadding(false);
@@ -161,10 +168,8 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         content.removeAll();
 
         H1 title = new H1(teamName);
-        HorizontalLayout stats = new HorizontalLayout(
-            ViewSupport.createStat("Starchips", Long.toString(snapshot.totalStarchips())),
-            ViewSupport.createStat("Unique Cards", Integer.toString(snapshot.uniqueCardCount()))
-        );
+        HorizontalLayout stats = new HorizontalLayout();
+        stats.add(ViewSupport.createAllStats(snapshot, hundoConstants));
         stats.setWrap(true);
 
         content.add(title, stats, createDownloadLink(), createLatestAcquisitions(snapshot), createMembers(), createCardGrids(snapshot.acquiredCards()));
@@ -260,7 +265,11 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         cell.getStyle().set("font-size", "0.75rem");
         cell.getStyle().set("color", "#ffffff");
 
-        if(acquisition != null) {
+        if(hundoConstants.getUnobtainableCards().contains(cardId)) {
+            cell.getStyle().set("background", "#6a737d");
+            cell.getElement().setProperty("title", "Card " + cardId + "\nUnobtainable");
+        }
+        else if(acquisition != null) {
             cell.getStyle().set("background", "#2da44e");
             cell.getElement().setProperty("title",
                 "Card " + cardId

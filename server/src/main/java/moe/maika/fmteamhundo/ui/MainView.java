@@ -22,6 +22,7 @@ import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.state.CardAcquisitionView;
 import moe.maika.fmteamhundo.state.GameStateService;
+import moe.maika.fmteamhundo.state.HundoConstants;
 import moe.maika.fmteamhundo.state.StateChangeListener;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
@@ -31,14 +32,16 @@ public class MainView extends VerticalLayout implements StateChangeListener {
 
     private final GameStateService gameStateService;
     private final TeamRepository teamRepository;
+    private final HundoConstants hundoConstants;
     private final VerticalLayout content;
     private long renderedVersion = -1;
     private UI currentUI;
 
     @Autowired
-    public MainView(GameStateService gameStateService, TeamRepository teamRepository) {
+    public MainView(GameStateService gameStateService, TeamRepository teamRepository, HundoConstants hundoConstants) {
         this.gameStateService = gameStateService;
         this.teamRepository = teamRepository;
+        this.hundoConstants = hundoConstants;
         setSizeFull();
         setPadding(false);
         setSpacing(false);
@@ -94,8 +97,7 @@ public class MainView extends VerticalLayout implements StateChangeListener {
         content.removeAll();
 
         H1 title = new H1("FM Team Hundo");
-        Paragraph subtitle = new Paragraph("Live team progress.");
-        content.add(title, subtitle);
+        content.add(title);
 
         for(Team team : teamRepository.findAll()) {
             TeamPageSnapshot snapshot = gameStateService.getTeamPageSnapshot(team.getTeamId());
@@ -116,10 +118,8 @@ public class MainView extends VerticalLayout implements StateChangeListener {
         link.setRoute(TeamView.class, String.valueOf(team.getTeamId()));
         heading.add(link);
 
-        Div stats = new Div(
-            ViewSupport.createStat("Starchips", Long.toString(snapshot.totalStarchips())),
-            ViewSupport.createStat("Unique Cards", Integer.toString(snapshot.uniqueCardCount()))
-        );
+        Div stats = new Div();
+        stats.add(ViewSupport.createAllStats(snapshot, hundoConstants));
         stats.getStyle().set("display", "flex");
         stats.getStyle().set("gap", "0.5rem");
         stats.getStyle().set("flex-wrap", "wrap");

@@ -16,10 +16,10 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
+import moe.maika.fmteamhundo.state.HundoConstants;
 import moe.maika.fmteamhundo.state.TeamMapping;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.ByteArrayInputStream;
@@ -35,18 +35,18 @@ public class UserProfileView extends VerticalLayout {
     private final UserRepository userRepository;
     private final TeamMapping teamMapping;
     private final ApiKeyService apiKeyService;
+    private final HundoConstants hundoConstants;
     private final ObjectMapper objectMapper;
-    private final String apiUrl;
     private final Anchor downloadAnchor;
 
     @Autowired
     public UserProfileView(UserRepository userRepository, TeamMapping teamMapping, ApiKeyService apiKeyService, ObjectMapper objectMapper,
-                           @Value("${ygo.api_url}") String apiUrl) {
+                           HundoConstants hundoConstants) {
         this.userRepository = userRepository;
         this.teamMapping = teamMapping;
         this.apiKeyService = apiKeyService;
         this.objectMapper = objectMapper;
-        this.apiUrl = apiUrl;
+        this.hundoConstants = hundoConstants;
         this.downloadAnchor = new Anchor();
 
         setSizeFull();
@@ -107,7 +107,7 @@ public class UserProfileView extends VerticalLayout {
 
     private String buildCredentialsJson(String apiKey, String username) {
         try {
-            Credentials dto = new Credentials(apiKey, apiUrl, username);
+            Credentials dto = new Credentials(apiKey, hundoConstants.getApiUrl(), username);
             return objectMapper.writeValueAsString(dto);
         } catch (IOException e) {
             throw new RuntimeException("Failed to serialize credentials", e);

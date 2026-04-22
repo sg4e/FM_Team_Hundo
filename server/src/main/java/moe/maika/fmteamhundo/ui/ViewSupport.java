@@ -3,6 +3,7 @@ package moe.maika.fmteamhundo.ui;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -17,6 +18,9 @@ import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.RouterLink;
+
+import moe.maika.fmteamhundo.state.HundoConstants;
+import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
 final class ViewSupport {
 
@@ -71,6 +75,13 @@ final class ViewSupport {
         stat.getStyle().set("border-radius", "999px");
         stat.getStyle().set("background", "#f6f8fa");
         return stat;
+    }
+
+    static List<Component> createAllStats(TeamPageSnapshot snapshot, HundoConstants hundoConstants) {
+        return List.of(
+            createStat("Cards", String.format("%d/%d", snapshot.uniqueCardCount(), hundoConstants.getTotalObtainableCards())),
+            createStat("Starchips", Long.toString(snapshot.totalStarchips()))
+        );
     }
 
     static Component externalLink(String text, String href) {

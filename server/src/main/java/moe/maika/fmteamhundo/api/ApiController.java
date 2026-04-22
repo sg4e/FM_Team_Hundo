@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
 import moe.maika.fmteamhundo.state.GameStateService;
+import moe.maika.fmteamhundo.state.HundoConstants;
 
 @RestController
 @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -32,12 +34,17 @@ public class ApiController {
     private final ApiKeyService apiKeyService;
     private final PlayerUpdateRepository playerUpdateRepository;
     private final GameStateService gameStateService;
+    private final HundoConstants hundoConstants;
+    private final Set<Integer> unobtainableCards;
 
     @Autowired
-    public ApiController(ApiKeyService apiKeyService, PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService) {
+    public ApiController(ApiKeyService apiKeyService, PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService, 
+            HundoConstants hundoConstants) {
         this.apiKeyService = apiKeyService;
         this.playerUpdateRepository = playerUpdateRepository;
         this.gameStateService = gameStateService;
+        this.hundoConstants = hundoConstants;
+        this.unobtainableCards = hundoConstants.getUnobtainableCards();
     }
 
     @GetMapping("/validate")
@@ -64,7 +71,19 @@ public class ApiController {
         if (validation.isValid()) {
             User user = validation.getUser().get();
             response.put("message", user.getName());
-            
+
+            if(emuMessages.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("result", "error", "message", "No updates provided"));
+            }
+
+            // Make sure no unobtainable cards are included in the update
+            if(emuMessages.stream().filter(msg -> msg.getType() != MessageType.STARCHIPS).map(EmuMessage::getValue)
+                .anyMatch(cardId -> unobtainableCards.contains(cardId))) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("result", "error", "message", "Update contains unobtainable cards"));
+            }
+
             // Check if user is on team 0 (no team)
             if (user.getTeamId() == 0) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
