@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayDeque;
@@ -41,6 +42,7 @@ public class GameStateService {
     private final Map<Integer, Long> teamVersions;
     private final Map<Long, Long> playerVersions;
     private long overallTeamVersion;
+    private final Set<StateChangeListener> stateChangeListeners;
 
     private final UserRepository userRepo;
     private final PlayerUpdateRepository playerUpdateRepository;
@@ -55,6 +57,7 @@ public class GameStateService {
         playerSnapshotCache = new HashMap<>();
         teamVersions = new HashMap<>();
         playerVersions = new HashMap<>();
+        stateChangeListeners = new HashSet<>();
         this.userRepo = userRepo;
         this.playerUpdateRepository = playerUpdateRepository;
         loadKnownUsers();
@@ -185,6 +188,47 @@ public class GameStateService {
         overallTeamVersion = 0;
     }
 
+    public void addStateChangeListener(StateChangeListener listener) {
+        stateChangeListeners.add(listener);
+    }
+
+    public void removeStateChangeListener(StateChangeListener listener) {
+        stateChangeListeners.remove(listener);
+    }
+
+    private void notifyListenersTeamChanged(int teamId) {
+        for(StateChangeListener listener : stateChangeListeners) {
+            try {
+                listener.onTeamStateChanged(teamId);
+            } catch(Exception e) {
+                // Log and continue to notify other listeners
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void notifyListenersPlayerChanged(long playerId) {
+        for(StateChangeListener listener : stateChangeListeners) {
+            try {
+                listener.onPlayerStateChanged(playerId);
+            } catch(Exception e) {
+                // Log and continue to notify other listeners
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void notifyListenersOverallChanged() {
+        for(StateChangeListener listener : stateChangeListeners) {
+            try {
+                listener.onOverallStateChanged();
+            } catch(Exception e) {
+                // Log and continue to notify other listeners
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void loadKnownUsers() {
         userRepo.findAll().forEach(this::recordKnownUser);
     }
@@ -220,10 +264,13 @@ public class GameStateService {
         teamVersions.merge(teamId, 1L, Long::sum);
         overallTeamVersion++;
         teamSnapshotCache.remove(teamId);
+        notifyListenersTeamChanged(teamId);
+        notifyListenersOverallChanged();
     }
 
     private void bumpPlayerVersion(long playerId) {
         playerVersions.merge(playerId, 1L, Long::sum);
         playerSnapshotCache.remove(playerId);
+        notifyListenersPlayerChanged(playerId);
     }
 }

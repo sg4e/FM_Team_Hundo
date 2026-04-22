@@ -11,16 +11,17 @@ import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
-import com.vaadin.flow.shared.Registration;
+import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.PlayerPageSnapshot;
+import moe.maika.fmteamhundo.state.StateChangeListener;
 import moe.maika.fmteamhundo.state.TeamMapping;
 
 @Route("players")
 @AnonymousAllowed
-public class PlayerView extends VerticalLayout implements HasUrlParameter<String> {
+public class PlayerView extends VerticalLayout implements HasUrlParameter<String>, StateChangeListener {
 
     private final GameStateService gameStateService;
     private final TeamMapping teamMapping;
@@ -28,7 +29,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
 
     private Long playerId;
     private long renderedVersion = -1;
-    private Registration pollRegistration;
+    private UI currentUI;
 
     public PlayerView(GameStateService gameStateService, TeamMapping teamMapping) {
         this.gameStateService = gameStateService;
@@ -44,8 +45,16 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         content.setSpacing(true);
 
         add(ViewSupport.createTopBar(), content);
-        addAttachListener(event -> startPolling(event.getUI()));
-        addDetachListener(event -> stopPolling(event.getUI()));
+        addAttachListener(event -> {
+            currentUI = event.getUI();
+            currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
+            gameStateService.addStateChangeListener(this);
+            refreshIfNeeded();
+        });
+        addDetachListener(event -> {
+            gameStateService.removeStateChangeListener(this);
+            currentUI = null;
+        });
     }
 
     @Override
@@ -60,19 +69,21 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         refreshIfNeeded();
     }
 
-    private void startPolling(UI ui) {
-        ui.setPollInterval(2000);
-        stopPolling(ui);
-        pollRegistration = ui.addPollListener(event -> refreshIfNeeded());
-        refreshIfNeeded();
+    @Override
+    public void onTeamStateChanged(int teamId) {
+        // PlayerView doesn't need team updates
     }
 
-    private void stopPolling(UI ui) {
-        if(pollRegistration != null) {
-            pollRegistration.remove();
-            pollRegistration = null;
+    @Override
+    public void onPlayerStateChanged(long changedPlayerId) {
+        if(playerId != null && playerId.equals(changedPlayerId) && currentUI != null) {
+            currentUI.access(this::refreshIfNeeded);
         }
-        ui.setPollInterval(-1);
+    }
+
+    @Override
+    public void onOverallStateChanged() {
+        // PlayerView doesn't need overall updates
     }
 
     private void refreshIfNeeded() {

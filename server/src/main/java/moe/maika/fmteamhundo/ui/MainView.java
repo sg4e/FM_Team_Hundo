@@ -14,7 +14,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
-import com.vaadin.flow.shared.Registration;
+import com.vaadin.flow.shared.communication.PushMode;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -22,17 +22,18 @@ import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.state.CardAcquisitionView;
 import moe.maika.fmteamhundo.state.GameStateService;
+import moe.maika.fmteamhundo.state.StateChangeListener;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
 @Route("")
 @AnonymousAllowed
-public class MainView extends VerticalLayout {
+public class MainView extends VerticalLayout implements StateChangeListener {
 
     private final GameStateService gameStateService;
     private final TeamRepository teamRepository;
     private final VerticalLayout content;
     private long renderedVersion = -1;
-    private Registration pollRegistration;
+    private UI currentUI;
 
     @Autowired
     public MainView(GameStateService gameStateService, TeamRepository teamRepository) {
@@ -49,23 +50,35 @@ public class MainView extends VerticalLayout {
         content.setSpacing(true);
 
         add(ViewSupport.createTopBar(), content);
-        addAttachListener(event -> startPolling(event.getUI()));
-        addDetachListener(event -> stopPolling(event.getUI()));
+        addAttachListener(event -> {
+            currentUI = event.getUI();
+            currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
+            gameStateService.addStateChangeListener(this);
+            refreshIfNeeded();
+        });
+        addDetachListener(event -> {
+            gameStateService.removeStateChangeListener(this);
+            currentUI = null;
+        });
     }
 
-    private void startPolling(UI ui) {
-        ui.setPollInterval(2000);
-        stopPolling(ui);
-        pollRegistration = ui.addPollListener(event -> refreshIfNeeded());
-        refreshIfNeeded();
-    }
-
-    private void stopPolling(UI ui) {
-        if(pollRegistration != null) {
-            pollRegistration.remove();
-            pollRegistration = null;
+    @Override
+    public void onTeamStateChanged(int teamId) {
+        if(currentUI != null) {
+            currentUI.access(this::refreshIfNeeded);
         }
-        ui.setPollInterval(-1);
+    }
+
+    @Override
+    public void onPlayerStateChanged(long playerId) {
+        // MainView doesn't need player-specific updates
+    }
+
+    @Override
+    public void onOverallStateChanged() {
+        if(currentUI != null) {
+            currentUI.access(this::refreshIfNeeded);
+        }
     }
 
     private void refreshIfNeeded() {

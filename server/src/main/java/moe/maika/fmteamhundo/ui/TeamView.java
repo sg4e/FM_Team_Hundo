@@ -26,7 +26,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.server.StreamResource;
-import com.vaadin.flow.shared.Registration;
+import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.entities.User;
@@ -34,11 +34,12 @@ import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.state.CardAcquisitionView;
 import moe.maika.fmteamhundo.state.GameStateService;
+import moe.maika.fmteamhundo.state.StateChangeListener;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
 @Route("teams")
 @AnonymousAllowed
-public class TeamView extends VerticalLayout implements HasUrlParameter<String> {
+public class TeamView extends VerticalLayout implements HasUrlParameter<String>, StateChangeListener {
 
     private static final int CARDS_PER_FULL_GRID = 100;
     private static final int TOTAL_CARDS = 722;
@@ -51,7 +52,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
     private Integer teamId;
     private String teamName;
     private long renderedVersion = -1;
-    private Registration pollRegistration;
+    private UI currentUI;
 
     @Autowired
     public TeamView(GameStateService gameStateService, TeamRepository teamRepository, UserRepository userRepository) {
@@ -69,8 +70,16 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
         content.setSpacing(true);
 
         add(ViewSupport.createTopBar(), content);
-        addAttachListener(event -> startPolling(event.getUI()));
-        addDetachListener(event -> stopPolling(event.getUI()));
+        addAttachListener(event -> {
+            currentUI = event.getUI();
+            currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
+            gameStateService.addStateChangeListener(this);
+            refreshIfNeeded();
+        });
+        addDetachListener(event -> {
+            gameStateService.removeStateChangeListener(this);
+            currentUI = null;
+        });
     }
 
     @Override
@@ -94,19 +103,21 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
         refreshIfNeeded();
     }
 
-    private void startPolling(UI ui) {
-        ui.setPollInterval(2000);
-        stopPolling(ui);
-        pollRegistration = ui.addPollListener(event -> refreshIfNeeded());
-        refreshIfNeeded();
+    @Override
+    public void onTeamStateChanged(int changedTeamId) {
+        if(teamId != null && teamId.equals(changedTeamId) && currentUI != null) {
+            currentUI.access(this::refreshIfNeeded);
+        }
     }
 
-    private void stopPolling(UI ui) {
-        if(pollRegistration != null) {
-            pollRegistration.remove();
-            pollRegistration = null;
-        }
-        ui.setPollInterval(-1);
+    @Override
+    public void onPlayerStateChanged(long playerId) {
+        // TeamView doesn't need player-specific updates
+    }
+
+    @Override
+    public void onOverallStateChanged() {
+        // TeamView doesn't need overall updates
     }
 
     private void refreshIfNeeded() {
@@ -129,14 +140,16 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
     }
 
     private Component createDownloadLink() {
-        List<Integer> cardIds = gameStateService.getLibrary(teamId).getAcquiredCardIds();
-        String csvContent = cardIds.stream()
-            .map(String::valueOf)
-            .collect(Collectors.joining("\n"));
-        
         StreamResource resource = new StreamResource(
             teamName.replaceAll("[^a-zA-Z0-9._-]", "_") + "_cards.txt",
-            () -> new ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8))
+            () -> {
+                // Fetch the latest card list on-demand when the user clicks download
+                List<Integer> cardIds = gameStateService.getLibrary(teamId).getAcquiredCardIds();
+                String content = cardIds.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining("\n"));
+                return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+            }
         );
         
         Anchor downloadLink = new Anchor(resource, "Download Team's Library");
