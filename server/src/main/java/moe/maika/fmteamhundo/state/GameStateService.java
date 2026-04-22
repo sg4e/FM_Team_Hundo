@@ -141,9 +141,11 @@ public class GameStateService {
         User user = idToUser.get(playerId);
         String playerName = user != null ? user.getName() : "Unknown Player";
         int teamId = user != null ? user.getTeamId() : 0;
+        Library library = teamLibraries.getOrDefault(teamId, new Library());
+        int starchips = (int) library.getStarchips(playerId);
         List<PlayerUpdate> latestUpdates = List.copyOf(recentUpdatesByPlayer.getOrDefault(playerId, new ArrayDeque<>()));
 
-        PlayerPageSnapshot snapshot = new PlayerPageSnapshot(playerId, currentVersion, playerName, teamId, latestUpdates);
+        PlayerPageSnapshot snapshot = new PlayerPageSnapshot(playerId, currentVersion, playerName, teamId, starchips, latestUpdates);
         playerSnapshotCache.put(playerId, snapshot);
         return snapshot;
     }

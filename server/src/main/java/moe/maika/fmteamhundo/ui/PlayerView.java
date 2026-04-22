@@ -111,6 +111,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         content.add(
             new H1(snapshot.playerName()),
             new Paragraph("Team " + teamMapping.getTeamNameForTeamId(snapshot.teamId())),
+            new Paragraph("Starchips: " + snapshot.starchips()),
             new H3("Latest 10 player updates")
         );
 

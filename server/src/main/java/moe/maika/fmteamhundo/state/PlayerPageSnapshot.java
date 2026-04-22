@@ -4,4 +4,4 @@ import java.util.List;
 
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 
-public record PlayerPageSnapshot(long playerId, long version, String playerName, int teamId, List<PlayerUpdate> latestUpdates) { }
+public record PlayerPageSnapshot(long playerId, long version, String playerName, int teamId, int starchips, List<PlayerUpdate> latestUpdates) { }
