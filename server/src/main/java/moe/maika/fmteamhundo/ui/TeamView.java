@@ -1,13 +1,17 @@
 package moe.maika.fmteamhundo.ui;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H3;
@@ -21,6 +25,7 @@ import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.shared.Registration;
 
 import moe.maika.fmteamhundo.data.entities.Team;
@@ -123,6 +128,22 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
         content.add(new H1("Team not found"));
     }
 
+    private Component createDownloadLink() {
+        List<Integer> cardIds = gameStateService.getLibrary(teamId).getAcquiredCardIds();
+        String csvContent = cardIds.stream()
+            .map(String::valueOf)
+            .collect(Collectors.joining("\n"));
+        
+        StreamResource resource = new StreamResource(
+            teamName.replaceAll("[^a-zA-Z0-9._-]", "_") + "_cards.txt",
+            () -> new ByteArrayInputStream(csvContent.getBytes(StandardCharsets.UTF_8))
+        );
+        
+        Anchor downloadLink = new Anchor(resource, "Download Team's Library");
+        downloadLink.getElement().setAttribute("download", true);
+        return downloadLink;
+    }
+
     private void render(TeamPageSnapshot snapshot) {
         content.removeAll();
 
@@ -133,7 +154,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String> 
         );
         stats.setWrap(true);
 
-        content.add(title, stats, createLatestAcquisitions(snapshot), createMembers(), createCardGrids(snapshot.acquiredCards()));
+        content.add(title, stats, createDownloadLink(), createLatestAcquisitions(snapshot), createMembers(), createCardGrids(snapshot.acquiredCards()));
     }
 
     private Component createLatestAcquisitions(TeamPageSnapshot snapshot) {

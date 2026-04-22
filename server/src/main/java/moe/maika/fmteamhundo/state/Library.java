@@ -1,5 +1,6 @@
 package moe.maika.fmteamhundo.state;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -86,5 +87,9 @@ public class Library {
 
     public synchronized long getVersion() {
         return version;
+    }
+
+    public synchronized List<Integer> getAcquiredCardIds() {
+        return new ArrayList<>(acquiredCards.keySet());
     }
 }
