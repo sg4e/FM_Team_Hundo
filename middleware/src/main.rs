@@ -235,6 +235,7 @@ async fn listen_for_emu_connection(sender: mpsc::Sender<String>) -> Result<(), B
                         // Continue listening despite the error
                     }
                 }
+                interval.reset();
             }
             _ = interval.tick() => {
                 println!("Waiting for connection from emulator...");
