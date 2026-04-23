@@ -1,16 +1,18 @@
-
 package moe.maika.fmteamhundo.ui;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.html.UnorderedList;
-import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.UI;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -23,6 +25,7 @@ import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.state.CardAcquisitionView;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
+import moe.maika.fmteamhundo.state.PlayerPageSnapshot;
 import moe.maika.fmteamhundo.state.StateChangeListener;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
@@ -34,7 +37,7 @@ public class MainView extends VerticalLayout implements StateChangeListener {
     private final TeamRepository teamRepository;
     private final HundoConstants hundoConstants;
     private final VerticalLayout content;
-    private long renderedVersion = -1;
+    private final Map<Integer, TeamPageSnapshot> teamSnapshots;
     private UI currentUI;
 
     @Autowired
@@ -42,6 +45,7 @@ public class MainView extends VerticalLayout implements StateChangeListener {
         this.gameStateService = gameStateService;
         this.teamRepository = teamRepository;
         this.hundoConstants = hundoConstants;
+        this.teamSnapshots = new HashMap<>();
         setSizeFull();
         setPadding(false);
         setSpacing(false);
@@ -57,7 +61,7 @@ public class MainView extends VerticalLayout implements StateChangeListener {
             currentUI = event.getUI();
             currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
             gameStateService.addStateChangeListener(this);
-            refreshIfNeeded();
+            loadInitialSnapshots();
         });
         addDetachListener(event -> {
             gameStateService.removeStateChangeListener(this);
@@ -66,30 +70,31 @@ public class MainView extends VerticalLayout implements StateChangeListener {
     }
 
     @Override
-    public void onTeamStateChanged(int teamId) {
+    public void onTeamStateChanged(TeamPageSnapshot snapshot) {
         if(currentUI != null) {
-            currentUI.access(this::refreshIfNeeded);
+            currentUI.access(() -> applySnapshot(snapshot));
         }
     }
 
     @Override
-    public void onPlayerStateChanged(long playerId) {
+    public void onPlayerStateChanged(PlayerPageSnapshot snapshot) {
         // MainView doesn't need player-specific updates
     }
 
-    @Override
-    public void onOverallStateChanged() {
-        if(currentUI != null) {
-            currentUI.access(this::refreshIfNeeded);
+    private void loadInitialSnapshots() {
+        teamSnapshots.clear();
+        for(Team team : teamRepository.findAll()) {
+            teamSnapshots.put(team.getTeamId(), gameStateService.getTeamPageSnapshot(team.getTeamId()));
         }
+        render();
     }
 
-    private void refreshIfNeeded() {
-        long currentVersion = gameStateService.getOverallTeamVersion();
-        if(currentVersion == renderedVersion) {
+    private void applySnapshot(TeamPageSnapshot snapshot) {
+        TeamPageSnapshot currentSnapshot = teamSnapshots.get(snapshot.teamId());
+        if(currentSnapshot != null && currentSnapshot.version() >= snapshot.version()) {
             return;
         }
-        renderedVersion = currentVersion;
+        teamSnapshots.put(snapshot.teamId(), snapshot);
         render();
     }
 
@@ -100,9 +105,13 @@ public class MainView extends VerticalLayout implements StateChangeListener {
         content.add(title);
 
         for(Team team : teamRepository.findAll()) {
-            TeamPageSnapshot snapshot = gameStateService.getTeamPageSnapshot(team.getTeamId());
+            TeamPageSnapshot snapshot = teamSnapshots.getOrDefault(team.getTeamId(), emptySnapshot(team.getTeamId()));
             content.add(createTeamCard(team, snapshot));
         }
+    }
+
+    private TeamPageSnapshot emptySnapshot(int teamId) {
+        return new TeamPageSnapshot(teamId, 0, 0, 0, List.of(), List.of(), Map.of());
     }
 
     private Div createTeamCard(Team team, TeamPageSnapshot snapshot) {

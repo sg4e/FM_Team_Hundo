@@ -18,6 +18,7 @@ import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.PlayerPageSnapshot;
 import moe.maika.fmteamhundo.state.StateChangeListener;
 import moe.maika.fmteamhundo.state.TeamMapping;
+import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 
 @Route("players")
 @AnonymousAllowed
@@ -49,7 +50,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
             currentUI = event.getUI();
             currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
             gameStateService.addStateChangeListener(this);
-            refreshIfNeeded();
+            loadInitialSnapshot();
         });
         addDetachListener(event -> {
             gameStateService.removeStateChangeListener(this);
@@ -62,38 +63,37 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         try {
             playerId = Long.parseLong(parameter);
         }
-        catch (NumberFormatException ex) {
+        catch(NumberFormatException ex) {
             playerId = -1L;
         }
         renderedVersion = -1;
-        refreshIfNeeded();
+        if(currentUI != null) {
+            loadInitialSnapshot();
+        }
     }
 
     @Override
-    public void onTeamStateChanged(int teamId) {
+    public void onTeamStateChanged(TeamPageSnapshot snapshot) {
         // PlayerView doesn't need team updates
     }
 
     @Override
-    public void onPlayerStateChanged(long changedPlayerId) {
-        if(playerId != null && playerId.equals(changedPlayerId) && currentUI != null) {
-            currentUI.access(this::refreshIfNeeded);
+    public void onPlayerStateChanged(PlayerPageSnapshot snapshot) {
+        if(playerId != null && playerId == snapshot.playerId() && currentUI != null) {
+            currentUI.access(() -> renderIfNewer(snapshot));
         }
     }
 
-    @Override
-    public void onOverallStateChanged() {
-        // PlayerView doesn't need overall updates
-    }
-
-    private void refreshIfNeeded() {
+    private void loadInitialSnapshot() {
         if(playerId == null || playerId <= 0) {
             renderMissingPlayer();
             return;
         }
+        renderIfNewer(gameStateService.getPlayerPageSnapshot(playerId));
+    }
 
-        PlayerPageSnapshot snapshot = gameStateService.getPlayerPageSnapshot(playerId);
-        if(snapshot.version() == renderedVersion) {
+    private void renderIfNewer(PlayerPageSnapshot snapshot) {
+        if(snapshot.version() <= renderedVersion) {
             return;
         }
         renderedVersion = snapshot.version();

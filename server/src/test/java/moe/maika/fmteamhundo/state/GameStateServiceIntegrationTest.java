@@ -457,6 +457,7 @@ class GameStateServiceIntegrationTest {
         TeamPageSnapshot snapshot = gameStateService.getTeamPageSnapshot(1);
 
         assertThat(snapshot.teamId()).isEqualTo(1);
+        assertThat(snapshot.version()).isGreaterThan(0);
         assertThat(snapshot.totalStarchips()).isEqualTo(75);
         assertThat(snapshot.uniqueCardCount()).isEqualTo(3);
         assertThat(snapshot.members()).extracting(member -> member.playerName()).contains("Team1User1", "Team1User2", "Team1User3");
@@ -480,11 +481,52 @@ class GameStateServiceIntegrationTest {
         PlayerPageSnapshot snapshot = gameStateService.getPlayerPageSnapshot(team1Users.get(0).getDatabaseId());
 
         assertThat(snapshot.playerId()).isEqualTo(team1Users.get(0).getDatabaseId());
+        assertThat(snapshot.version()).isGreaterThan(0);
         assertThat(snapshot.playerName()).isEqualTo("Team1User1");
+        assertThat(snapshot.starchips()).isEqualTo(999);
         assertThat(snapshot.latestUpdates()).hasSize(10);
         assertThat(snapshot.latestUpdates()).allMatch(update -> update.getSource() != MessageType.STARCHIPS);
         assertThat(snapshot.latestUpdates().get(0).getValue()).isEqualTo(111);
         assertThat(snapshot.latestUpdates().get(9).getValue()).isEqualTo(102);
+    }
+
+    @Test
+    void testListenersReceiveLatestSnapshots() {
+        TestStateChangeListener listener = new TestStateChangeListener();
+        gameStateService.addStateChangeListener(listener);
+
+        Instant baseTime = Instant.now();
+        gameStateService.update(List.of(
+            createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, 321, baseTime),
+            createPlayerUpdate(team1Users.get(0), MessageType.DROP, 123, baseTime.plusSeconds(1))
+        ));
+
+        TeamPageSnapshot latestTeamSnapshot = gameStateService.getTeamPageSnapshot(1);
+        PlayerPageSnapshot latestPlayerSnapshot = gameStateService.getPlayerPageSnapshot(team1Users.get(0).getDatabaseId());
+
+        assertThat(listener.latestTeamSnapshot).isNotNull();
+        assertThat(listener.latestPlayerSnapshot).isNotNull();
+        assertThat(listener.latestTeamSnapshot.version()).isEqualTo(latestTeamSnapshot.version());
+        assertThat(listener.latestTeamSnapshot.acquiredCards()).containsKey(123);
+        assertThat(listener.latestPlayerSnapshot.version()).isEqualTo(latestPlayerSnapshot.version());
+        assertThat(listener.latestPlayerSnapshot.starchips()).isEqualTo(321);
+        assertThat(listener.latestPlayerSnapshot.latestUpdates()).extracting(PlayerUpdate::getValue).containsExactly(123);
+    }
+
+    private static final class TestStateChangeListener implements StateChangeListener {
+
+        private TeamPageSnapshot latestTeamSnapshot;
+        private PlayerPageSnapshot latestPlayerSnapshot;
+
+        @Override
+        public void onTeamStateChanged(TeamPageSnapshot snapshot) {
+            latestTeamSnapshot = snapshot;
+        }
+
+        @Override
+        public void onPlayerStateChanged(PlayerPageSnapshot snapshot) {
+            latestPlayerSnapshot = snapshot;
+        }
     }
 
     private EmuMessage createEmuMessage(MessageType type, int value, int lastRng, int nowRng) {
