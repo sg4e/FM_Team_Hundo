@@ -20,12 +20,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
 import moe.maika.fmteamhundo.api.MessageType;
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 
+@Slf4j
 @Service
 public class GameStateService {
 
@@ -204,7 +206,7 @@ public class GameStateService {
                 listener.onTeamStateChanged(teamId);
             } catch(Exception e) {
                 // Log and continue to notify other listeners
-                e.printStackTrace();
+                log.error("Error notifying listener of team state change for team {}: {}", teamId, e.getMessage(), e);
             }
         }
     }
@@ -215,7 +217,7 @@ public class GameStateService {
                 listener.onPlayerStateChanged(playerId);
             } catch(Exception e) {
                 // Log and continue to notify other listeners
-                e.printStackTrace();
+                log.error("Error notifying listener of player state change for player {}: {}", playerId, e.getMessage(), e);
             }
         }
     }
@@ -226,7 +228,7 @@ public class GameStateService {
                 listener.onOverallStateChanged();
             } catch(Exception e) {
                 // Log and continue to notify other listeners
-                e.printStackTrace();
+                log.error("Error notifying listener of overall state change: {}", e.getMessage(), e);
             }
         }
     }
