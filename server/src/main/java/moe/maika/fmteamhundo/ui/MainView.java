@@ -1,8 +1,11 @@
 package moe.maika.fmteamhundo.ui;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
@@ -18,34 +21,39 @@ import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.shared.communication.PushMode;
 
-import org.springframework.beans.factory.annotation.Autowired;
-
 import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.repos.TeamRepository;
-import moe.maika.fmteamhundo.state.CardAcquisitionView;
+import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
-import moe.maika.fmteamhundo.state.PlayerPageSnapshot;
-import moe.maika.fmteamhundo.state.StateChangeListener;
+import moe.maika.fmteamhundo.state.TeamUpdateListener;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
+import moe.maika.fmteamhundo.state.UserMappings;
 
 @Route("")
 @AnonymousAllowed
-public class MainView extends VerticalLayout implements StateChangeListener {
+public class MainView extends VerticalLayout implements TeamUpdateListener {
 
     private final GameStateService gameStateService;
     private final TeamRepository teamRepository;
     private final HundoConstants hundoConstants;
+    private final UserMappings userMappings;
+    private final List<Team> teams;
     private final VerticalLayout content;
     private final Map<Integer, TeamPageSnapshot> teamSnapshots;
     private UI currentUI;
 
     @Autowired
-    public MainView(GameStateService gameStateService, TeamRepository teamRepository, HundoConstants hundoConstants) {
+    public MainView(GameStateService gameStateService, TeamRepository teamRepository, HundoConstants hundoConstants,
+            UserMappings userMappings
+    ) {
         this.gameStateService = gameStateService;
         this.teamRepository = teamRepository;
         this.hundoConstants = hundoConstants;
-        this.teamSnapshots = new HashMap<>();
+        this.userMappings = userMappings;
+        this.teams = teamRepository.findAll();
+        this.teamSnapshots = teams.stream().map(Team::getTeamId)
+                .collect(Collectors.toMap(Function.identity(), id -> gameStateService.getLatestTeamPageSnapshot(id)));
         setSizeFull();
         setPadding(false);
         setSpacing(false);
@@ -60,38 +68,25 @@ public class MainView extends VerticalLayout implements StateChangeListener {
         addAttachListener(event -> {
             currentUI = event.getUI();
             currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
-            gameStateService.addStateChangeListener(this);
-            loadInitialSnapshots();
+            gameStateService.addTeamUpdateListener(this);
+            render();
         });
         addDetachListener(event -> {
-            gameStateService.removeStateChangeListener(this);
+            gameStateService.removeTeamUpdateListener(this);
             currentUI = null;
         });
     }
 
     @Override
-    public void onTeamStateChanged(TeamPageSnapshot snapshot) {
+    public void onTeamUpdate(TeamPageSnapshot snapshot) {
         if(currentUI != null) {
             currentUI.access(() -> applySnapshot(snapshot));
         }
     }
 
-    @Override
-    public void onPlayerStateChanged(PlayerPageSnapshot snapshot) {
-        // MainView doesn't need player-specific updates
-    }
-
-    private void loadInitialSnapshots() {
-        teamSnapshots.clear();
-        for(Team team : teamRepository.findAll()) {
-            teamSnapshots.put(team.getTeamId(), gameStateService.getTeamPageSnapshot(team.getTeamId()));
-        }
-        render();
-    }
-
     private void applySnapshot(TeamPageSnapshot snapshot) {
         TeamPageSnapshot currentSnapshot = teamSnapshots.get(snapshot.teamId());
-        if(currentSnapshot != null && currentSnapshot.version() >= snapshot.version()) {
+        if(currentSnapshot != null && currentSnapshot.timestamp().isAfter(snapshot.timestamp())) {
             return;
         }
         teamSnapshots.put(snapshot.teamId(), snapshot);
@@ -105,13 +100,9 @@ public class MainView extends VerticalLayout implements StateChangeListener {
         content.add(title);
 
         for(Team team : teamRepository.findAll()) {
-            TeamPageSnapshot snapshot = teamSnapshots.getOrDefault(team.getTeamId(), emptySnapshot(team.getTeamId()));
+            TeamPageSnapshot snapshot = teamSnapshots.get(team.getTeamId());
             content.add(createTeamCard(team, snapshot));
         }
-    }
-
-    private TeamPageSnapshot emptySnapshot(int teamId) {
-        return new TeamPageSnapshot(teamId, 0, 0, 0, List.of(), List.of(), Map.of());
     }
 
     private Div createTeamCard(Team team, TeamPageSnapshot snapshot) {
@@ -138,7 +129,7 @@ public class MainView extends VerticalLayout implements StateChangeListener {
             acquisitions.add(new ListItem("No cards acquired yet."));
         }
         else {
-            for(CardAcquisitionView acquisition : snapshot.latestAcquisitions()) {
+            for(CardAcquisition acquisition : snapshot.latestAcquisitions()) {
                 acquisitions.add(new ListItem(describeAcquisition(acquisition)));
             }
         }
@@ -147,9 +138,9 @@ public class MainView extends VerticalLayout implements StateChangeListener {
         return card;
     }
 
-    private String describeAcquisition(CardAcquisitionView acquisition) {
+    private String describeAcquisition(CardAcquisition acquisition) {
         return "Card " + acquisition.cardId() + " via " + acquisition.source()
-            + " by " + acquisition.playerName()
+            + " by " + userMappings.getUserById(acquisition.playerId()).getName()
             + " at " + ViewSupport.formatInstant(acquisition.acquisitionTime());
     }
 }

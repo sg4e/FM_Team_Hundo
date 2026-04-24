@@ -17,7 +17,7 @@ import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
 import moe.maika.fmteamhundo.state.HundoConstants;
-import moe.maika.fmteamhundo.state.TeamMapping;
+import moe.maika.fmteamhundo.state.UserMappings;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,14 +33,14 @@ public class UserProfileView extends VerticalLayout {
     private static final String CREDENTIALS_FILENAME = "credentials_FM_Team_Hundo.json";
 
     private final UserRepository userRepository;
-    private final TeamMapping teamMapping;
+    private final UserMappings teamMapping;
     private final ApiKeyService apiKeyService;
     private final HundoConstants hundoConstants;
     private final ObjectMapper objectMapper;
     private final Anchor downloadAnchor;
 
     @Autowired
-    public UserProfileView(UserRepository userRepository, TeamMapping teamMapping, ApiKeyService apiKeyService, ObjectMapper objectMapper,
+    public UserProfileView(UserRepository userRepository, UserMappings teamMapping, ApiKeyService apiKeyService, ObjectMapper objectMapper,
                            HundoConstants hundoConstants) {
         this.userRepository = userRepository;
         this.teamMapping = teamMapping;

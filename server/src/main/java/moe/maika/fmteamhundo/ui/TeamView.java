@@ -29,37 +29,45 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.data.entities.Team;
-import moe.maika.fmteamhundo.state.CardAcquisitionView;
+import moe.maika.fmteamhundo.data.entities.User;
+import moe.maika.fmteamhundo.data.repos.TeamRepository;
+import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
-import moe.maika.fmteamhundo.state.PlayerPageSnapshot;
-import moe.maika.fmteamhundo.state.StateChangeListener;
-import moe.maika.fmteamhundo.state.TeamMember;
+import moe.maika.fmteamhundo.state.TeamUpdateListener;
 import moe.maika.fmteamhundo.state.TeamPageSnapshot;
-import moe.maika.fmteamhundo.data.repos.TeamRepository;
+import moe.maika.fmteamhundo.state.UserMappings;
 
 @Route("teams")
 @AnonymousAllowed
-public class TeamView extends VerticalLayout implements HasUrlParameter<String>, StateChangeListener {
+public class TeamView extends VerticalLayout implements HasUrlParameter<String>, TeamUpdateListener {
 
     private static final int CARDS_PER_FULL_GRID = 100;
     private static final int TOTAL_CARDS = 722;
 
     private final GameStateService gameStateService;
+    private final UserRepository userRepository;
     private final TeamRepository teamRepository;
     private final HundoConstants hundoConstants;
+    private final UserMappings userMappings;
     private final VerticalLayout content;
 
     private Integer teamId;
     private String teamName;
-    private long renderedVersion = -1;
+    private List<User> teamMembers;
+    private TeamPageSnapshot renderedSnapshot;
     private UI currentUI;
 
     @Autowired
-    public TeamView(GameStateService gameStateService, TeamRepository teamRepository, HundoConstants hundoConstants) {
+    public TeamView(GameStateService gameStateService, UserRepository userRepository, TeamRepository teamRepository, 
+            HundoConstants hundoConstants, UserMappings userMappings
+    ) {
         this.gameStateService = gameStateService;
+        this.userRepository = userRepository;
         this.teamRepository = teamRepository;
         this.hundoConstants = hundoConstants;
+        this.userMappings = userMappings;
 
         setSizeFull();
         setPadding(false);
@@ -74,11 +82,11 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         addAttachListener(event -> {
             currentUI = event.getUI();
             currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
-            gameStateService.addStateChangeListener(this);
+            gameStateService.addTeamUpdateListener(this);
             loadInitialSnapshot();
         });
         addDetachListener(event -> {
-            gameStateService.removeStateChangeListener(this);
+            gameStateService.removeTeamUpdateListener(this);
             currentUI = null;
         });
     }
@@ -88,6 +96,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         try {
             teamId = Integer.parseInt(parameter);
             Optional<Team> team = teamRepository.findById(teamId);
+            teamMembers = userRepository.findByTeamId(teamId);
             if(team.isPresent()) {
                 teamName = team.get().getName();
             }
@@ -100,22 +109,16 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             teamId = null;
             teamName = null;
         }
-        renderedVersion = -1;
         if(currentUI != null) {
             loadInitialSnapshot();
         }
     }
 
     @Override
-    public void onTeamStateChanged(TeamPageSnapshot snapshot) {
+    public void onTeamUpdate(TeamPageSnapshot snapshot) {
         if(teamId != null && teamId == snapshot.teamId() && currentUI != null) {
             currentUI.access(() -> renderIfNewer(snapshot));
         }
-    }
-
-    @Override
-    public void onPlayerStateChanged(PlayerPageSnapshot snapshot) {
-        // TeamView doesn't need player-specific updates
     }
 
     private void loadInitialSnapshot() {
@@ -123,14 +126,14 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             renderMissingTeam();
             return;
         }
-        renderIfNewer(gameStateService.getTeamPageSnapshot(teamId));
+        renderIfNewer(gameStateService.getLatestTeamPageSnapshot(teamId));
     }
 
     private void renderIfNewer(TeamPageSnapshot snapshot) {
-        if(snapshot.version() <= renderedVersion) {
+        if(renderedSnapshot != null && snapshot.timestamp().isBefore(renderedSnapshot.timestamp())) {
             return;
         }
-        renderedVersion = snapshot.version();
+        renderedSnapshot = snapshot;
         render(snapshot);
     }
 
@@ -164,24 +167,25 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         stats.add(ViewSupport.createAllStats(snapshot, hundoConstants));
         stats.setWrap(true);
 
-        content.add(title, stats, createDownloadLink(), createLatestAcquisitions(snapshot), createMembers(snapshot), createCardGrids(snapshot.acquiredCards()));
+        content.add(title, stats, createDownloadLink(), createLatestAcquisitions(snapshot), 
+                createMembers(snapshot), createCardGrids(gameStateService.getLibrary(teamId).getAcquiredCards()));
     }
 
     private Component createLatestAcquisitions(TeamPageSnapshot snapshot) {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(false);
-        section.add(new H3("Latest 5 unique acquisitions"));
+        section.add(new H3("Latest 10 cards"));
 
         UnorderedList list = new UnorderedList();
         if(snapshot.latestAcquisitions().isEmpty()) {
             list.add(new ListItem("No cards acquired yet."));
         }
         else {
-            for(CardAcquisitionView acquisition : snapshot.latestAcquisitions()) {
+            for(CardAcquisition acquisition : snapshot.latestAcquisitions()) {
                 list.add(new ListItem(
                     "Card " + acquisition.cardId() + " via " + acquisition.source()
-                        + " by " + acquisition.playerName()
+                        + " by " + userMappings.getUserById(acquisition.playerId()).getName()
                         + " at " + ViewSupport.formatInstant(acquisition.acquisitionTime())
                 ));
             }
@@ -197,14 +201,14 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         section.add(new H3("Team Members"));
 
         UnorderedList list = new UnorderedList();
-        if(snapshot.members().isEmpty()) {
-            list.add(new ListItem("No team members known yet."));
+        if(teamMembers.isEmpty()) {
+            list.add(new ListItem("No members on team."));
         }
         else {
-            for(TeamMember member : snapshot.members()) {
+            for(User member : teamMembers) {
                 RouterLink playerLink = new RouterLink();
-                playerLink.setText(member.playerName());
-                playerLink.setRoute(PlayerView.class, String.valueOf(member.playerId()));
+                playerLink.setText(member.getName());
+                playerLink.setRoute(PlayerView.class, String.valueOf(member.getDatabaseId()));
                 list.add(new ListItem(playerLink));
             }
         }
@@ -212,7 +216,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         return section;
     }
 
-    private Component createCardGrids(Map<Integer, CardAcquisitionView> acquiredCards) {
+    private Component createCardGrids(Map<Integer, CardAcquisition> acquiredCards) {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(true);
@@ -225,7 +229,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         return section;
     }
 
-    private Component createGrid(int startCardId, int endCardId, Map<Integer, CardAcquisitionView> acquiredCards) {
+    private Component createGrid(int startCardId, int endCardId, Map<Integer, CardAcquisition> acquiredCards) {
         VerticalLayout gridWrapper = new VerticalLayout();
         gridWrapper.setPadding(false);
         gridWrapper.setSpacing(false);
@@ -244,7 +248,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         return gridWrapper;
     }
 
-    private Component createCardCell(int cardId, CardAcquisitionView acquisition) {
+    private Component createCardCell(int cardId, CardAcquisition acquisition) {
         Div cell = new Div();
         cell.setText(Integer.toString(cardId));
         cell.getStyle().set("height", "2rem");
@@ -263,7 +267,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             cell.getStyle().set("background", "#2da44e");
             cell.getElement().setProperty("title",
                 "Card " + cardId
-                    + "\nAcquired by " + acquisition.playerName()
+                    + "\nAcquired by " + userMappings.getUserById(acquisition.playerId()).getName()
                     + "\nSource: " + acquisition.source()
                     + "\nAt: " + ViewSupport.formatInstant(acquisition.acquisitionTime()));
         }

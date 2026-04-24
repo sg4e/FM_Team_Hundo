@@ -1,18 +1,17 @@
 package moe.maika.fmteamhundo.state;
 
-import java.util.ArrayDeque;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +26,7 @@ import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.util.RingBuffer;
 
 @Slf4j
 @Service
@@ -34,114 +34,80 @@ public class GameStateService {
 
     private static final int REPLAY_BATCH_SIZE = 1000;
     private static final int PLAYER_PAGE_UPDATE_LIMIT = 10;
-    private static final int MAIN_PAGE_ACQUISITION_LIMIT = 5;
+    private static final int TEAM_PAGE_UPDATE_LIMIT = 10;
 
-    private final Map<Integer, Library> teamLibraries;
-    private final Map<Long, User> idToUser;
-    private final Map<Integer, List<TeamMember>> teamMembers;
-    private final Map<Long, Deque<PlayerUpdate>> recentUpdatesByPlayer;
-    private final Map<Integer, Long> teamVersions;
-    private final Map<Long, Long> playerVersions;
-    private final Set<StateChangeListener> stateChangeListeners;
+    private final ConcurrentHashMap<Integer, Library> teamLibraries;
+    private final ConcurrentHashMap<Long, RingBuffer<PlayerUpdate>> latestPlayerUpdates;
+    private final ConcurrentHashMap<Integer, TeamPageSnapshot> latestTeamSnapshots;
+    private final ConcurrentHashMap<Integer, RingBuffer<CardAcquisition>> latestTeamAcquisitions;
+    private final Set<TeamUpdateListener> teamUpdateListeners;
+    private final ConcurrentHashMap<Long, Set<PlayerUpdateListener>> playerUpdateListenerMap;
 
     private final UserRepository userRepo;
     private final PlayerUpdateRepository playerUpdateRepository;
+    private final UserMappings userMappings;
+    private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
-    public GameStateService(UserRepository userRepo, PlayerUpdateRepository playerUpdateRepository) {
-        teamLibraries = new HashMap<>();
-        idToUser = new HashMap<>();
-        teamMembers = new HashMap<>();
-        recentUpdatesByPlayer = new HashMap<>();
-        teamVersions = new HashMap<>();
-        playerVersions = new HashMap<>();
-        stateChangeListeners = new CopyOnWriteArraySet<>();
+    public GameStateService(UserRepository userRepo, PlayerUpdateRepository playerUpdateRepository, UserMappings userMappings) {
+        teamLibraries = new ConcurrentHashMap<>();
+        latestPlayerUpdates = new ConcurrentHashMap<>();
+        latestTeamSnapshots = new ConcurrentHashMap<>();
+        latestTeamAcquisitions = new ConcurrentHashMap<>();
+        teamUpdateListeners = ConcurrentHashMap.newKeySet();
+        playerUpdateListenerMap = new ConcurrentHashMap<>();
         this.userRepo = userRepo;
         this.playerUpdateRepository = playerUpdateRepository;
-        loadKnownUsers();
+        this.userMappings = userMappings;
         reloadFromDatabase();
     }
 
     public void update(Collection<PlayerUpdate> updates) {
-        List<TeamPageSnapshot> changedTeamSnapshots;
-        List<PlayerPageSnapshot> changedPlayerSnapshots;
-        synchronized(this) {
-            Map<Integer, List<PlayerUpdate>> updatesByTeam = new HashMap<>();
-            Set<Long> changedPlayerIds = new TreeSet<>();
-            for(PlayerUpdate update : updates) {
-                User user = requireUser(update.getParticipantId());
-                updatesByTeam.computeIfAbsent(user.getTeamId(), ignored -> new ArrayList<>()).add(update);
-                changedPlayerIds.add(update.getParticipantId());
-                if(update.getSource() != MessageType.STARCHIPS) {
-                    Deque<PlayerUpdate> playerUpdates = recentUpdatesByPlayer.computeIfAbsent(update.getParticipantId(), ignored -> new ArrayDeque<>());
-                    playerUpdates.addFirst(update);
-                    while(playerUpdates.size() > PLAYER_PAGE_UPDATE_LIMIT) {
-                        playerUpdates.removeLast();
-                    }
-                }
-            }
-
-            Set<Integer> changedTeamIds = new TreeSet<>();
-            updatesByTeam.forEach((teamId, teamUpdates) -> {
-                Library library = teamLibraries.computeIfAbsent(teamId, ignored -> new Library());
-                if(library.update(teamUpdates)) {
-                    incrementTeamVersion(teamId);
-                    changedTeamIds.add(teamId);
-                }
-            });
-
-            changedTeamSnapshots = changedTeamIds.stream().map(this::buildTeamPageSnapshot).toList();
-            changedPlayerSnapshots = changedPlayerIds.stream().map(this::buildPlayerPageSnapshot).toList();
+        Map<Integer, List<PlayerUpdate>> updatesByTeam = new HashMap<>();
+        Map<Library, List<PlayerUpdate>> updatesByLibrary = new HashMap<>();
+        // dispatch updates to listeners
+        executorService.submit(() -> {
+            Map<Long, List<PlayerUpdate>> mappedUpdates = updates.stream().collect(Collectors.groupingBy(PlayerUpdate::getParticipantId));
+            notifyPlayerUpdateListeners(mappedUpdates);
+        });
+        for(PlayerUpdate update : updates) {
+            User user = userMappings.getUserById(update.getParticipantId());
+            updatesByTeam.computeIfAbsent(user.getTeamId(), _ -> new ArrayList<>()).add(update);
         }
-        notifyListenersTeamChanged(changedTeamSnapshots);
-        notifyListenersPlayerChanged(changedPlayerSnapshots);
+        updatesByTeam.forEach((teamId, teamUpdates) -> {
+            Library library = teamLibraries.computeIfAbsent(teamId, _ -> new Library(teamId, this::consumeLibraryUpdate));
+            updatesByLibrary.put(library, teamUpdates);
+        });
+        updatesByLibrary.forEach((library, libraryUpdates) -> {
+            executorService.submit(() -> library.update(libraryUpdates));
+        });
+    }
+
+    // this may run on another thread!
+    private void consumeLibraryUpdate(LibraryUpdate libraryUpdate) {
+        RingBuffer<CardAcquisition> teamAcquisitions = latestTeamAcquisitions.computeIfAbsent(libraryUpdate.teamId(), _ -> new RingBuffer<>(TEAM_PAGE_UPDATE_LIMIT));
+        teamAcquisitions.addAll(libraryUpdate.newAcquisitions());
+        TeamPageSnapshot updatedSnapshot = new TeamPageSnapshot(libraryUpdate.teamId(), libraryUpdate.timestamp(), libraryUpdate.totalStarchips(), libraryUpdate.uniqueCardCount(), teamAcquisitions.toList());
+        latestTeamSnapshots.merge(libraryUpdate.teamId(), updatedSnapshot, (existing, newVal) -> 
+                existing.timestamp().isBefore(newVal.timestamp()) ? newVal : existing);
+        notifyTeamUpdateListeners(List.of(updatedSnapshot));
     }
 
     public synchronized Library getLibrary(int teamId) {
-        return teamLibraries.getOrDefault(teamId, new Library());
+        return teamLibraries.getOrDefault(teamId, new Library(teamId, this::consumeLibraryUpdate));
     }
 
-    public synchronized List<Integer> getKnownTeamIds() {
-        TreeSet<Integer> teamIds = new TreeSet<>(teamMembers.keySet());
-        teamIds.addAll(teamLibraries.keySet());
-        teamIds.remove(0);
-        return List.copyOf(teamIds);
+    public TeamPageSnapshot getLatestTeamPageSnapshot(int teamId) {
+        TeamPageSnapshot snap = latestTeamSnapshots.get(teamId);
+        return snap != null ? snap : new TeamPageSnapshot(teamId, Instant.MIN, 0, 0, List.of());
     }
 
-    public synchronized TeamPageSnapshot getTeamPageSnapshot(int teamId) {
-        return buildTeamPageSnapshot(teamId);
-    }
-
-    public synchronized PlayerPageSnapshot getPlayerPageSnapshot(long playerId) {
-        return buildPlayerPageSnapshot(playerId);
-    }
-
-    public void recordKnownUser(User user) {
-        List<TeamPageSnapshot> changedTeamSnapshots = List.of();
-        List<PlayerPageSnapshot> changedPlayerSnapshots = List.of();
-        synchronized(this) {
-            User previous = idToUser.put(user.getDatabaseId(), user);
-            rebuildTeamMembers();
-            if(previous == null || previous.getTeamId() != user.getTeamId() || !previous.getName().equals(user.getName())) {
-                Set<Integer> changedTeamIds = new LinkedHashSet<>();
-                if(previous != null && previous.getTeamId() != user.getTeamId()) {
-                    incrementTeamVersion(previous.getTeamId());
-                    changedTeamIds.add(previous.getTeamId());
-                }
-                incrementTeamVersion(user.getTeamId());
-                changedTeamIds.add(user.getTeamId());
-                incrementPlayerVersion(user.getDatabaseId());
-
-                changedTeamSnapshots = changedTeamIds.stream().map(this::buildTeamPageSnapshot).toList();
-                changedPlayerSnapshots = List.of(buildPlayerPageSnapshot(user.getDatabaseId()));
-            }
-        }
-        notifyListenersTeamChanged(changedTeamSnapshots);
-        notifyListenersPlayerChanged(changedPlayerSnapshots);
+    public List<PlayerUpdate> getLatestPlayerUpdates(long playerId) {
+        RingBuffer<PlayerUpdate> latest = latestPlayerUpdates.get(playerId);
+        return latest != null ? latest.toList() : List.of();
     }
 
     void reloadFromDatabase() {
-        loadKnownUsers();
         Pageable pageable = PageRequest.of(0, REPLAY_BATCH_SIZE);
         Slice<PlayerUpdate> currentBatch;
         do {
@@ -155,116 +121,67 @@ public class GameStateService {
 
     synchronized void reset() {
         teamLibraries.clear();
-        idToUser.clear();
-        teamMembers.clear();
-        recentUpdatesByPlayer.clear();
-        teamVersions.clear();
-        playerVersions.clear();
+        latestPlayerUpdates.clear();
+        latestTeamSnapshots.clear();
+        latestTeamAcquisitions.clear();
+        teamUpdateListeners.clear();
+        playerUpdateListenerMap.clear();
     }
 
-    public void addStateChangeListener(StateChangeListener listener) {
-        stateChangeListeners.add(listener);
+    public void addTeamUpdateListener(TeamUpdateListener listener) {
+        teamUpdateListeners.add(listener);
     }
 
-    public void removeStateChangeListener(StateChangeListener listener) {
-        stateChangeListeners.remove(listener);
+    public void removeTeamUpdateListener(TeamUpdateListener listener) {
+        teamUpdateListeners.remove(listener);
     }
 
-    private void notifyListenersTeamChanged(Collection<TeamPageSnapshot> snapshots) {
+    public void addPlayerUpdateListener(long playerId, PlayerUpdateListener listener) {
+        playerUpdateListenerMap.computeIfAbsent(playerId, _ -> ConcurrentHashMap.newKeySet()).add(listener);
+    }
+
+    public void removePlayerUpdateListener(long playerId, PlayerUpdateListener listener) {
+        playerUpdateListenerMap.computeIfAbsent(playerId, _ -> ConcurrentHashMap.newKeySet()).remove(listener);
+    }
+
+    private void notifyTeamUpdateListeners(Collection<TeamPageSnapshot> snapshots) {
         for(TeamPageSnapshot snapshot : snapshots) {
-            for(StateChangeListener listener : stateChangeListeners) {
-                try {
-                    listener.onTeamStateChanged(snapshot);
-                } catch(Exception e) {
-                    log.error("Error notifying listener of team state change for team {}: {}", snapshot.teamId(), e.getMessage(), e);
-                }
+            for(TeamUpdateListener listener : teamUpdateListeners) {
+                executorService.submit(() -> {
+                    try {
+                        listener.onTeamUpdate(snapshot);
+                    } catch(Exception e) {
+                        log.error("Error notifying listener of team state change for team {}: {}", snapshot.teamId(), e.getMessage(), e);
+                    }
+                });
             }
         }
     }
 
-    private void notifyListenersPlayerChanged(Collection<PlayerPageSnapshot> snapshots) {
-        for(PlayerPageSnapshot snapshot : snapshots) {
-            for(StateChangeListener listener : stateChangeListeners) {
-                try {
-                    listener.onPlayerStateChanged(snapshot);
-                } catch(Exception e) {
-                    log.error("Error notifying listener of player state change for player {}: {}", snapshot.playerId(), e.getMessage(), e);
+    private void notifyPlayerUpdateListeners(Map<Long, List<PlayerUpdate>> updates) {
+        for(Map.Entry<Long, List<PlayerUpdate>> entry : updates.entrySet()) {
+            long playerId = entry.getKey();
+            List<PlayerUpdate> updateList = entry.getValue();
+            // add to our own memory, filtering out STARCHIPS updates
+            List<PlayerUpdate> nonStarchipsUpdates = updateList.stream()
+                .filter(u -> u.getSource() != MessageType.STARCHIPS)
+                .toList();
+            if(!nonStarchipsUpdates.isEmpty()) {
+                latestPlayerUpdates.computeIfAbsent(playerId, _ -> new RingBuffer<>(PLAYER_PAGE_UPDATE_LIMIT)).addAll(nonStarchipsUpdates);
+            }
+            Set<PlayerUpdateListener> listeners = playerUpdateListenerMap.get(playerId);
+            if(listeners != null) {
+                List<PlayerUpdate> lockedList = Collections.unmodifiableList(updateList);
+                for(PlayerUpdateListener listener : listeners) {
+                    executorService.submit(() -> {
+                        try {
+                            listener.onPlayerUpdate(lockedList);
+                        } catch(Exception e) {
+                            log.error("Error notifying listener of player state change for player {}: {}", playerId, e.getMessage(), e);
+                        }
+                    });
                 }
             }
         }
-    }
-
-    private void loadKnownUsers() {
-        userRepo.findAll().forEach(this::recordKnownUser);
-    }
-
-    private User requireUser(long playerId) {
-        User knownUser = idToUser.get(playerId);
-        if(knownUser != null) {
-            return knownUser;
-        }
-        User loadedUser = userRepo.findById(playerId).orElseThrow();
-        recordKnownUser(loadedUser);
-        return loadedUser;
-    }
-
-    private void rebuildTeamMembers() {
-        Map<Integer, List<TeamMember>> rebuilt = idToUser.values().stream()
-            .sorted(Comparator.comparingInt(User::getTeamId).thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER))
-            .collect(Collectors.groupingBy(
-                User::getTeamId,
-                Collectors.mapping(user -> new TeamMember(user.getDatabaseId(), user.getName()), Collectors.toList())
-            ));
-        teamMembers.clear();
-        rebuilt.forEach((teamId, members) -> teamMembers.put(teamId, Collections.unmodifiableList(members)));
-    }
-
-    private CardAcquisitionView toCardAcquisitionView(CardAcquisition acquisition) {
-        User user = idToUser.get(acquisition.playerId());
-        String playerName = user != null ? user.getName() : "Unknown Player";
-        return new CardAcquisitionView(acquisition.cardId(), acquisition.acquisitionTime(), acquisition.source(), acquisition.playerId(), playerName);
-    }
-
-    private TeamPageSnapshot buildTeamPageSnapshot(int teamId) {
-        Library library = teamLibraries.computeIfAbsent(teamId, ignored -> new Library());
-        Map<Integer, CardAcquisitionView> acquiredCards = library.getAcquiredCards().values().stream()
-            .map(this::toCardAcquisitionView)
-            .collect(Collectors.toUnmodifiableMap(CardAcquisitionView::cardId, card -> card));
-
-        return new TeamPageSnapshot(
-            teamId,
-            teamVersions.getOrDefault(teamId, 0L),
-            library.getTotalTeamStarchips(),
-            library.getUniqueCardCount(),
-            List.copyOf(teamMembers.getOrDefault(teamId, List.of())),
-            library.getRecentCardAcquisitions(MAIN_PAGE_ACQUISITION_LIMIT).stream().map(this::toCardAcquisitionView).toList(),
-            acquiredCards
-        );
-    }
-
-    private PlayerPageSnapshot buildPlayerPageSnapshot(long playerId) {
-        User user = idToUser.get(playerId);
-        String playerName = user != null ? user.getName() : "Unknown Player";
-        int teamId = user != null ? user.getTeamId() : 0;
-        Library library = teamLibraries.getOrDefault(teamId, new Library());
-        int starchips = (int) library.getStarchips(playerId);
-        List<PlayerUpdate> latestUpdates = List.copyOf(recentUpdatesByPlayer.getOrDefault(playerId, new ArrayDeque<>()));
-
-        return new PlayerPageSnapshot(
-            playerId,
-            playerVersions.getOrDefault(playerId, 0L),
-            playerName,
-            teamId,
-            starchips,
-            latestUpdates
-        );
-    }
-
-    private void incrementTeamVersion(int teamId) {
-        teamVersions.merge(teamId, 1L, Long::sum);
-    }
-
-    private void incrementPlayerVersion(long playerId) {
-        playerVersions.merge(playerId, 1L, Long::sum);
     }
 }

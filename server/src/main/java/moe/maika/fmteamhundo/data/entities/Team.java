@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -22,6 +23,7 @@ import lombok.ToString;
 @Setter
 @ToString
 @NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "teams")
 public class Team implements Serializable {
     
@@ -33,5 +35,9 @@ public class Team implements Serializable {
     
     public Team(String name) {
         this.name = name;
+    }
+
+    public boolean isNoTeam() {
+        return this.teamId == 0;
     }
 }

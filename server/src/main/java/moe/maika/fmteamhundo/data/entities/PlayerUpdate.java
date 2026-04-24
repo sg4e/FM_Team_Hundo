@@ -18,7 +18,7 @@ import moe.maika.fmteamhundo.api.MessageType;
 @Setter
 @ToString
 @NoArgsConstructor
-public class PlayerUpdate {
+public class PlayerUpdate implements Comparable<PlayerUpdate> {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)  // IDENTITY over SEQUENCE
     private Long databaseId;
@@ -38,5 +38,10 @@ public class PlayerUpdate {
         this.lastRng = message.getLastRng();
         this.nowRng = message.getNowRng();
         this.opponentId = message.getOpponentId();
+    }
+
+    @Override
+    public int compareTo(PlayerUpdate other) {
+        return getTime().compareTo(other.getTime());
     }
 }

@@ -1,13 +1,15 @@
 package moe.maika.fmteamhundo.state;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import moe.maika.fmteamhundo.api.MessageType;
@@ -15,26 +17,36 @@ import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 
 public class Library {
 
+    private final int teamId;
+    private final Consumer<LibraryUpdate> onLibraryUpdate;
     private final Map<Integer, CardAcquisition> acquiredCards = new TreeMap<>();
-    private final Map<Long, Long> starchips = new HashMap<>();
+    private final ConcurrentHashMap<Long, Long> starchips = new ConcurrentHashMap<>();
     private long totalStarchips = 0;
-    private long version = 0;
-    private boolean isCardCacheValid = false;
-    private Map<Integer, CardAcquisition> cachedCards;
-    private List<CardAcquisition> cachedRecentAcquisitions;
+
+    Library(int teamId, Consumer<LibraryUpdate> onLibraryUpdate) {
+        this.teamId = teamId;
+        this.onLibraryUpdate = onLibraryUpdate;
+    }
 
     boolean update(Collection<PlayerUpdate> teamUpdates) {
+        if(teamUpdates.isEmpty()) {
+            return false;
+        }
         Set<PlayerUpdate> starchipUpdates = teamUpdates.stream().filter(c -> c.getSource() == MessageType.STARCHIPS).collect(Collectors.toSet());
         // for each player, get only the most recent starchip update
         Map<Long, PlayerUpdate> mostRecentStarchipUpdateByPlayer = starchipUpdates.stream().collect(Collectors.toMap(PlayerUpdate::getParticipantId, c -> c, (c1, c2) -> c1.getTime().isAfter(c2.getTime()) ? c1 : c2));
         Set<PlayerUpdate> cardUpdates = teamUpdates.stream().filter(c -> c.getSource() != MessageType.STARCHIPS).collect(Collectors.toSet());
+        Instant latestTimestamp = teamUpdates.stream().map(c -> c.getTime()).max(Instant::compareTo).get();
         boolean changed = false;
+        LibraryUpdate libraryUpdate = null;
+        List<CardAcquisition> newAcquisitions = new ArrayList<>();
         synchronized(this) {
             for(PlayerUpdate card : cardUpdates) {
                 // make sure library maps to first acquisition of the card
                 if(!acquiredCards.containsKey(card.getValue()) || acquiredCards.get(card.getValue()).acquisitionTime().isAfter(card.getTime())) {
-                    isCardCacheValid = false;
-                    acquiredCards.put(card.getValue(), new CardAcquisition(card.getValue(), card.getTime(), card.getSource(), card.getParticipantId()));
+                    CardAcquisition acquisition = new CardAcquisition(card.getValue(), card.getTime(), card.getSource(), card.getParticipantId());
+                    newAcquisitions.add(acquisition);
+                    acquiredCards.put(card.getValue(), acquisition);
                     changed = true;
                 }
             }
@@ -51,13 +63,17 @@ public class Library {
                 }
             }
             if(changed) {
-                version++;
+                libraryUpdate = new LibraryUpdate(this, teamId, latestTimestamp, totalStarchips, acquiredCards.size(), newAcquisitions);
             }
+        }
+        if(libraryUpdate != null) {
+            onLibraryUpdate.accept(libraryUpdate);
         }
         return changed;
     }
 
-    public synchronized long getStarchips(long participantId) {
+    // not synchronized so PlayerView calls don't block
+    public long getStarchips(long participantId) {
         return starchips.getOrDefault(participantId, 0L);
     }
 
@@ -66,27 +82,11 @@ public class Library {
     }
 
     public synchronized Map<Integer, CardAcquisition> getAcquiredCards() {
-        if(!isCardCacheValid) {
-            cachedCards = Collections.unmodifiableMap(new TreeMap<>(acquiredCards));
-            cachedRecentAcquisitions = acquiredCards.values().stream()
-                .sorted((left, right) -> right.acquisitionTime().compareTo(left.acquisitionTime()))
-                .toList();
-            isCardCacheValid = true;
-        }
-        return cachedCards;
+        return Collections.unmodifiableMap(acquiredCards);
     }
 
     public synchronized int getUniqueCardCount() {
         return acquiredCards.size();
-    }
-
-    public synchronized List<CardAcquisition> getRecentCardAcquisitions(int limit) {
-        getAcquiredCards();
-        return cachedRecentAcquisitions.stream().limit(limit).toList();
-    }
-
-    public synchronized long getVersion() {
-        return version;
     }
 
     public synchronized List<Integer> getAcquiredCardIds() {

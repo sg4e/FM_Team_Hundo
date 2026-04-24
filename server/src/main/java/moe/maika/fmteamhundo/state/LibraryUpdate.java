@@ -3,10 +3,11 @@ package moe.maika.fmteamhundo.state;
 import java.time.Instant;
 import java.util.List;
 
-public record TeamPageSnapshot(
+public record LibraryUpdate(
+    Library library,
     int teamId,
     Instant timestamp,
     long totalStarchips,
     int uniqueCardCount,
-    List<CardAcquisition> latestAcquisitions
+    List<CardAcquisition> newAcquisitions
 ) { }

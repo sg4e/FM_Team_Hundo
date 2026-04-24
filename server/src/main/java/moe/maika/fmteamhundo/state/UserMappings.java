@@ -7,19 +7,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import moe.maika.fmteamhundo.data.entities.Team;
+import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 
 @Component
-public class TeamMapping {
+public class UserMappings {
     
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
     private final Map<Long, Team> userToTeamCache = new HashMap<>();
     private final Map<Integer, Team> teamIdToTeamCache = new HashMap<>();
+    private final Map<Long, String> idToUser = new HashMap<>();
+
+    private static final Team NO_TEAM = new Team(0, "No Team");
 
     @Autowired
-    public TeamMapping(TeamRepository teamRepository, UserRepository userRepository) {
+    public UserMappings(TeamRepository teamRepository, UserRepository userRepository) {
         this.teamRepository = teamRepository;
         this.userRepository = userRepository;
     }
@@ -33,7 +37,7 @@ public class TeamMapping {
             userToTeamCache.put(userId, teamRepository.findById(teamId).get());
             return userToTeamCache.get(userId);
         }
-        return null;
+        return NO_TEAM;
     }
 
     public String getTeamNameForTeamId(int teamId) {
@@ -46,6 +50,23 @@ public class TeamMapping {
             return team.getName();
         }
         return "No Team";
+    }
+
+    public User getUserById(long userId) {
+        if(idToUser.containsKey(userId)) {
+            return userRepository.getByDatabaseId(userId).orElse(null);
+        }
+        User user = userRepository.getByDatabaseId(userId).orElse(null);
+        if(user != null) {
+            idToUser.put(userId, user.getName());
+        }
+        return user;
+    }
+
+    void clearCaches() {
+        userToTeamCache.clear();
+        teamIdToTeamCache.clear();
+        idToUser.clear();
     }
     
 }

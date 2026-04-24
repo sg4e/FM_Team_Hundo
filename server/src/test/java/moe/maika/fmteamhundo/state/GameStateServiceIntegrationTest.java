@@ -51,6 +51,9 @@ class GameStateServiceIntegrationTest {
     private PlayerUpdateRepository playerUpdateRepository;
 
     @Autowired
+    private UserMappings userMappings;
+
+    @Autowired
     private ApiKeyService apiKeyService;
 
     @Autowired
@@ -75,6 +78,7 @@ class GameStateServiceIntegrationTest {
         // Clear repositories before each test
         playerUpdateRepository.deleteAll();
         userRepository.deleteAll();
+        userMappings.clearCaches();
 
         team1Users = new ArrayList<>();
         team2Users = new ArrayList<>();
@@ -89,7 +93,6 @@ class GameStateServiceIntegrationTest {
             user.setTeamId(1);
             user.setOauth("oauth_token_team1_" + i);
             user = userRepository.save(user);
-            gameStateService.recordKnownUser(user);
             team1Users.add(user);
             team1ApiKeys.add(apiKeyService.generateNewApiKey(user));
         }
@@ -102,7 +105,6 @@ class GameStateServiceIntegrationTest {
             user.setTeamId(2);
             user.setOauth("oauth_token_team2_" + i);
             user = userRepository.save(user);
-            gameStateService.recordKnownUser(user);
             team2Users.add(user);
             team2ApiKeys.add(apiKeyService.generateNewApiKey(user));
         }
@@ -123,6 +125,7 @@ class GameStateServiceIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(messages)))
                 .andExpect(status().isOk());
+        sleep();
 
         Library team1Library = gameStateService.getLibrary(1);
         assertThat(team1Library.getStarchips(team1Users.get(0).getDatabaseId())).isEqualTo(100);
@@ -160,7 +163,7 @@ class GameStateServiceIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(user3Messages)))
                 .andExpect(status().isOk());
-
+        sleep();
         Library team1Library = gameStateService.getLibrary(1);
         assertThat(team1Library.getStarchips(team1Users.get(0).getDatabaseId())).isEqualTo(50);
         assertThat(team1Library.getStarchips(team1Users.get(1).getDatabaseId())).isEqualTo(75);
@@ -209,7 +212,7 @@ class GameStateServiceIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(team2User2Messages)))
                 .andExpect(status().isOk());
-
+        sleep();
         Library team1Library = gameStateService.getLibrary(1);
         Library team2Library = gameStateService.getLibrary(2);
 
@@ -242,7 +245,7 @@ class GameStateServiceIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(secondMessages)))
                 .andExpect(status().isOk());
-
+        sleep();
         // Verify the value was overwritten with the most recent
         assertThat(team1Library.getStarchips(team1Users.get(0).getDatabaseId())).isEqualTo(100);
         assertThat(team1Library.getTotalTeamStarchips()).isEqualTo(100);
@@ -280,6 +283,7 @@ class GameStateServiceIntegrationTest {
                 .content(objectMapper.writeValueAsString(team2Card1)))
                 .andExpect(status().isOk());
 
+        sleep();
         Library team1Library = gameStateService.getLibrary(1);
         Library team2Library = gameStateService.getLibrary(2);
 
@@ -312,6 +316,8 @@ class GameStateServiceIntegrationTest {
                 .content(objectMapper.writeValueAsString(multiCardMessages)))
                 .andExpect(status().isOk());
 
+        sleep();
+
         Library team1Library = gameStateService.getLibrary(1);
         Map<Integer, CardAcquisition> team1Cards = team1Library.getAcquiredCards();
 
@@ -333,6 +339,8 @@ class GameStateServiceIntegrationTest {
                 .content(objectMapper.writeValueAsString(cardMessage1)))
                 .andExpect(status().isOk());
 
+        sleep();
+
         Library team1Library = gameStateService.getLibrary(1);
         CardAcquisition acquisition = team1Library.getAcquiredCards().get(122);
 
@@ -351,6 +359,7 @@ class GameStateServiceIntegrationTest {
         );
 
         gameStateService.update(updates);
+        sleep();
 
         Library team1Library = gameStateService.getLibrary(1);
         CardAcquisition acquisition = team1Library.getAcquiredCards().get(122);
@@ -397,6 +406,7 @@ class GameStateServiceIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(team2User1)))
                 .andExpect(status().isOk());
+        sleep();
 
         Library team1Library = gameStateService.getLibrary(1);
         Library team2Library = gameStateService.getLibrary(2);
@@ -424,6 +434,7 @@ class GameStateServiceIntegrationTest {
 
         gameStateService.reset();
         gameStateService.reloadFromDatabase();
+        sleep();
 
         Library team1Library = gameStateService.getLibrary(1);
         assertThat(team1Library.getStarchips(team1Users.get(0).getDatabaseId())).isEqualTo(1000);
@@ -433,7 +444,7 @@ class GameStateServiceIntegrationTest {
     }
 
     @Test
-    void testTeamPageSnapshotIncludesRosterAndLatestAcquisitions() throws Exception {
+    void testProcessedTeamSnapshotIncludesLatestAcquisitions() throws Exception {
         List<EmuMessage> user1Messages = Arrays.asList(
             createEmuMessage(MessageType.DROP, 100, 0, 1),
             createEmuMessage(MessageType.FUSE, 200, 0, 1)
@@ -454,16 +465,15 @@ class GameStateServiceIntegrationTest {
             .content(objectMapper.writeValueAsString(user2Messages)))
             .andExpect(status().isOk());
 
-        TeamPageSnapshot snapshot = gameStateService.getTeamPageSnapshot(1);
+        sleep();
+        TeamPageSnapshot snapshot = gameStateService.getLatestTeamPageSnapshot(1);
 
+        assertThat(snapshot).isNotNull();
         assertThat(snapshot.teamId()).isEqualTo(1);
-        assertThat(snapshot.version()).isGreaterThan(0);
         assertThat(snapshot.totalStarchips()).isEqualTo(75);
         assertThat(snapshot.uniqueCardCount()).isEqualTo(3);
-        assertThat(snapshot.members()).extracting(member -> member.playerName()).contains("Team1User1", "Team1User2", "Team1User3");
         assertThat(snapshot.latestAcquisitions()).hasSize(3);
         assertThat(snapshot.latestAcquisitions().get(0).cardId()).isEqualTo(300);
-        assertThat(snapshot.acquiredCards()).containsKeys(100, 200, 300);
     }
 
     @Test
@@ -477,23 +487,24 @@ class GameStateServiceIntegrationTest {
         updates.add(createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, 999, baseTime.plusSeconds(20)));
 
         gameStateService.update(updates);
+        sleep();
 
-        PlayerPageSnapshot snapshot = gameStateService.getPlayerPageSnapshot(team1Users.get(0).getDatabaseId());
+        List<PlayerUpdate> latestUpdates = gameStateService.getLatestPlayerUpdates(team1Users.get(0).getDatabaseId());
 
-        assertThat(snapshot.playerId()).isEqualTo(team1Users.get(0).getDatabaseId());
-        assertThat(snapshot.version()).isGreaterThan(0);
-        assertThat(snapshot.playerName()).isEqualTo("Team1User1");
-        assertThat(snapshot.starchips()).isEqualTo(999);
-        assertThat(snapshot.latestUpdates()).hasSize(10);
-        assertThat(snapshot.latestUpdates()).allMatch(update -> update.getSource() != MessageType.STARCHIPS);
-        assertThat(snapshot.latestUpdates().get(0).getValue()).isEqualTo(111);
-        assertThat(snapshot.latestUpdates().get(9).getValue()).isEqualTo(102);
+        // Should track the 10 most recent DROP messages (non-starchips)
+        assertThat(latestUpdates).hasSize(10);
+        assertThat(latestUpdates).allMatch(update -> update.getSource() != MessageType.STARCHIPS);
+        assertThat(latestUpdates.get(0).getValue()).isEqualTo(111);
+        assertThat(latestUpdates.get(9).getValue()).isEqualTo(102);
     }
 
     @Test
-    void testListenersReceiveLatestSnapshots() {
-        TestStateChangeListener listener = new TestStateChangeListener();
-        gameStateService.addStateChangeListener(listener);
+    void testListenersReceiveLatestSnapshots() throws InterruptedException {
+        TestTeamUpdateListener teamListener = new TestTeamUpdateListener();
+        gameStateService.addTeamUpdateListener(teamListener);
+
+        TestPlayerUpdateListener playerListener = new TestPlayerUpdateListener();
+        gameStateService.addPlayerUpdateListener(team1Users.get(0).getDatabaseId(), playerListener);
 
         Instant baseTime = Instant.now();
         gameStateService.update(List.of(
@@ -501,31 +512,31 @@ class GameStateServiceIntegrationTest {
             createPlayerUpdate(team1Users.get(0), MessageType.DROP, 123, baseTime.plusSeconds(1))
         ));
 
-        TeamPageSnapshot latestTeamSnapshot = gameStateService.getTeamPageSnapshot(1);
-        PlayerPageSnapshot latestPlayerSnapshot = gameStateService.getPlayerPageSnapshot(team1Users.get(0).getDatabaseId());
+        sleep();
 
-        assertThat(listener.latestTeamSnapshot).isNotNull();
-        assertThat(listener.latestPlayerSnapshot).isNotNull();
-        assertThat(listener.latestTeamSnapshot.version()).isEqualTo(latestTeamSnapshot.version());
-        assertThat(listener.latestTeamSnapshot.acquiredCards()).containsKey(123);
-        assertThat(listener.latestPlayerSnapshot.version()).isEqualTo(latestPlayerSnapshot.version());
-        assertThat(listener.latestPlayerSnapshot.starchips()).isEqualTo(321);
-        assertThat(listener.latestPlayerSnapshot.latestUpdates()).extracting(PlayerUpdate::getValue).containsExactly(123);
+        assertThat(teamListener.latestTeamSnapshot).isNotNull();
+        assertThat(teamListener.latestTeamSnapshot.teamId()).isEqualTo(1);
+        assertThat(playerListener.latestPlayerUpdates).isNotNull();
+        // player listeners DO receive starchip updates
+        assertThat(playerListener.latestPlayerUpdates).hasSize(2);
+        assertThat(playerListener.latestPlayerUpdates.get(1).getValue()).isEqualTo(123);
     }
 
-    private static final class TestStateChangeListener implements StateChangeListener {
-
+    private static final class TestTeamUpdateListener implements TeamUpdateListener {
         private TeamPageSnapshot latestTeamSnapshot;
-        private PlayerPageSnapshot latestPlayerSnapshot;
 
         @Override
-        public void onTeamStateChanged(TeamPageSnapshot snapshot) {
+        public void onTeamUpdate(TeamPageSnapshot snapshot) {
             latestTeamSnapshot = snapshot;
         }
+    }
+
+    private static final class TestPlayerUpdateListener implements PlayerUpdateListener {
+        private List<PlayerUpdate> latestPlayerUpdates;
 
         @Override
-        public void onPlayerStateChanged(PlayerPageSnapshot snapshot) {
-            latestPlayerSnapshot = snapshot;
+        public void onPlayerUpdate(List<PlayerUpdate> updates) {
+            latestPlayerUpdates = updates;
         }
     }
 
@@ -547,5 +558,14 @@ class GameStateServiceIntegrationTest {
         update.setLastRng(0);
         update.setNowRng(1);
         return update;
+    }
+
+    private static void sleep() {
+        try {
+                Thread.sleep(500);
+        }
+        catch(Exception ex) {
+                throw new RuntimeException(ex);
+        }
     }
 }
