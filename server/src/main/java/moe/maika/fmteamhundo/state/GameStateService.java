@@ -86,20 +86,36 @@ public class GameStateService {
     // this may run on another thread!
     private void consumeLibraryUpdate(LibraryUpdate libraryUpdate) {
         RingBuffer<CardAcquisition> teamAcquisitions = latestTeamAcquisitions.computeIfAbsent(libraryUpdate.teamId(), _ -> new RingBuffer<>(TEAM_PAGE_UPDATE_LIMIT));
-        teamAcquisitions.addAll(libraryUpdate.newAcquisitions());
-        TeamPageSnapshot updatedSnapshot = new TeamPageSnapshot(libraryUpdate.teamId(), libraryUpdate.timestamp(), libraryUpdate.totalStarchips(), libraryUpdate.uniqueCardCount(), teamAcquisitions.toList());
+        for(CardAcquisition card : libraryUpdate.newAcquisitions()) {
+            teamAcquisitions.addOrReplace(card, oldCard -> {
+                if(card.cardId() != oldCard.cardId())
+                    return Boolean.FALSE;
+                if(card.acquisitionTime().isBefore(oldCard.acquisitionTime()))
+                    return Boolean.TRUE;
+                return null;
+            });
+        }
+        TeamPageSnapshot updatedSnapshot = new TeamPageSnapshot(libraryUpdate.teamId(), libraryUpdate.timestamp(), libraryUpdate.totalStarchips(), libraryUpdate.uniqueCardCount());
         latestTeamSnapshots.merge(libraryUpdate.teamId(), updatedSnapshot, (existing, newVal) -> 
                 existing.timestamp().isBefore(newVal.timestamp()) ? newVal : existing);
         notifyTeamUpdateListeners(List.of(updatedSnapshot));
     }
 
-    public synchronized Library getLibrary(int teamId) {
+    public Library getLibrary(int teamId) {
         return teamLibraries.getOrDefault(teamId, new Library(teamId, this::consumeLibraryUpdate));
+    }
+
+    public List<CardAcquisition> getLatestCardAcquisitions(int teamId) {
+        RingBuffer<CardAcquisition> cards = latestTeamAcquisitions.get(teamId);
+        if(cards == null) {
+            return List.of();
+        }
+        return cards.toList();
     }
 
     public TeamPageSnapshot getLatestTeamPageSnapshot(int teamId) {
         TeamPageSnapshot snap = latestTeamSnapshots.get(teamId);
-        return snap != null ? snap : new TeamPageSnapshot(teamId, Instant.MIN, 0, 0, List.of());
+        return snap != null ? snap : new TeamPageSnapshot(teamId, Instant.MIN, 0, 0);
     }
 
     public List<PlayerUpdate> getLatestPlayerUpdates(long playerId) {

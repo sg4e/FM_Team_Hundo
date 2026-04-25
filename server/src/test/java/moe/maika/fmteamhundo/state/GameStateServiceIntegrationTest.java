@@ -467,13 +467,14 @@ class GameStateServiceIntegrationTest {
 
         sleep();
         TeamPageSnapshot snapshot = gameStateService.getLatestTeamPageSnapshot(1);
+        List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(1);
 
         assertThat(snapshot).isNotNull();
         assertThat(snapshot.teamId()).isEqualTo(1);
         assertThat(snapshot.totalStarchips()).isEqualTo(75);
         assertThat(snapshot.uniqueCardCount()).isEqualTo(3);
-        assertThat(snapshot.latestAcquisitions()).hasSize(3);
-        assertThat(snapshot.latestAcquisitions().get(0).cardId()).isEqualTo(300);
+        assertThat(latestAcquisitions).hasSize(3);
+        assertThat(latestAcquisitions.get(0).cardId()).isEqualTo(300);
     }
 
     @Test
@@ -520,6 +521,46 @@ class GameStateServiceIntegrationTest {
         // player listeners DO receive starchip updates
         assertThat(playerListener.latestPlayerUpdates).hasSize(2);
         assertThat(playerListener.latestPlayerUpdates.get(1).getValue()).isEqualTo(123);
+    }
+
+    @Test
+    void testNoDuplicateCardAcquisitionsOnReplay() throws Exception {
+        // This test simulates the issue that occurred during database replay:
+        // When the same card is acquired via different sources or timestamps arrive out of order,
+        // it should not create duplicate entries in the team acquisitions list.
+        
+        Instant earlierTime = Instant.now();
+        Instant laterTime = earlierTime.plusSeconds(3600); // 1 hour later
+        
+        // First batch: Card 19 acquired via DROP at later time
+        List<PlayerUpdate> firstBatch = Arrays.asList(
+            createPlayerUpdate(team1Users.get(0), MessageType.DROP, 19, laterTime)
+        );
+        gameStateService.update(firstBatch);
+        sleep();
+        
+        // Verify card is in acquisitions
+        List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(1);
+        assertThat(latestAcquisitions).hasSize(1);
+        assertThat(latestAcquisitions.get(0).cardId()).isEqualTo(19);
+        assertThat(latestAcquisitions.get(0).source()).isEqualTo(MessageType.DROP);
+        
+        // Second batch: Same card acquired via FUSE at earlier time (simulating out-of-order replay)
+        // This should replace the DROP with FUSE, not create a duplicate
+        List<PlayerUpdate> secondBatch = Arrays.asList(
+            createPlayerUpdate(team1Users.get(0), MessageType.FUSE, 19, earlierTime)
+        );
+        gameStateService.update(secondBatch);
+        sleep();
+        
+        // Verify no duplicate: should only have the FUSE acquisition (the earlier one)
+        List<CardAcquisition> latestAcquisitions2 = gameStateService.getLatestCardAcquisitions(1);
+        assertThat(latestAcquisitions2)
+            .hasSize(1)
+            .extracting("cardId")
+            .containsExactly(19);
+        assertThat(latestAcquisitions2.get(0).source()).isEqualTo(MessageType.FUSE);
+        assertThat(latestAcquisitions2.get(0).acquisitionTime()).isEqualTo(earlierTime);
     }
 
     private static final class TestTeamUpdateListener implements TeamUpdateListener {

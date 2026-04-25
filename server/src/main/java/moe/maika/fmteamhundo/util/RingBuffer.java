@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 
 /**
  * A thread-safe ring buffer that maintains elements in sorted order (newest first)
@@ -97,6 +98,46 @@ public class RingBuffer<E extends Comparable<E>> implements Iterable<E>, Seriali
             }
             
             return true;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public boolean replaceAll(E replacement, Function<E, Boolean> filter) {
+        boolean replaced = false;
+        lock.writeLock().lock();
+        try {
+            for(int i = 0, n = elements.size(); i < n; i++) {
+                Boolean decision = filter.apply(elements.get(i));
+                if(decision == null) {
+                    return true;
+                }
+                if(decision) {
+                    elements.set(i, replacement);
+                    replaced = true;
+                }
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+        return replaced;
+    }
+
+    /**
+     * If true, replace.
+     * If false, add if never null.
+     * If null, stop trying to replace and don't add.
+     * 
+     * @param element
+     * @param replaceCondition
+     */
+    public void addOrReplace(E element, Function<E, Boolean> replaceCondition) {
+        lock.writeLock().lock();
+        try {
+            boolean replaced = replaceAll(element, replaceCondition);
+            if(!replaced) {
+                add(element);
+            }
         } finally {
             lock.writeLock().unlock();
         }

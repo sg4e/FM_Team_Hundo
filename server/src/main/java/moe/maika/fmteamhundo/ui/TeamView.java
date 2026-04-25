@@ -177,12 +177,13 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         section.setSpacing(false);
         section.add(new H3("Latest 10 cards"));
 
+        List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(teamId);
         UnorderedList list = new UnorderedList();
-        if(snapshot.latestAcquisitions().isEmpty()) {
+        if(latestAcquisitions.isEmpty()) {
             list.add(new ListItem("No cards acquired yet."));
         }
         else {
-            for(CardAcquisition acquisition : snapshot.latestAcquisitions()) {
+            for(CardAcquisition acquisition : latestAcquisitions) {
                 list.add(new ListItem(
                     "Card " + acquisition.cardId() + " via " + acquisition.source()
                         + " by " + userMappings.getUserById(acquisition.playerId()).getName()

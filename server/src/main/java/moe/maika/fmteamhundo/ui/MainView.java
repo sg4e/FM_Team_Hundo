@@ -124,12 +124,13 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
         stats.getStyle().set("gap", "0.5rem");
         stats.getStyle().set("flex-wrap", "wrap");
 
+        List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(team.getTeamId());
         UnorderedList acquisitions = new UnorderedList();
-        if(snapshot.latestAcquisitions().isEmpty()) {
+        if(latestAcquisitions.isEmpty()) {
             acquisitions.add(new ListItem("No cards acquired yet."));
         }
         else {
-            for(CardAcquisition acquisition : snapshot.latestAcquisitions()) {
+            for(CardAcquisition acquisition : latestAcquisitions) {
                 acquisitions.add(new ListItem(describeAcquisition(acquisition)));
             }
         }
