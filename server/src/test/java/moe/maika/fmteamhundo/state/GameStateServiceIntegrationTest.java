@@ -474,7 +474,7 @@ class GameStateServiceIntegrationTest {
             .andExpect(status().isOk());
 
         sleep();
-        TeamPageSnapshot snapshot = gameStateService.getLatestTeamPageSnapshot(1);
+        LibraryUpdate snapshot = gameStateService.getLatestLibraryUpdate(1);
         List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(1);
 
         assertThat(snapshot).isNotNull();
@@ -652,10 +652,10 @@ class GameStateServiceIntegrationTest {
     }
 
     private static final class TestTeamUpdateListener implements TeamUpdateListener {
-        private TeamPageSnapshot latestTeamSnapshot;
+        private LibraryUpdate latestTeamSnapshot;
 
         @Override
-        public void onTeamUpdate(TeamPageSnapshot snapshot) {
+        public void onTeamUpdate(LibraryUpdate snapshot) {
             latestTeamSnapshot = snapshot;
         }
     }

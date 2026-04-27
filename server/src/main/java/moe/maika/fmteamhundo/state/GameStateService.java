@@ -37,7 +37,7 @@ public class GameStateService {
 
     private final ConcurrentHashMap<Integer, Library> teamLibraries;
     private final ConcurrentHashMap<Long, RingBuffer<PlayerUpdate>> latestPlayerUpdates;
-    private final ConcurrentHashMap<Integer, TeamPageSnapshot> latestTeamSnapshots;
+    private final ConcurrentHashMap<Integer, LibraryUpdate> latestTeamSnapshots;
     private final ConcurrentHashMap<Integer, RingBuffer<CardAcquisition>> latestTeamAcquisitions;
     private final Set<TeamUpdateListener> teamUpdateListeners;
     private final ConcurrentHashMap<Long, Set<PlayerUpdateListener>> playerUpdateListenerMap;
@@ -97,10 +97,9 @@ public class GameStateService {
                 return null;
             });
         }
-        TeamPageSnapshot updatedSnapshot = new TeamPageSnapshot(libraryUpdate.teamId(), libraryUpdate.timestamp(), libraryUpdate.totalStarchips(), libraryUpdate.uniqueCardCount());
-        latestTeamSnapshots.merge(libraryUpdate.teamId(), updatedSnapshot, (existing, newVal) -> 
+        latestTeamSnapshots.merge(libraryUpdate.teamId(), libraryUpdate, (existing, newVal) -> 
                 existing.timestamp().isBefore(newVal.timestamp()) ? newVal : existing);
-        notifyTeamUpdateListeners(List.of(updatedSnapshot));
+        notifyTeamUpdateListeners(libraryUpdate);
     }
 
     public Library getLibrary(int teamId) {
@@ -115,9 +114,13 @@ public class GameStateService {
         return cards.toList();
     }
 
-    public TeamPageSnapshot getLatestTeamPageSnapshot(int teamId) {
-        TeamPageSnapshot snap = latestTeamSnapshots.get(teamId);
-        return snap != null ? snap : new TeamPageSnapshot(teamId, Instant.MIN, 0, 0);
+    public LibraryUpdate getLatestLibraryUpdate(int teamId) {
+        LibraryUpdate snap = latestTeamSnapshots.get(teamId);
+        if(snap == null) {
+            snap = getLibrary(teamId).generateEmptyLibraryUpdate();
+            latestTeamSnapshots.putIfAbsent(teamId, snap);
+        }
+        return snap;
     }
 
     public List<PlayerUpdate> getLatestPlayerUpdates(long playerId) {
@@ -162,17 +165,15 @@ public class GameStateService {
         playerUpdateListenerMap.computeIfAbsent(playerId, _ -> ConcurrentHashMap.newKeySet()).remove(listener);
     }
 
-    private void notifyTeamUpdateListeners(Collection<TeamPageSnapshot> snapshots) {
-        for(TeamPageSnapshot snapshot : snapshots) {
-            for(TeamUpdateListener listener : teamUpdateListeners) {
-                executorService.submit(() -> {
-                    try {
-                        listener.onTeamUpdate(snapshot);
-                    } catch(Exception e) {
-                        log.error("Error notifying listener of team state change for team {}: {}", snapshot.teamId(), e.getMessage(), e);
-                    }
-                });
-            }
+    private void notifyTeamUpdateListeners(LibraryUpdate update) {
+        for(TeamUpdateListener listener : teamUpdateListeners) {
+            executorService.submit(() -> {
+                try {
+                    listener.onTeamUpdate(update);
+                } catch(Exception e) {
+                    log.error("Error notifying listener of team state change for team {}: {}", update.teamId(), e.getMessage(), e);
+                }
+            });
         }
     }
 

@@ -35,8 +35,8 @@ import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
+import moe.maika.fmteamhundo.state.LibraryUpdate;
 import moe.maika.fmteamhundo.state.TeamUpdateListener;
-import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 import moe.maika.fmteamhundo.state.UserMappings;
 
 @Route("teams")
@@ -56,7 +56,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     private Integer teamId;
     private String teamName;
     private List<User> teamMembers;
-    private TeamPageSnapshot renderedSnapshot;
+    private LibraryUpdate renderedSnapshot;
     private UI currentUI;
 
     @Autowired
@@ -115,7 +115,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     }
 
     @Override
-    public void onTeamUpdate(TeamPageSnapshot snapshot) {
+    public void onTeamUpdate(LibraryUpdate snapshot) {
         if(teamId != null && teamId == snapshot.teamId() && currentUI != null) {
             currentUI.access(() -> renderIfNewer(snapshot));
         }
@@ -126,10 +126,10 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             renderMissingTeam();
             return;
         }
-        renderIfNewer(gameStateService.getLatestTeamPageSnapshot(teamId));
+        renderIfNewer(gameStateService.getLatestLibraryUpdate(teamId));
     }
 
-    private void renderIfNewer(TeamPageSnapshot snapshot) {
+    private void renderIfNewer(LibraryUpdate snapshot) {
         if(renderedSnapshot != null && snapshot.timestamp().isBefore(renderedSnapshot.timestamp())) {
             return;
         }
@@ -159,7 +159,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         return downloadLink;
     }
 
-    private void render(TeamPageSnapshot snapshot) {
+    private void render(LibraryUpdate snapshot) {
         content.removeAll();
 
         H1 title = new H1(teamName);
@@ -171,7 +171,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
                 createMembers(snapshot), createCardGrids(gameStateService.getLibrary(teamId).getAcquiredCards()));
     }
 
-    private Component createLatestAcquisitions(TeamPageSnapshot snapshot) {
+    private Component createLatestAcquisitions(LibraryUpdate snapshot) {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(false);
@@ -195,7 +195,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         return section;
     }
 
-    private Component createMembers(TeamPageSnapshot snapshot) {
+    private Component createMembers(LibraryUpdate snapshot) {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(false);

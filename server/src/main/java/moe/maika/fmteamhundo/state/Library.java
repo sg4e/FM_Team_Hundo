@@ -104,6 +104,10 @@ public class Library {
                 totalCostOfBuyables, canAffordRemainingBuyables, completed, completionTime);
     }
 
+    LibraryUpdate generateEmptyLibraryUpdate() {
+        return updateHundoProgress(Instant.MIN, List.of());
+    }
+
     // not synchronized so PlayerView calls don't block
     public long getStarchips(long participantId) {
         return starchips.getOrDefault(participantId, 0L);

@@ -26,8 +26,8 @@ import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
+import moe.maika.fmteamhundo.state.LibraryUpdate;
 import moe.maika.fmteamhundo.state.TeamUpdateListener;
-import moe.maika.fmteamhundo.state.TeamPageSnapshot;
 import moe.maika.fmteamhundo.state.UserMappings;
 
 @Route("")
@@ -40,7 +40,7 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
     private final UserMappings userMappings;
     private final List<Team> teams;
     private final VerticalLayout content;
-    private final Map<Integer, TeamPageSnapshot> teamSnapshots;
+    private final Map<Integer, LibraryUpdate> teamSnapshots;
     private UI currentUI;
 
     @Autowired
@@ -53,7 +53,7 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
         this.userMappings = userMappings;
         this.teams = teamRepository.findAll();
         this.teamSnapshots = teams.stream().map(Team::getTeamId)
-                .collect(Collectors.toMap(Function.identity(), id -> gameStateService.getLatestTeamPageSnapshot(id)));
+                .collect(Collectors.toMap(Function.identity(), id -> gameStateService.getLatestLibraryUpdate(id)));
         setSizeFull();
         setPadding(false);
         setSpacing(false);
@@ -78,14 +78,14 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
     }
 
     @Override
-    public void onTeamUpdate(TeamPageSnapshot snapshot) {
+    public void onTeamUpdate(LibraryUpdate snapshot) {
         if(currentUI != null) {
             currentUI.access(() -> applySnapshot(snapshot));
         }
     }
 
-    private void applySnapshot(TeamPageSnapshot snapshot) {
-        TeamPageSnapshot currentSnapshot = teamSnapshots.get(snapshot.teamId());
+    private void applySnapshot(LibraryUpdate snapshot) {
+        LibraryUpdate currentSnapshot = teamSnapshots.get(snapshot.teamId());
         if(currentSnapshot != null && currentSnapshot.timestamp().isAfter(snapshot.timestamp())) {
             return;
         }
@@ -100,12 +100,12 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
         content.add(title);
 
         for(Team team : teamRepository.findAll()) {
-            TeamPageSnapshot snapshot = teamSnapshots.get(team.getTeamId());
+            LibraryUpdate snapshot = teamSnapshots.get(team.getTeamId());
             content.add(createTeamCard(team, snapshot));
         }
     }
 
-    private Div createTeamCard(Team team, TeamPageSnapshot snapshot) {
+    private Div createTeamCard(Team team, LibraryUpdate snapshot) {
         Div card = new Div();
         card.getStyle().set("border", "1px solid #d0d7de");
         card.getStyle().set("border-radius", "12px");

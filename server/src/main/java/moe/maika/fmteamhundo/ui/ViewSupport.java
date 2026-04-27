@@ -20,7 +20,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.RouterLink;
 
 import moe.maika.fmteamhundo.state.HundoConstants;
-import moe.maika.fmteamhundo.state.TeamPageSnapshot;
+import moe.maika.fmteamhundo.state.LibraryUpdate;
 
 final class ViewSupport {
 
@@ -77,7 +77,7 @@ final class ViewSupport {
         return stat;
     }
 
-    static List<Component> createAllStats(TeamPageSnapshot snapshot, HundoConstants hundoConstants) {
+    static List<Component> createAllStats(LibraryUpdate snapshot, HundoConstants hundoConstants) {
         return List.of(
             createStat("Cards", String.format("%d/%d", snapshot.uniqueCardCount(), hundoConstants.getTotalObtainableCards())),
             createStarchipsStat(snapshot.totalStarchips())
