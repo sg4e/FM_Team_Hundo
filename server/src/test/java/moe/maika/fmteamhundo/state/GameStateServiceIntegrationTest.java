@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,8 @@ import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
+import moe.maika.ygofm.gamedata.Card;
+import moe.maika.ygofm.gamedata.FMDB;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -58,6 +63,9 @@ class GameStateServiceIntegrationTest {
 
     @Autowired
     private GameStateService gameStateService;
+
+    @Autowired
+    private HundoConstants hundoConstants;
 
     private List<User> team1Users;
     private List<User> team2Users;
@@ -563,6 +571,86 @@ class GameStateServiceIntegrationTest {
         assertThat(latestAcquisitions2.get(0).acquisitionTime()).isEqualTo(earlierTime);
     }
 
+    @Test
+    void testLibraryUpdateReportsAffordableBuyablesButIncompleteWithoutUnbuyables() {
+        AtomicReference<LibraryUpdate> latestUpdate = new AtomicReference<>();
+        Library library = new Library(1, hundoConstants, latestUpdate::set);
+        Instant now = Instant.now();
+
+        Set<Card> obtainableCards = getObtainableCards();
+        Set<Card> unbuyableCards = getUnbuyableCards(obtainableCards);
+        int totalBuyableCost = getTotalBuyableCost(obtainableCards);
+
+        boolean changed = library.update(List.of(
+            createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, totalBuyableCost, now)
+        ));
+
+        assertThat(changed).isTrue();
+        assertThat(latestUpdate.get()).isNotNull();
+        assertThat(latestUpdate.get().totalUnobtained()).isEqualTo(obtainableCards.size());
+        assertThat(latestUpdate.get().totalUnbuyables()).isEqualTo(unbuyableCards.size());
+        assertThat(latestUpdate.get().totalCostOfBuyables()).isEqualTo(totalBuyableCost);
+        assertThat(latestUpdate.get().canAffordRemainingBuyables()).isTrue();
+        assertThat(latestUpdate.get().hasCompletedHundo()).isFalse();
+        assertThat(latestUpdate.get().completionTime()).isNull();
+    }
+
+    @Test
+    void testLibraryUpdateMarksHundoCompleteOnceAllUnbuyablesAreObtained() {
+        AtomicReference<LibraryUpdate> latestUpdate = new AtomicReference<>();
+        Library library = new Library(1, hundoConstants, latestUpdate::set);
+        Instant completionTimestamp = Instant.now();
+
+        Set<Card> obtainableCards = getObtainableCards();
+        Set<Card> unbuyableCards = getUnbuyableCards(obtainableCards);
+        int totalBuyableCost = getTotalBuyableCost(obtainableCards);
+
+        List<PlayerUpdate> completionUpdates = new ArrayList<>();
+        completionUpdates.add(createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, totalBuyableCost, completionTimestamp));
+        for (Card card : unbuyableCards) {
+            completionUpdates.add(createPlayerUpdate(team1Users.get(0), MessageType.DROP, card.getId(), completionTimestamp));
+        }
+
+        boolean changed = library.update(completionUpdates);
+
+        assertThat(changed).isTrue();
+        assertThat(latestUpdate.get()).isNotNull();
+        assertThat(latestUpdate.get().totalUnbuyables()).isZero();
+        assertThat(latestUpdate.get().totalCostOfBuyables()).isEqualTo(totalBuyableCost);
+        assertThat(latestUpdate.get().canAffordRemainingBuyables()).isTrue();
+        assertThat(latestUpdate.get().hasCompletedHundo()).isTrue();
+        assertThat(latestUpdate.get().completionTime()).isEqualTo(completionTimestamp);
+    }
+
+    @Test
+    void testLibraryUpdatePreservesFirstCompletionTime() {
+        AtomicReference<LibraryUpdate> latestUpdate = new AtomicReference<>();
+        Library library = new Library(1, hundoConstants, latestUpdate::set);
+        Instant completionTimestamp = Instant.now();
+        Instant laterTimestamp = completionTimestamp.plusSeconds(30);
+
+        Set<Card> obtainableCards = getObtainableCards();
+        Set<Card> unbuyableCards = getUnbuyableCards(obtainableCards);
+        int totalBuyableCost = getTotalBuyableCost(obtainableCards);
+
+        List<PlayerUpdate> completionUpdates = new ArrayList<>();
+        completionUpdates.add(createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, totalBuyableCost, completionTimestamp));
+        for (Card card : unbuyableCards) {
+            completionUpdates.add(createPlayerUpdate(team1Users.get(0), MessageType.DROP, card.getId(), completionTimestamp));
+        }
+        library.update(completionUpdates);
+
+        boolean changed = library.update(List.of(
+            createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, totalBuyableCost + 1, laterTimestamp)
+        ));
+
+        assertThat(changed).isTrue();
+        assertThat(latestUpdate.get()).isNotNull();
+        assertThat(latestUpdate.get().hasCompletedHundo()).isTrue();
+        assertThat(latestUpdate.get().completionTime()).isEqualTo(completionTimestamp);
+        assertThat(latestUpdate.get().timestamp()).isEqualTo(laterTimestamp);
+    }
+
     private static final class TestTeamUpdateListener implements TeamUpdateListener {
         private TeamPageSnapshot latestTeamSnapshot;
 
@@ -599,6 +687,25 @@ class GameStateServiceIntegrationTest {
         update.setLastRng(0);
         update.setNowRng(1);
         return update;
+    }
+
+    private Set<Card> getObtainableCards() {
+        return FMDB.getInstance().getAllCards().stream()
+            .filter(card -> !hundoConstants.getUnobtainableCards().contains(card.getId()))
+            .collect(Collectors.toSet());
+    }
+
+    private static Set<Card> getUnbuyableCards(Set<Card> obtainableCards) {
+        return obtainableCards.stream()
+            .filter(card -> card.getStarchips() == 0 || card.getStarchips() == 999_999)
+            .collect(Collectors.toSet());
+    }
+
+    private static int getTotalBuyableCost(Set<Card> obtainableCards) {
+        return obtainableCards.stream()
+            .filter(card -> card.getStarchips() != 0 && card.getStarchips() != 999_999)
+            .mapToInt(Card::getStarchips)
+            .sum();
     }
 
     private static void sleep() {

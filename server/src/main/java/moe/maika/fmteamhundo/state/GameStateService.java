@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,10 +45,12 @@ public class GameStateService {
     private final UserRepository userRepo;
     private final PlayerUpdateRepository playerUpdateRepository;
     private final UserMappings userMappings;
+    private final HundoConstants hundoConstants;
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
-    public GameStateService(UserRepository userRepo, PlayerUpdateRepository playerUpdateRepository, UserMappings userMappings) {
+    public GameStateService(UserRepository userRepo, PlayerUpdateRepository playerUpdateRepository, UserMappings userMappings,
+            HundoConstants hundoConstants) {
         teamLibraries = new ConcurrentHashMap<>();
         latestPlayerUpdates = new ConcurrentHashMap<>();
         latestTeamSnapshots = new ConcurrentHashMap<>();
@@ -58,6 +59,7 @@ public class GameStateService {
         playerUpdateListenerMap = new ConcurrentHashMap<>();
         this.userRepo = userRepo;
         this.playerUpdateRepository = playerUpdateRepository;
+        this.hundoConstants = hundoConstants;
         this.userMappings = userMappings;
         reloadFromDatabase();
     }
@@ -75,7 +77,7 @@ public class GameStateService {
             updatesByTeam.computeIfAbsent(user.getTeamId(), _ -> new ArrayList<>()).add(update);
         }
         updatesByTeam.forEach((teamId, teamUpdates) -> {
-            Library library = teamLibraries.computeIfAbsent(teamId, _ -> new Library(teamId, this::consumeLibraryUpdate));
+            Library library = teamLibraries.computeIfAbsent(teamId, _ -> new Library(teamId, hundoConstants, this::consumeLibraryUpdate));
             updatesByLibrary.put(library, teamUpdates);
         });
         updatesByLibrary.forEach((library, libraryUpdates) -> {
@@ -102,7 +104,7 @@ public class GameStateService {
     }
 
     public Library getLibrary(int teamId) {
-        return teamLibraries.getOrDefault(teamId, new Library(teamId, this::consumeLibraryUpdate));
+        return teamLibraries.getOrDefault(teamId, new Library(teamId, hundoConstants, this::consumeLibraryUpdate));
     }
 
     public List<CardAcquisition> getLatestCardAcquisitions(int teamId) {

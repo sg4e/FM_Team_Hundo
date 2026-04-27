@@ -9,5 +9,11 @@ public record LibraryUpdate(
     Instant timestamp,
     long totalStarchips,
     int uniqueCardCount,
-    List<CardAcquisition> newAcquisitions
+    List<CardAcquisition> newAcquisitions,
+    int totalUnobtained,
+    int totalUnbuyables,
+    int totalCostOfBuyables,
+    boolean canAffordRemainingBuyables,
+    boolean hasCompletedHundo,
+    Instant completionTime
 ) { }

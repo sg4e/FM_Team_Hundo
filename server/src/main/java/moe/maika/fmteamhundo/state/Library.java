@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 
 import moe.maika.fmteamhundo.api.MessageType;
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
+import moe.maika.ygofm.gamedata.Card;
+import moe.maika.ygofm.gamedata.FMDB;
 
 public class Library {
 
@@ -21,11 +23,18 @@ public class Library {
     private final Consumer<LibraryUpdate> onLibraryUpdate;
     private final Map<Integer, CardAcquisition> acquiredCards = new TreeMap<>();
     private final ConcurrentHashMap<Long, Long> starchips = new ConcurrentHashMap<>();
-    private long totalStarchips = 0;
+    private volatile long totalStarchips = 0;
+    private final HundoConstants hundoConstants;
+    private final FMDB fmdb;
 
-    Library(int teamId, Consumer<LibraryUpdate> onLibraryUpdate) {
+    private volatile boolean hasCompletedHundo = false;
+    private volatile Instant completionTime = null;
+
+    Library(int teamId, HundoConstants hundoConstants, Consumer<LibraryUpdate> onLibraryUpdate) {
         this.teamId = teamId;
+        this.hundoConstants = hundoConstants;
         this.onLibraryUpdate = onLibraryUpdate;
+        this.fmdb = FMDB.getInstance();
     }
 
     boolean update(Collection<PlayerUpdate> teamUpdates) {
@@ -44,7 +53,7 @@ public class Library {
             for(PlayerUpdate card : cardUpdates) {
                 // make sure library maps to first acquisition of the card
                 if(!acquiredCards.containsKey(card.getValue()) || acquiredCards.get(card.getValue()).acquisitionTime().isAfter(card.getTime())) {
-                    CardAcquisition acquisition = new CardAcquisition(card.getValue(), card.getTime(), card.getSource(), card.getParticipantId());
+                    CardAcquisition acquisition = new CardAcquisition(card.getValue(), card.getTime(), card.getSource(), card.getParticipantId(), card.getOpponentId());
                     newAcquisitions.add(acquisition);
                     acquiredCards.put(card.getValue(), acquisition);
                     changed = true;
@@ -63,7 +72,7 @@ public class Library {
                 }
             }
             if(changed) {
-                libraryUpdate = new LibraryUpdate(this, teamId, latestTimestamp, totalStarchips, acquiredCards.size(), newAcquisitions);
+                libraryUpdate = updateHundoProgress(latestTimestamp, newAcquisitions);
             }
         }
         if(libraryUpdate != null) {
@@ -72,12 +81,35 @@ public class Library {
         return changed;
     }
 
+    private LibraryUpdate updateHundoProgress(Instant latestTimestamp, List<CardAcquisition> newAcquisitions) {
+        Set<Integer> obtained = acquiredCards.keySet();
+        Set<Integer> unobtainable = hundoConstants.getUnobtainableCards();
+        Set<Card> unobtainedCards = fmdb.getAllCards().stream()
+                .filter(card -> !unobtainable.contains(card.getId()))
+                .filter(card -> !obtained.contains(card.getId()))
+                .collect(Collectors.toSet());
+        int totalUnobtained = unobtainedCards.size();
+        Set<Card> unbuyables = unobtainedCards.stream().filter(card -> card.getStarchips() == 999_999 || card.getStarchips() == 0).collect(Collectors.toSet());
+        int totalUnbuyables = unbuyables.size();
+        int totalCostOfBuyables = unobtainedCards.stream().filter(card -> !unbuyables.contains(card)).mapToInt(Card::getStarchips).sum();
+        boolean canAffordRemainingBuyables = totalStarchips >= totalCostOfBuyables;
+        boolean completed = canAffordRemainingBuyables && totalUnbuyables == 0;
+        if(completed && !hasCompletedHundo) {
+            hasCompletedHundo = true;
+            // using latestTimestamp for this isn't perfectly accurate since it's not the timestamp of precisely the update that completely the hundo
+            // but the difference should be negligible
+            completionTime = latestTimestamp;
+        }
+        return new LibraryUpdate(this, teamId, latestTimestamp, totalStarchips, acquiredCards.size(), newAcquisitions, totalUnobtained, totalUnbuyables,
+                totalCostOfBuyables, canAffordRemainingBuyables, completed, completionTime);
+    }
+
     // not synchronized so PlayerView calls don't block
     public long getStarchips(long participantId) {
         return starchips.getOrDefault(participantId, 0L);
     }
 
-    public synchronized long getTotalTeamStarchips() {
+    public long getTotalTeamStarchips() {
         return totalStarchips;
     }
 

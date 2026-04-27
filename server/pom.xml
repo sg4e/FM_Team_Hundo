@@ -112,6 +112,11 @@
             <artifactId>twitch4j-helix</artifactId>
             <version>1.25.0</version>
         </dependency>
+        <dependency>
+            <groupId>moe.maika</groupId>
+            <artifactId>ygofm-gamedata</artifactId>
+            <version>1.1.0</version>
+        </dependency>
         <!-- Spring Security OAuth2 Client -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
