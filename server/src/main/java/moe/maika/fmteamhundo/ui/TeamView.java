@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +29,8 @@ import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.entities.User;
-import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.service.TeamService;
 import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -48,9 +47,9 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
 
     private final GameStateService gameStateService;
     private final UserRepository userRepository;
-    private final TeamRepository teamRepository;
     private final HundoConstants hundoConstants;
     private final UserMappings userMappings;
+    private final TeamService teamService;
     private final VerticalLayout content;
 
     private Integer teamId;
@@ -60,14 +59,14 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     private UI currentUI;
 
     @Autowired
-    public TeamView(GameStateService gameStateService, UserRepository userRepository, TeamRepository teamRepository, 
-            HundoConstants hundoConstants, UserMappings userMappings
+    public TeamView(GameStateService gameStateService, UserRepository userRepository, 
+            HundoConstants hundoConstants, UserMappings userMappings, TeamService teamService
     ) {
         this.gameStateService = gameStateService;
         this.userRepository = userRepository;
-        this.teamRepository = teamRepository;
         this.hundoConstants = hundoConstants;
         this.userMappings = userMappings;
+        this.teamService = teamService;
 
         setSizeFull();
         setPadding(false);
@@ -95,10 +94,10 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     public void setParameter(BeforeEvent event, String parameter) {
         try {
             teamId = Integer.parseInt(parameter);
-            Optional<Team> team = teamRepository.findById(teamId);
+            Team team = teamService.getTeamById(teamId);
             teamMembers = userRepository.findByTeamId(teamId);
-            if(team.isPresent()) {
-                teamName = team.get().getName();
+            if(team != null) {
+                teamName = team.getName();
             }
             else {
                 teamId = null;

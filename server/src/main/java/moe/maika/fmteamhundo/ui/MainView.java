@@ -22,7 +22,7 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.data.entities.Team;
-import moe.maika.fmteamhundo.data.repos.TeamRepository;
+import moe.maika.fmteamhundo.service.TeamService;
 import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -35,7 +35,6 @@ import moe.maika.fmteamhundo.state.UserMappings;
 public class MainView extends VerticalLayout implements TeamUpdateListener {
 
     private final GameStateService gameStateService;
-    private final TeamRepository teamRepository;
     private final HundoConstants hundoConstants;
     private final UserMappings userMappings;
     private final List<Team> teams;
@@ -44,14 +43,13 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
     private UI currentUI;
 
     @Autowired
-    public MainView(GameStateService gameStateService, TeamRepository teamRepository, HundoConstants hundoConstants,
-            UserMappings userMappings
+    public MainView(GameStateService gameStateService, HundoConstants hundoConstants,
+            UserMappings userMappings, TeamService teamService
     ) {
         this.gameStateService = gameStateService;
-        this.teamRepository = teamRepository;
         this.hundoConstants = hundoConstants;
         this.userMappings = userMappings;
-        this.teams = teamRepository.findAll();
+        this.teams = teamService.getTeams();
         this.teamSnapshots = teams.stream().map(Team::getTeamId)
                 .collect(Collectors.toMap(Function.identity(), id -> gameStateService.getLatestLibraryUpdate(id)));
         setSizeFull();
@@ -99,7 +97,7 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
         H1 title = new H1("FM Team Hundo");
         content.add(title);
 
-        for(Team team : teamRepository.findAll()) {
+        for(Team team : teams) {
             LibraryUpdate snapshot = teamSnapshots.get(team.getTeamId());
             content.add(createTeamCard(team, snapshot));
         }
