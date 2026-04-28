@@ -84,6 +84,20 @@ public class ApiController {
                     .body(Map.of("result", "error", "message", "Update contains unobtainable cards"));
             }
 
+            //Make sure no card id is non-positive or greater than 722
+            if(emuMessages.stream().filter(msg -> msg.getType() != MessageType.STARCHIPS).map(EmuMessage::getValue)
+                .anyMatch(cardId -> cardId <= 0 || cardId > 722)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("result", "error", "message", "Invalid card id"));
+            }
+
+            //Make sure starchips total is not at or above 1000000
+            if(emuMessages.stream().filter(msg -> msg.getType() == MessageType.STARCHIPS).mapToInt(EmuMessage::getValue)
+                .anyMatch(starchips -> starchips >= 1_000_000)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("result", "error", "message", "Total starchips cannot be equal to or exceed 1000000"));
+            }
+
             // Check if user is on team 0 (no team)
             if (user.getTeamId() == 0) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)

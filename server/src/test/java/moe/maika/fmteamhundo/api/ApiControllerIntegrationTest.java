@@ -284,4 +284,43 @@ class ApiControllerIntegrationTest {
         assertThat(updates).isEmpty();
     }
 
+
+    @Test
+    void testUpdateEndpointWithInvalidCardId() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, -1, 0, 1, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid card id"));
+
+        // Verify no database insertions
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
+    @Test
+    void testUpdateEndpointWithExcessiveStarchips() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.STARCHIPS, 1_000_001, 0, 0, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Total starchips cannot be equal to or exceed 1000000"));
+
+        // Verify no database insertions
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
 }

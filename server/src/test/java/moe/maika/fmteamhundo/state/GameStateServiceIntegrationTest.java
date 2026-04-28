@@ -281,9 +281,9 @@ class GameStateServiceIntegrationTest {
                 .content(objectMapper.writeValueAsString(team1Card2)))
                 .andExpect(status().isOk());
 
-        // Team 2: User 1 acquires card 789 (RITUAL)
+        // Team 2: User 1 acquires card 666 (RITUAL)
         List<EmuMessage> team2Card1 = Arrays.asList(
-                createEmuMessage(MessageType.RITUAL, 789, 0, 1)
+                createEmuMessage(MessageType.RITUAL, 666, 0, 1)
         );
         mockMvc.perform(post("/api/update")
                 .header("X-API-Key", team2ApiKeys.get(0))
@@ -302,11 +302,11 @@ class GameStateServiceIntegrationTest {
         assertThat(team1Cards.get(122).cardId()).isEqualTo(122);
         assertThat(team1Cards.get(456).cardId()).isEqualTo(456);
 
-        assertThat(team2Cards).containsKeys(789);
-        assertThat(team2Cards.get(789).cardId()).isEqualTo(789);
+        assertThat(team2Cards).containsKeys(666);
+        assertThat(team2Cards.get(666).cardId()).isEqualTo(666);
 
         // Verify team isolation
-        assertThat(team1Cards).doesNotContainKey(789);
+        assertThat(team1Cards).doesNotContainKey(666);
         assertThat(team2Cards).doesNotContainKeys(122, 456);
     }
 
@@ -436,7 +436,7 @@ class GameStateServiceIntegrationTest {
         for (int i = 0; i < 1001; i++) {
             updates.add(createPlayerUpdate(team1Users.get(0), MessageType.STARCHIPS, i, baseTime.plusSeconds(i)));
         }
-        updates.add(createPlayerUpdate(team1Users.get(1), MessageType.DROP, 777, baseTime.plusSeconds(2000)));
+        updates.add(createPlayerUpdate(team1Users.get(1), MessageType.DROP, 122, baseTime.plusSeconds(2000)));
 
         playerUpdateRepository.saveAll(updates);
 
@@ -447,8 +447,8 @@ class GameStateServiceIntegrationTest {
         Library team1Library = gameStateService.getLibrary(1);
         assertThat(team1Library.getStarchips(team1Users.get(0).getDatabaseId())).isEqualTo(1000);
         assertThat(team1Library.getTotalTeamStarchips()).isEqualTo(1000);
-        assertThat(team1Library.getAcquiredCards()).containsKey(777);
-        assertThat(team1Library.getAcquiredCards().get(777).playerId()).isEqualTo(team1Users.get(1).getDatabaseId());
+        assertThat(team1Library.getAcquiredCards()).containsKey(122);
+        assertThat(team1Library.getAcquiredCards().get(122).playerId()).isEqualTo(team1Users.get(1).getDatabaseId());
     }
 
     @Test
