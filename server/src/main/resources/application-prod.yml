@@ -1,0 +1,11 @@
+server:
+  port: 51160
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          twitch:
+            redirect-uri: "https://hundo.maika.moe/login/oauth2/code/{registrationId}"
+ygo:
+  apiUrl: https://hundo-api.maika.moe/api
