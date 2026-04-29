@@ -14,6 +14,8 @@ import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.html.UnorderedList;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
@@ -61,6 +63,7 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
         content.setWidthFull();
         content.setPadding(true);
         content.setSpacing(true);
+        content.addClassName("page-container");
 
         add(ViewSupport.createTopBar(), content);
         addAttachListener(event -> {
@@ -105,35 +108,41 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
 
     private Div createTeamCard(Team team, LibraryUpdate snapshot) {
         Div card = new Div();
-        card.getStyle().set("border", "1px solid #d0d7de");
-        card.getStyle().set("border-radius", "12px");
-        card.getStyle().set("padding", "1rem");
-        card.getStyle().set("background", "white");
+        card.addClassName("team-card");
 
         H3 heading = new H3();
+        heading.addClassName("team-card__title");
         RouterLink link = new RouterLink();
         link.setText(team.getName());
         link.setRoute(TeamView.class, String.valueOf(team.getTeamId()));
         heading.add(link);
 
         Div stats = new Div();
+        stats.addClassName("dashboard-stats-bar");
         stats.add(ViewSupport.createAllStats(snapshot, hundoConstants));
-        stats.getStyle().set("display", "flex");
-        stats.getStyle().set("gap", "0.5rem");
-        stats.getStyle().set("flex-wrap", "wrap");
 
         List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(team.getTeamId());
         UnorderedList acquisitions = new UnorderedList();
+        acquisitions.addClassName("activity-list");
         if(latestAcquisitions.isEmpty()) {
             acquisitions.add(new ListItem("No cards acquired yet."));
         }
         else {
-            for(CardAcquisition acquisition : latestAcquisitions) {
+            latestAcquisitions.stream().limit(5).forEach(acquisition -> {
                 acquisitions.add(new ListItem(describeAcquisition(acquisition)));
-            }
+            });
         }
 
-        card.add(heading, stats, new Span("Latest 5 unique acquisitions"), acquisitions);
+        if(snapshot.hasCompletedHundo()) {
+            Div banner = new Div(new Icon(VaadinIcon.TROPHY), new Span("Completed at " + ViewSupport.formatInstant(snapshot.completionTime())));
+            banner.addClassName("completion-banner");
+            card.add(banner);
+        }
+
+        Span acquisitionsLabel = new Span("Latest 5 unique acquisitions");
+        acquisitionsLabel.addClassName("section-label");
+
+        card.add(heading, stats, acquisitionsLabel, acquisitions);
         return card;
     }
 

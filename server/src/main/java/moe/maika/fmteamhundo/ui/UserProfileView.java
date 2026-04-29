@@ -51,22 +51,25 @@ public class UserProfileView extends VerticalLayout {
 
         setSizeFull();
         setDefaultHorizontalComponentAlignment(Alignment.CENTER);
+        addClassName("profile-view");
 
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if(principal instanceof User) {
             User user = (User) principal;
             String username = user.getName();
             add(new H2("User Profile"));
-            add(new Div(new Div("Username: " + username)));
-            add(new Div(new Div("Team: " + teamMapping.getTeamNameForTeamId(user.getTeamId()))));
+            add(createProfileField("Username: " + username));
+            add(createProfileField("Team: " + teamMapping.getTeamNameForTeamId(user.getTeamId())));
             RouterLink playerLink = new RouterLink();
             playerLink.setText("View public player page");
             playerLink.setRoute(PlayerView.class, String.valueOf(user.getDatabaseId()));
+            playerLink.addClassName("profile-view__link");
             add(playerLink);
             Button downloadButton = new Button("Download credentials file", event -> openDownloadDialog(user));
+            downloadButton.addClassName("profile-view__button");
             downloadAnchor.setId("credential-download-anchor");
             downloadAnchor.getElement().setAttribute("download", CREDENTIALS_FILENAME);
-            downloadAnchor.getStyle().set("display", "none");
+            downloadAnchor.addClassName("u-hidden");
             add(downloadButton, downloadAnchor);
         } else {
             add(new H2("Not logged in"));
@@ -112,5 +115,11 @@ public class UserProfileView extends VerticalLayout {
         } catch (IOException e) {
             throw new RuntimeException("Failed to serialize credentials", e);
         }
+    }
+
+    private Div createProfileField(String text) {
+        Div wrapper = new Div(new Div(text));
+        wrapper.addClassName("profile-view__field");
+        return wrapper;
     }
 }

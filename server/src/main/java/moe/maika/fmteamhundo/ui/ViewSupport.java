@@ -11,9 +11,12 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -36,15 +39,26 @@ final class ViewSupport {
         topBar.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
         topBar.setAlignItems(FlexComponent.Alignment.CENTER);
         topBar.setPadding(true);
+        topBar.addClassName("top-bar");
 
         HorizontalLayout nav = new HorizontalLayout();
         nav.setSpacing(true);
+        nav.addClassName("top-bar__nav");
         nav.add(new RouterLink("Home", MainView.class));
-        topBar.add(nav);
+        Div actions = new Div();
+        actions.addClassName("top-bar__actions");
+
+        Button themeToggle = new Button(new Icon(VaadinIcon.MOON), event -> UI.getCurrent().getPage().executeJs("toggleTheme()"));
+        themeToggle.addClassName("theme-toggle");
+        themeToggle.getElement().setAttribute("aria-label", "Toggle dark mode");
+        actions.add(themeToggle);
+
+        topBar.add(nav, actions);
 
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if(principal instanceof OAuth2User user) {
             MenuBar menuBar = new MenuBar();
+            menuBar.addClassName("top-bar__menu");
             MenuItem userMenu = menuBar.addItem((String) user.getAttribute("preferred_username"), event -> { });
             userMenu.getSubMenu().addItem("Profile", event -> UI.getCurrent().navigate(UserProfileView.class));
             
@@ -54,10 +68,12 @@ final class ViewSupport {
             }
             
             userMenu.getSubMenu().addItem("Logout", event -> UI.getCurrent().getPage().setLocation("/logout"));
-            topBar.add(menuBar);
+            actions.add(menuBar);
         }
         else {
-            topBar.add(new Button("Login", event -> UI.getCurrent().getPage().setLocation("/oauth2/authorization/twitch")));
+            Button loginButton = new Button("Login", event -> UI.getCurrent().getPage().setLocation("/oauth2/authorization/twitch"));
+            loginButton.addClassName("top-bar__login");
+            actions.add(loginButton);
         }
 
         return topBar;
@@ -69,18 +85,16 @@ final class ViewSupport {
 
     static Span createStat(String label, String value) {
         Span stat = new Span(label + ": " + value);
-        stat.getStyle().set("font-weight", "600");
-        stat.getStyle().set("padding", "0.35rem 0.65rem");
-        stat.getStyle().set("border", "1px solid #d0d7de");
-        stat.getStyle().set("border-radius", "999px");
-        stat.getStyle().set("background", "#f6f8fa");
+        stat.addClassName("stat-chip");
         return stat;
     }
 
     static List<Component> createAllStats(LibraryUpdate snapshot, HundoConstants hundoConstants) {
         return List.of(
             createStat("Cards", String.format("%d/%d", snapshot.uniqueCardCount(), hundoConstants.getTotalObtainableCards())),
-            createStarchipsStat(snapshot.totalStarchips())
+            createStarchipsStat(snapshot.totalStarchips()),
+            createStat("Unbuyables", Long.toString(snapshot.totalUnbuyables())),
+            createStat("Cost of Buyables", Long.toString(snapshot.totalCostOfBuyables()))
         );
     }
 
@@ -90,6 +104,7 @@ final class ViewSupport {
 
     static Component externalLink(String text, String href) {
         Anchor anchor = new Anchor(href, text);
+        anchor.addClassName("external-link");
         return anchor;
     }
 }

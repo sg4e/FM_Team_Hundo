@@ -55,6 +55,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         content.setWidthFull();
         content.setPadding(true);
         content.setSpacing(true);
+        content.addClassName("page-container");
 
         add(ViewSupport.createTopBar(), content);
     }
@@ -136,9 +137,12 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         }
         Team team = teamMapping.getTeamForUserId(playerId);
 
-        content.add(new H1(player.getName()));
+        H1 title = new H1(player.getName());
+        title.addClassName("player-view__title");
+        content.add(title);
         if(!team.isNoTeam()) {
             RouterLink teamLink = new RouterLink("Team " + teamMapping.getTeamNameForTeamId(team.getTeamId()), TeamView.class, String.valueOf(team.getTeamId()));
+            teamLink.addClassName("player-view__team-link");
             content.add(teamLink);
             if(currentStarchips == 0) {
                 currentStarchips = gameStateService.getLibrary(team.getTeamId()).getStarchips(playerId);
@@ -151,6 +155,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         );
 
         UnorderedList updates = new UnorderedList();
+        updates.addClassName("player-view__updates");
         if(latestUpdates.isEmpty()) {
             updates.add(new ListItem("No recent non-starchip updates."));
         }

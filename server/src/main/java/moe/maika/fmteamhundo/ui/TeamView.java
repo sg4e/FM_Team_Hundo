@@ -17,7 +17,8 @@ import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.html.UnorderedList;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.HasUrlParameter;
@@ -37,6 +38,7 @@ import moe.maika.fmteamhundo.state.HundoConstants;
 import moe.maika.fmteamhundo.state.LibraryUpdate;
 import moe.maika.fmteamhundo.state.TeamUpdateListener;
 import moe.maika.fmteamhundo.state.UserMappings;
+import moe.maika.ygofm.gamedata.FMDB;
 
 @Route("teams")
 @AnonymousAllowed
@@ -76,6 +78,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         content.setWidthFull();
         content.setPadding(true);
         content.setSpacing(true);
+        content.addClassName("page-container");
 
         add(ViewSupport.createTopBar(), content);
         addAttachListener(event -> {
@@ -162,11 +165,18 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         content.removeAll();
 
         H1 title = new H1(teamName);
-        HorizontalLayout stats = new HorizontalLayout();
+        title.addClassName("team-view__title");
+        Div stats = new Div();
+        stats.addClassName("dashboard-stats-bar");
         stats.add(ViewSupport.createAllStats(snapshot, hundoConstants));
-        stats.setWrap(true);
 
-        content.add(title, stats, createDownloadLink(), createLatestAcquisitions(snapshot), 
+        content.add(title);
+        if(snapshot.hasCompletedHundo()) {
+            Div banner = new Div(new Icon(VaadinIcon.TROPHY), new Span("Completed at " + ViewSupport.formatInstant(snapshot.completionTime())));
+            banner.addClassName("completion-banner");
+            content.add(banner);
+        }
+        content.add(stats, createDownloadLink(), createLatestAcquisitions(snapshot),
                 createMembers(snapshot), createCardGrids(gameStateService.getLibrary(teamId).getAcquiredCards()));
     }
 
@@ -174,21 +184,23 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(false);
+        section.addClassName("content-section");
         section.add(new H3("Latest 10 cards"));
 
         List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(teamId);
         UnorderedList list = new UnorderedList();
+        list.addClassName("activity-list");
         if(latestAcquisitions.isEmpty()) {
             list.add(new ListItem("No cards acquired yet."));
         }
         else {
-            for(CardAcquisition acquisition : latestAcquisitions) {
+            latestAcquisitions.stream().limit(10).forEach(acquisition -> {
                 list.add(new ListItem(
                     "Card " + acquisition.cardId() + " via " + acquisition.source()
                         + " by " + userMappings.getUserById(acquisition.playerId()).getName()
                         + " at " + ViewSupport.formatInstant(acquisition.acquisitionTime())
                 ));
-            }
+            });
         }
         section.add(list);
         return section;
@@ -198,6 +210,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(false);
+        section.addClassName("content-section");
         section.add(new H3("Team Members"));
 
         UnorderedList list = new UnorderedList();
@@ -220,6 +233,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(true);
+        section.addClassName("content-section");
         section.add(new H3("Card Grid"));
 
         for(int startCardId = 1; startCardId <= 700; startCardId += CARDS_PER_FULL_GRID) {
@@ -233,47 +247,46 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         VerticalLayout gridWrapper = new VerticalLayout();
         gridWrapper.setPadding(false);
         gridWrapper.setSpacing(false);
+        gridWrapper.addClassName("card-grid-section");
         gridWrapper.add(new Span("Cards " + startCardId + "-" + endCardId));
 
         Div grid = new Div();
-        grid.getStyle().set("display", "grid");
-        grid.getStyle().set("grid-template-columns", "repeat(10, minmax(0, 1fr))");
-        grid.getStyle().set("gap", "4px");
-        grid.getStyle().set("max-width", "520px");
+        grid.addClassNames("card-grid", "js-card-grid");
 
         for(int cardId = startCardId; cardId <= endCardId; cardId++) {
             grid.add(createCardCell(cardId, acquiredCards.get(cardId)));
         }
         gridWrapper.add(grid);
+        if(currentUI != null) {
+            currentUI.getPage().executeJs("if(window.initCardPopovers) window.initCardPopovers()");
+        }
         return gridWrapper;
     }
 
     private Component createCardCell(int cardId, CardAcquisition acquisition) {
         Div cell = new Div();
         cell.setText(Integer.toString(cardId));
-        cell.getStyle().set("height", "2rem");
-        cell.getStyle().set("display", "flex");
-        cell.getStyle().set("align-items", "center");
-        cell.getStyle().set("justify-content", "center");
-        cell.getStyle().set("border-radius", "6px");
-        cell.getStyle().set("font-size", "0.75rem");
-        cell.getStyle().set("color", "#ffffff");
+        cell.addClassName("card-cell");
+        cell.getElement().setAttribute("data-card-id", Integer.toString(cardId));
 
         if(hundoConstants.getUnobtainableCards().contains(cardId)) {
-            cell.getStyle().set("background", "#6a737d");
-            cell.getElement().setProperty("title", "Card " + cardId + "\nUnobtainable");
+            cell.addClassName("card-cell--unobtainable");
+            cell.getElement().setAttribute("data-status", "unobtainable");
         }
         else if(acquisition != null) {
-            cell.getStyle().set("background", "#2da44e");
-            cell.getElement().setProperty("title",
-                "Card " + cardId
-                    + "\nAcquired by " + userMappings.getUserById(acquisition.playerId()).getName()
-                    + "\nSource: " + acquisition.source()
-                    + "\nAt: " + ViewSupport.formatInstant(acquisition.acquisitionTime()));
+            cell.addClassName("card-cell--acquired");
+            cell.getElement().setAttribute("data-status", "acquired");
+            cell.getElement().setAttribute("data-player-name", userMappings.getUserById(acquisition.playerId()).getName());
+            cell.getElement().setAttribute("data-source", acquisition.source().toString());
+            cell.getElement().setAttribute("data-acquisition-time", ViewSupport.formatInstant(acquisition.acquisitionTime()));
+            Object opponent = FMDB.getInstance().getDuelist(acquisition.opponentId());
+            if(opponent != null) {
+                cell.getElement().setAttribute("data-opponent", opponent.toString());
+            }
         }
         else {
-            cell.getStyle().set("background", "#cf222e");
-            cell.getElement().setProperty("title", "Card " + cardId + "\nNot acquired");
+            cell.addClassName("card-cell--unacquired");
+            cell.getElement().setAttribute("data-status", "unacquired");
         }
         return cell;
     }

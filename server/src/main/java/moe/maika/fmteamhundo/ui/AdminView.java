@@ -107,8 +107,7 @@ public class AdminView extends VerticalLayout {
                 });
 
                 Div container = new Div(teamSelector, assignButton);
-                container.getStyle().set("display", "flex");
-                container.getStyle().set("gap", "10px");
+                container.addClassName("admin-action-row");
                 return container;
             }).setHeader("Action");
 
