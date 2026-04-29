@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,7 @@ import moe.maika.fmteamhundo.state.HundoConstants;
 import moe.maika.fmteamhundo.state.LibraryUpdate;
 import moe.maika.fmteamhundo.state.TeamUpdateListener;
 import moe.maika.fmteamhundo.state.UserMappings;
+import moe.maika.ygofm.gamedata.Duelist;
 import moe.maika.ygofm.gamedata.FMDB;
 
 @Route("teams")
@@ -53,6 +55,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     private final UserMappings userMappings;
     private final TeamService teamService;
     private final VerticalLayout content;
+    private final FMDB fmdb;
 
     private Integer teamId;
     private String teamName;
@@ -69,6 +72,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         this.hundoConstants = hundoConstants;
         this.userMappings = userMappings;
         this.teamService = teamService;
+        this.fmdb = FMDB.getInstance();
 
         setSizeFull();
         setPadding(false);
@@ -185,7 +189,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         section.setPadding(false);
         section.setSpacing(false);
         section.addClassName("content-section");
-        section.add(new H3("Latest 10 cards"));
+        section.add(new H3("Latest 10 new cards"));
 
         List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(teamId);
         UnorderedList list = new UnorderedList();
@@ -195,11 +199,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         }
         else {
             latestAcquisitions.stream().limit(10).forEach(acquisition -> {
-                list.add(new ListItem(
-                    "Card " + acquisition.cardId() + " via " + acquisition.source()
-                        + " by " + userMappings.getUserById(acquisition.playerId()).getName()
-                        + " at " + ViewSupport.formatInstant(acquisition.acquisitionTime())
-                ));
+                list.add(ViewSupport.createFromCardAcquisition(acquisition, userMappings));
             });
         }
         section.add(list);
@@ -234,7 +234,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         section.setPadding(false);
         section.setSpacing(true);
         section.addClassName("content-section");
-        section.add(new H3("Card Grid"));
+        section.add(new H3("Library"));
 
         for(int startCardId = 1; startCardId <= 700; startCardId += CARDS_PER_FULL_GRID) {
             section.add(createGrid(startCardId, startCardId + CARDS_PER_FULL_GRID - 1, acquiredCards));
@@ -267,7 +267,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         Div cell = new Div();
         cell.setText(Integer.toString(cardId));
         cell.addClassName("card-cell");
-        cell.getElement().setAttribute("data-card-id", Integer.toString(cardId));
+        cell.getElement().setAttribute("data-card-id", Objects.toString(fmdb.getCard(cardId)));
 
         if(hundoConstants.getUnobtainableCards().contains(cardId)) {
             cell.addClassName("card-cell--unobtainable");
@@ -279,7 +279,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             cell.getElement().setAttribute("data-player-name", userMappings.getUserById(acquisition.playerId()).getName());
             cell.getElement().setAttribute("data-source", acquisition.source().toString());
             cell.getElement().setAttribute("data-acquisition-time", ViewSupport.formatInstant(acquisition.acquisitionTime()));
-            Object opponent = FMDB.getInstance().getDuelist(acquisition.opponentId());
+            Duelist opponent = fmdb.getDuelist(acquisition.opponentId());
             if(opponent != null) {
                 cell.getElement().setAttribute("data-opponent", opponent.toString());
             }

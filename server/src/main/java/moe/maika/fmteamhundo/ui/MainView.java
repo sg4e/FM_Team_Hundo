@@ -129,7 +129,7 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
         }
         else {
             latestAcquisitions.stream().limit(5).forEach(acquisition -> {
-                acquisitions.add(new ListItem(describeAcquisition(acquisition)));
+                acquisitions.add(ViewSupport.createFromCardAcquisition(acquisition, userMappings));
             });
         }
 
@@ -139,16 +139,11 @@ public class MainView extends VerticalLayout implements TeamUpdateListener {
             card.add(banner);
         }
 
-        Span acquisitionsLabel = new Span("Latest 5 unique acquisitions");
+        Span acquisitionsLabel = new Span("Latest 5 new cards");
         acquisitionsLabel.addClassName("section-label");
 
         card.add(heading, stats, acquisitionsLabel, acquisitions);
         return card;
     }
 
-    private String describeAcquisition(CardAcquisition acquisition) {
-        return "Card " + acquisition.cardId() + " via " + acquisition.source()
-            + " by " + userMappings.getUserById(acquisition.playerId()).getName()
-            + " at " + ViewSupport.formatInstant(acquisition.acquisitionTime());
-    }
 }

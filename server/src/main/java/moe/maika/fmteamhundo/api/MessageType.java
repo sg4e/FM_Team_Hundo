@@ -4,11 +4,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum MessageType {
     @JsonProperty("drop")
-    DROP,
+    DROP("drop"),
     @JsonProperty("fuse")
-    FUSE,
+    FUSE("fusion"),
     @JsonProperty("ritual")
-    RITUAL,
+    RITUAL("ritual"),
     @JsonProperty("starchips")
-    STARCHIPS;
+    STARCHIPS("starchips");
+
+    private final String value;
+
+    private MessageType(String value) {
+        this.value = value;
+    }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

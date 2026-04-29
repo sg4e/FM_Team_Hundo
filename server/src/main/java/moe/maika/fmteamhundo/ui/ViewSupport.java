@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -12,6 +13,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Span;
@@ -22,14 +24,19 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.RouterLink;
 
+import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
+import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.HundoConstants;
 import moe.maika.fmteamhundo.state.LibraryUpdate;
+import moe.maika.fmteamhundo.state.UserMappings;
+import moe.maika.ygofm.gamedata.FMDB;
 
 final class ViewSupport {
 
-    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss MMMM dd")
         .withZone(ZoneId.systemDefault());
     private static final String ADMIN_TWITCH_ID = "73758417";
+    private static final FMDB fmdb = FMDB.getInstance();
 
     private ViewSupport() { }
 
@@ -106,5 +113,34 @@ final class ViewSupport {
         Anchor anchor = new Anchor(href, text);
         anchor.addClassName("external-link");
         return anchor;
+    }
+
+    static ListItem createFromCardAcquisition(CardAcquisition acquisition, UserMappings userMappings) {
+        ListItem item = new ListItem();
+        item.add(stylizeCardName(acquisition.cardId()));
+        item.add(String.format(" by %s as %s against %s at %s",
+            userMappings.getUserById(acquisition.playerId()).getName(),
+            acquisition.source(),
+            Objects.toString(fmdb.getDuelist(acquisition.opponentId())),
+            formatInstant(acquisition.acquisitionTime())
+        ));
+        return item;
+    }
+
+    static ListItem createFromPlayerUpdate(PlayerUpdate update) {
+        ListItem item = new ListItem();
+        item.add(stylizeCardName(update.getValue()));
+        item.add(String.format(" (%s) against %s at %s",
+            update.getSource(),
+            Objects.toString(fmdb.getDuelist(update.getOpponentId())),
+            formatInstant(update.getTime())
+        ));
+        return item;
+    }
+
+    private static Span stylizeCardName(int cardId) {
+        Span cardName = new Span(Objects.toString(fmdb.getCard(cardId)));
+        cardName.getStyle().set("font-weight", "bold");
+        return cardName;
     }
 }

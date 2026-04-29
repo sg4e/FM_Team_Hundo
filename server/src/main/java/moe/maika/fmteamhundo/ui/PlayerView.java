@@ -154,20 +154,14 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
             new H3("Latest updates")
         );
 
-        UnorderedList updates = new UnorderedList();
-        updates.addClassName("player-view__updates");
+        UnorderedList listedUpdates = new UnorderedList();
+        listedUpdates.addClassName("player-view__updates");
         if(latestUpdates.isEmpty()) {
-            updates.add(new ListItem("No recent non-starchip updates."));
+            listedUpdates.add(new ListItem("No recent non-starchip updates."));
         }
         else {
-            for(PlayerUpdate update : latestUpdates) {
-                updates.add(new ListItem(
-                    ViewSupport.formatInstant(update.getTime())
-                        + " - " + update.getSource()
-                        + " card " + update.getValue()
-                ));
-            }
+            latestUpdates.forEach(u -> listedUpdates.add(ViewSupport.createFromPlayerUpdate(u)));
         }
-        content.add(updates);
+        content.add(listedUpdates);
     }
 }

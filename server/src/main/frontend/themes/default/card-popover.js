@@ -28,14 +28,14 @@
     const cardId = cell.dataset.cardId;
     const status = cell.dataset.status;
     if (status === "unobtainable") {
-      return [`Card ${cardId} \u2014 Unobtainable`];
+      return [`${cardId}`, "Unobtainable"];
     }
     if (status === "unacquired") {
-      return [`Card ${cardId} \u2014 Not acquired`];
+      return [`${cardId}`, "Not acquired"];
     }
 
     const lines = [
-      `Card ${cardId}`,
+      `${cardId}`,
       `Acquired by: ${cell.dataset.playerName}`,
       `Source: ${cell.dataset.source}`
     ];
