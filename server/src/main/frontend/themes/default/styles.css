@@ -49,12 +49,26 @@
   --transition-fast: 160ms ease;
 }
 
+html,
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #ffffff 0%, var(--color-bg) 58%);
+  background: var(--color-bg);
   color: var(--color-text-primary);
   font-family: var(--font-family-base);
   font-size: var(--font-size-body);
+}
+
+html,
+body,
+#outlet {
+  min-height: 100%;
+}
+
+#outlet,
+vaadin-app-layout,
+vaadin-app-layout::part(content) {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
 body.dark-mode,
@@ -83,6 +97,20 @@ body.dark-mode,
 
 a {
   color: var(--color-link);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+label,
+li,
+div {
+  color: inherit;
 }
 
 /* Top Bar & Navigation */
@@ -152,6 +180,12 @@ a {
 .team-view__title,
 .player-view__title {
   margin-bottom: var(--spacing-sm);
+}
+
+.content-section h3,
+.team-card h3,
+.player-view h3 {
+  color: var(--color-text-primary);
 }
 
 .activity-list,

@@ -1,22 +1,28 @@
 (function () {
-  function applyStoredTheme() {
-    const root = document.body;
-    if (!root) {
+  function setDarkMode(enabled) {
+    const body = document.body;
+    const root = document.documentElement;
+    if (!body || !root) {
       return;
     }
 
+    body.classList.toggle("dark-mode", enabled);
+    root.classList.toggle("dark-mode", enabled);
+  }
+
+  function applyStoredTheme() {
     const isDark = window.localStorage.getItem("theme") === "dark";
-    root.classList.toggle("dark-mode", isDark);
+    setDarkMode(isDark);
   }
 
   window.toggleTheme = function toggleTheme() {
-    const root = document.body;
-    if (!root) {
+    const body = document.body;
+    if (!body) {
       return;
     }
 
-    const nextDark = !root.classList.contains("dark-mode");
-    root.classList.toggle("dark-mode", nextDark);
+    const nextDark = !body.classList.contains("dark-mode");
+    setDarkMode(nextDark);
     window.localStorage.setItem("theme", nextDark ? "dark" : "light");
   };
 
