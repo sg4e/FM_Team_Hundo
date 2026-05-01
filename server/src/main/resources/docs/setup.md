@@ -24,7 +24,7 @@ The BizHawk project releases BizHawk builds for Windows and Linux. Therefore, th
 
 3. Move `YGOFMPlugin.dll` to inside of `ExternalTools`
 
-**Warning: BizHawk is notorious for destroying save files.** You are recommended to use savestates in addition to in-game saves to prevent loss of progress. Consult the [Rules](page) page for legal uses of savestates for the event. BizHawk also comes pre-configured with many hotkeys and settings you probably want to disable.
+**Warning: BizHawk is notorious for destroying save files.** You are recommended to use savestates in addition to in-game saves to prevent loss of progress. Consult the [Rules](/docs/rules) page for legal uses of savestates for the event. BizHawk also comes pre-configured with many hotkeys and settings you probably want to disable.
 
 ### Setting up DuckStation for FM Team Hundo (experimental)
 
@@ -32,9 +32,9 @@ DuckStation is experimentally supported by FM Team Hundo. However, its license r
 
 The FM Team Hundo Python patch specifies in its readme the exact git commit it works with.
 
-## Register at [hundo.maika.moe](hundo.maika.moe)
+## Register at [hundo.maika.moe](/)
 
-1. Click the login button at the top-right corner of the [hundo.maika.moe](hundo.maika.moe) page. Authorize FM Team Hundo with your primary Twitch account. You'll be redirected to your FM Team Hundo profile page.
+1. Click the login button at the top-right corner of the [hundo.maika.moe](/) page. Authorize FM Team Hundo with your primary Twitch account. You'll be redirected to your FM Team Hundo profile page.
 
 2. Optionally set an alt account on your profile. FM Team Hundo requires you to livestream on Twitch whenever you're playing, either on the primary account you used as your login, or on the alt Twitch account set here. **Double-check the spelling of your alt account** since there's no verification step. Other livestreaming platforms aren't currently supported.
 
