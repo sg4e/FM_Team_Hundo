@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" width="900" height="200">
+  <defs>
+    <style>
+      .box { fill: var(--box-bg, #ffffff); stroke: var(--box-border, #333333); stroke-width: 2; rx: 8; ry: 8; }
+      .text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; fill: var(--text-color, #333333); text-anchor: middle; dominant-baseline: middle; }
+      .arrow { stroke: var(--arrow-color, #555555); stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .arrow-head { fill: var(--arrow-color, #555555); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon class="arrow-head" points="0 0, 10 3.5, 0 7" />
+    </marker>
+  </defs>
+
+  <!-- Boxes -->
+  <!-- Box 1: Emulator (with plugin) -->
+  <rect class="box" x="10" y="50" width="220" height="100" />
+  <text class="text" x="120" y="100">Emulator</text>
+  <text class="text" x="120" y="122">(with plugin)</text>
+
+  <!-- Box 2: FM_Sentinel -->
+  <rect class="box" x="340" y="50" width="200" height="100" />
+  <text class="text" x="440" y="100">FM_Sentinel</text>
+
+  <!-- Box 3: FM Team Hundo server -->
+  <rect class="box" x="650" y="50" width="240" height="100" />
+  <text class="text" x="770" y="94">FM Team Hundo</text>
+  <text class="text" x="770" y="116">server</text>
+
+  <!-- Arrows -->
+  <!-- Arrow 1: Box 1 -> Box 2 -->
+  <line class="arrow" x1="230" y1="100" x2="338" y2="100" />
+
+  <!-- Arrow 2: Box 2 <-> Box 3 (double arrow using two lines slightly offset) -->
+  <line class="arrow" x1="542" y1="94" x2="648" y2="94" />
+  <line class="arrow" x1="648" y1="106" x2="542" y2="106" />
+</svg>
