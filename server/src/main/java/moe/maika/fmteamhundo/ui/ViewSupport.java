@@ -101,8 +101,9 @@ final class ViewSupport {
         return List.of(
             createStat("Cards", String.format("%d/%d", snapshot.uniqueCardCount(), hundoConstants.getTotalObtainableCards())),
             createStarchipsStat(snapshot.totalStarchips()),
-            createStat("Cost of Buyables", Long.toString(snapshot.totalCostOfBuyables())),
-            createStat("Unbuyables", Long.toString(snapshot.totalUnbuyables()))
+            createStat("Cost of Buyables", Integer.toString(snapshot.totalCostOfBuyables())),
+            createStat("Unbuyables", Integer.toString(snapshot.totalUnbuyables())),
+            createStat("BEWDs", Integer.toString(snapshot.bewdCount()))
         );
     }
 

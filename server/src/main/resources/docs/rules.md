@@ -8,6 +8,8 @@
    
    2. The sum of all team members' current starchip counts is greater than the cost of all the buyable obtainable cards that are missing from the team's Library.
 
+   3. **BEUD + GG Exception:** If the team *collectively* has acquired 3 Blue-Eyes White Dragons and has Ultimate Dragon in their Library, their Library will be credited with Blue-Eyes Ultimate Dragon as if they had ritual-summoned it. Likewise, if the team's Library contains Sanga of the Thunder, Kazejin, Suijin, and Gate Guardian Ritual, their Library will be credited with Gate Guardian as if they had ritual-summoned it.
+
 2. A card is added to the team's Library when a team member **drops, fuses, or ritual-summons** the card. Any other way of obtaining a card (starter deck, bought with starchips, etc.) does not count.
 
 3. You may spend your starchips freely to improve your deck, but spent starchips will be automatically deducted from your team's starchip total.

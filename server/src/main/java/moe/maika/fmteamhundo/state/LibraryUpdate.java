@@ -15,5 +15,6 @@ public record LibraryUpdate(
     int totalCostOfBuyables,
     boolean canAffordRemainingBuyables,
     boolean hasCompletedHundo,
-    Instant completionTime
+    Instant completionTime,
+    int bewdCount
 ) { }

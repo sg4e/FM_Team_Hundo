@@ -24,11 +24,19 @@ public class Library {
     private final Map<Integer, CardAcquisition> acquiredCards = new TreeMap<>();
     private final ConcurrentHashMap<Long, Long> starchips = new ConcurrentHashMap<>();
     private volatile long totalStarchips = 0;
+    private volatile int bewdCount = 0;
     private final HundoConstants hundoConstants;
     private final FMDB fmdb;
 
     private volatile boolean hasCompletedHundo = false;
     private volatile Instant completionTime = null;
+
+    private static final List<Integer> GG_PIECES = List.of(
+        371,  // Sanga
+        372,  // Kazejin
+        373,  // Suijin
+        667   // Gate Guardian Ritual
+    );
 
     Library(int teamId, HundoConstants hundoConstants, Consumer<LibraryUpdate> onLibraryUpdate) {
         this.teamId = teamId;
@@ -51,11 +59,32 @@ public class Library {
         List<CardAcquisition> newAcquisitions = new ArrayList<>();
         synchronized(this) {
             for(PlayerUpdate card : cardUpdates) {
+                // handle BEUD and GG special cases
+                // BEWD count
+                if(card.getValue() == 1) {
+                    bewdCount++;
+                    changed = true; // changed every time because UI updates the BEWD count
+                }
+                // Regular card parsing
                 // make sure library maps to first acquisition of the card
                 if(!acquiredCards.containsKey(card.getValue()) || acquiredCards.get(card.getValue()).acquisitionTime().isAfter(card.getTime())) {
                     CardAcquisition acquisition = new CardAcquisition(card.getValue(), card.getTime(), card.getSource(), card.getParticipantId(), card.getOpponentId());
                     newAcquisitions.add(acquisition);
                     acquiredCards.put(card.getValue(), acquisition);
+                    changed = true;
+                }
+                // BEUD
+                if(!acquiredCards.containsKey(380) && bewdCount >= 3 && acquiredCards.containsKey(675)) {
+                    CardAcquisition acquisition = new CardAcquisition(380, card.getTime(), MessageType.RITUAL, card.getParticipantId(), card.getOpponentId());
+                    newAcquisitions.add(acquisition);
+                    acquiredCards.put(380, acquisition);
+                    changed = true;
+                }
+                // GG
+                if(!acquiredCards.containsKey(374) && GG_PIECES.stream().allMatch(id -> acquiredCards.containsKey(id))) {
+                    CardAcquisition acquisition = new CardAcquisition(374, card.getTime(), MessageType.RITUAL, card.getParticipantId(), card.getOpponentId());
+                    newAcquisitions.add(acquisition);
+                    acquiredCards.put(374, acquisition);
                     changed = true;
                 }
             }
@@ -101,7 +130,7 @@ public class Library {
             completionTime = latestTimestamp;
         }
         return new LibraryUpdate(this, teamId, latestTimestamp, totalStarchips, acquiredCards.size(), newAcquisitions, totalUnobtained, totalUnbuyables,
-                totalCostOfBuyables, canAffordRemainingBuyables, completed, completionTime);
+                totalCostOfBuyables, canAffordRemainingBuyables, completed, completionTime, bewdCount);
     }
 
     LibraryUpdate generateEmptyLibraryUpdate() {

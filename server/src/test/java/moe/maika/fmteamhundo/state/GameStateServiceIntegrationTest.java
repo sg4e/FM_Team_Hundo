@@ -572,6 +572,73 @@ class GameStateServiceIntegrationTest {
     }
 
     @Test
+    void testBlueEyesUltimateDragonUnlocksAfterThreeBewdsAndUltimateDragon() {
+        Instant baseTime = Instant.now();
+
+        gameStateService.update(List.of(
+            createPlayerUpdate(team1Users.get(0), MessageType.DROP, 1, baseTime),
+            createPlayerUpdate(team1Users.get(1), MessageType.DROP, 1, baseTime.plusSeconds(1)),
+            createPlayerUpdate(team1Users.get(2), MessageType.DROP, 1, baseTime.plusSeconds(2))
+        ));
+        sleep();
+
+        Library team1Library = gameStateService.getLibrary(1);
+        LibraryUpdate preUnlockSnapshot = gameStateService.getLatestLibraryUpdate(1);
+
+        assertThat(team1Library.getAcquiredCards()).containsKey(1).doesNotContainKey(380);
+        assertThat(preUnlockSnapshot.bewdCount()).isEqualTo(3);
+
+        gameStateService.update(List.of(
+            createPlayerUpdate(team1Users.get(0), MessageType.FUSE, 675, baseTime.plusSeconds(3))
+        ));
+        sleep();
+
+        LibraryUpdate unlockSnapshot = gameStateService.getLatestLibraryUpdate(1);
+        CardAcquisition beud = gameStateService.getLibrary(1).getAcquiredCards().get(380);
+
+        assertThat(beud).isNotNull();
+        assertThat(beud.source()).isEqualTo(MessageType.RITUAL);
+        assertThat(unlockSnapshot.bewdCount()).isEqualTo(3);
+        assertThat(unlockSnapshot.newAcquisitions())
+            .extracting(CardAcquisition::cardId)
+            .containsExactlyInAnyOrder(675, 380);
+        assertThat(gameStateService.getLatestCardAcquisitions(1))
+            .extracting(CardAcquisition::cardId)
+            .contains(1, 675, 380);
+    }
+
+    @Test
+    void testGateGuardianUnlocksAfterAllPiecesAndRitualAreCollected() {
+        Instant baseTime = Instant.now();
+
+        gameStateService.update(List.of(
+            createPlayerUpdate(team1Users.get(0), MessageType.DROP, 371, baseTime),
+            createPlayerUpdate(team1Users.get(1), MessageType.DROP, 372, baseTime.plusSeconds(1)),
+            createPlayerUpdate(team1Users.get(2), MessageType.DROP, 373, baseTime.plusSeconds(2))
+        ));
+        sleep();
+
+        assertThat(gameStateService.getLibrary(1).getAcquiredCards()).doesNotContainKey(374);
+
+        gameStateService.update(List.of(
+            createPlayerUpdate(team1Users.get(0), MessageType.RITUAL, 667, baseTime.plusSeconds(3))
+        ));
+        sleep();
+
+        LibraryUpdate unlockSnapshot = gameStateService.getLatestLibraryUpdate(1);
+        CardAcquisition gateGuardian = gameStateService.getLibrary(1).getAcquiredCards().get(374);
+
+        assertThat(gateGuardian).isNotNull();
+        assertThat(gateGuardian.source()).isEqualTo(MessageType.RITUAL);
+        assertThat(unlockSnapshot.newAcquisitions())
+            .extracting(CardAcquisition::cardId)
+            .containsExactlyInAnyOrder(667, 374);
+        assertThat(gameStateService.getLatestCardAcquisitions(1))
+            .extracting(CardAcquisition::cardId)
+            .contains(371, 372, 373, 667, 374);
+    }
+
+    @Test
     void testLibraryUpdateReportsAffordableBuyablesButIncompleteWithoutUnbuyables() {
         AtomicReference<LibraryUpdate> latestUpdate = new AtomicReference<>();
         Library library = new Library(1, hundoConstants, latestUpdate::set);
