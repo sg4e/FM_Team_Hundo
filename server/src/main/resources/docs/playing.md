@@ -26,3 +26,9 @@ Perform the following steps **in order** each time you want to continue your pro
 4. Verify in the FM_Sentinel command prompt/terminal window that the connection to the emulator and server is successful. FM_Sentinel will attempt to detect any connection problems while you play and print an error message, but you may also want to monitor [your player page](/players/me) on the FM Team Hundo website to make sure all your actions are posting to the server.
 
 5. Load your save file (or New Game if you haven't started yet). You're ready to play!
+
+## Limitations
+
+1. Once you ritual-summon a monster, that monster's ritual summon will not be re-sent to the collection server until you relaunch the emulator. This has no effect on the team's Library and can be ignored.
+
+2. If you receive the same drop in two consecutive fights, the second copy will not be sent to the collection server. This is an issue for the Blue-Eyes White Dragon farm. If you intend to keep farming for Blue-Eyes White Dragons after receiving one, either relaunch your emulator or win at least one duel against some other duelist before returning to Seto 3.
