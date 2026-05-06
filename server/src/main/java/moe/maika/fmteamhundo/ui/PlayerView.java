@@ -3,6 +3,8 @@ package moe.maika.fmteamhundo.ui;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
@@ -88,7 +90,16 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
 
     @Override
     public void setParameter(BeforeEvent event, String parameter) {
-        try {
+        if("me".equalsIgnoreCase(parameter)) {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if(principal instanceof User) {
+                playerId = ((User)principal).getDatabaseId();
+            }
+            else {
+                playerId = -1L;
+            }
+        }
+        else try {
             playerId = Long.parseLong(parameter);
         }
         catch(NumberFormatException ex) {
