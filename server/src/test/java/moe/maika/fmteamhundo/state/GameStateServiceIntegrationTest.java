@@ -240,6 +240,7 @@ class GameStateServiceIntegrationTest {
                 .content(objectMapper.writeValueAsString(firstMessages)))
                 .andExpect(status().isOk());
 
+        sleep();
         Library team1Library = gameStateService.getLibrary(1);
         assertThat(team1Library.getStarchips(team1Users.get(0).getDatabaseId())).isEqualTo(50);
         assertThat(team1Library.getTotalTeamStarchips()).isEqualTo(50);
