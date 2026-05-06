@@ -25,6 +25,7 @@ public class Library {
     private final ConcurrentHashMap<Long, Long> starchips = new ConcurrentHashMap<>();
     private volatile long totalStarchips = 0;
     private volatile int bewdCount = 0;
+    private final List<Instant> bewdInstants = new ArrayList<>();
     private final HundoConstants hundoConstants;
     private final FMDB fmdb;
 
@@ -62,8 +63,14 @@ public class Library {
                 // handle BEUD and GG special cases
                 // BEWD count
                 if(card.getValue() == 1) {
-                    bewdCount++;
-                    changed = true; // changed every time because UI updates the BEWD count
+                    // keeping track of the Instants helps protect against accidental re-adds, which might happen on resumes
+                    // this may or may not be necessary in the end
+                    // if FM Team Hundo every supports card-mod, this will have to be removed
+                    if(!bewdInstants.contains(card.getTime())) {
+                        bewdInstants.add(card.getTime());
+                        bewdCount++;
+                        changed = true; // changed every time because UI updates the BEWD count
+                    }
                 }
                 // Regular card parsing
                 // make sure library maps to first acquisition of the card
