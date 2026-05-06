@@ -135,3 +135,17 @@ jobs:
       with:
         name: server
         path: server/target/server.jar
+  
+  package-duckstation-patch:
+    name: Package DuckStation patch
+    runs-on: ubuntu-latest
+  
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: duckstation_patch
+        path: duckstation_patch/
