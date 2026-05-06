@@ -8,10 +8,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
@@ -38,9 +38,14 @@ public class AdminView extends VerticalLayout {
         this.content = new VerticalLayout();
 
         setSizeFull();
-        setPadding(true);
-        setSpacing(true);
+        setPadding(false);
+        setSpacing(false);
         setDefaultHorizontalComponentAlignment(Alignment.STRETCH);
+
+        content.setWidthFull();
+        content.setPadding(true);
+        content.setSpacing(true);
+        content.addClassNames("page-container", "admin-view");
 
         add(ViewSupport.createTopBar(), content);
 
@@ -59,12 +64,9 @@ public class AdminView extends VerticalLayout {
 
     private void renderAdminPanel() {
         content.removeAll();
-        content.add(new H2("Admin Panel"));
+        content.add(new H1("Admin Panel"));
 
-        // Section 1: Create Teams
-        content.add(new H3("Create Team"));
-        VerticalLayout createTeamSection = new VerticalLayout();
-        createTeamSection.setSpacing(true);
+        VerticalLayout createTeamSection = createSection("Create Team");
 
         TextField teamNameField = new TextField("Team Name");
         teamNameField.setPlaceholder("Enter team name");
@@ -80,13 +82,12 @@ public class AdminView extends VerticalLayout {
         createTeamSection.add(teamNameField, createTeamButton);
         content.add(createTeamSection);
 
-        // Section 2: Manage Team Members
-        content.add(new H3("Assign Users to Teams"));
+        VerticalLayout assignmentSection = createSection("Assign Users to Teams");
         List<Team> allTeams = teamRepository.findAll();
         List<User> unassignedUsers = userRepository.findByTeamId(0);
 
         if (unassignedUsers.isEmpty()) {
-            content.add(new Paragraph("No unassigned users."));
+            assignmentSection.add(new Paragraph("No unassigned users."));
         } else {
             Grid<User> userGrid = new Grid<>(User.class, false);
             userGrid.addColumn(User::getName).setHeader("User Name");
@@ -106,20 +107,36 @@ public class AdminView extends VerticalLayout {
                     }
                 });
 
-                Div container = new Div(teamSelector, assignButton);
+                VerticalLayout container = new VerticalLayout(teamSelector, assignButton);
+                container.setPadding(false);
+                container.setSpacing(true);
                 container.addClassName("admin-action-row");
                 return container;
             }).setHeader("Action");
 
             userGrid.setItems(unassignedUsers);
             userGrid.setWidthFull();
-            content.add(userGrid);
+            assignmentSection.add(userGrid);
         }
+
+        content.add(assignmentSection);
     }
 
     private void renderUnauthorized() {
         content.removeAll();
-        content.add(new H2("Unauthorized"));
-        content.add(new Paragraph("You do not have permission to access this page."));
+        VerticalLayout unauthorizedSection = createSection("Unauthorized");
+        unauthorizedSection.add(new Paragraph("You do not have permission to access this page."));
+        content.add(new H1("Admin Panel"), unauthorizedSection);
+    }
+
+    private VerticalLayout createSection(String title) {
+        VerticalLayout section = new VerticalLayout();
+        section.setPadding(true);
+        section.setSpacing(true);
+        section.setWidthFull();
+        section.setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.STRETCH);
+        section.addClassNames("content-section", "admin-section");
+        section.add(new H2(title));
+        return section;
     }
 }
