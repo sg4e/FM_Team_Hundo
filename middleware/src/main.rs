@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use clap::{crate_name, crate_version};
 use serde::{Deserialize};
 use reqwest::Client;
 use std::error::Error;
@@ -246,6 +247,7 @@ async fn listen_for_emu_connection(sender: mpsc::Sender<String>) -> Result<(), B
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+    println!("{}: version {}", crate_name!(), crate_version!());
     let (sender, receiver) = mpsc::channel(EMU_MESSAGE_BUFFER_SIZE);
 
     let emu_server = tokio::spawn(listen_for_emu_connection(sender));  // producer
