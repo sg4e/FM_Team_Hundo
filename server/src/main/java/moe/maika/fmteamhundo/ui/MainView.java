@@ -18,6 +18,7 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -34,6 +35,7 @@ import moe.maika.fmteamhundo.state.UserMappings;
 
 @Route("")
 @AnonymousAllowed
+@PageTitle("FM Team Hundo")
 public class MainView extends VerticalLayout implements TeamUpdateListener {
 
     private final GameStateService gameStateService;

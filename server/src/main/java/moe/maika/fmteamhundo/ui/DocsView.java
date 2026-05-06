@@ -16,6 +16,7 @@ import com.vaadin.flow.component.markdown.Markdown;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.WildcardParameter;
@@ -23,9 +24,10 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 
 @Route("docs")
 @AnonymousAllowed
-public class DocsView extends VerticalLayout implements HasUrlParameter<String> {
+public class DocsView extends VerticalLayout implements HasUrlParameter<String>, HasDynamicTitle {
 
     private static final Map<String, DocPage> DOCS = new LinkedHashMap<>();
+    private String title = "Documentation";
 
     static {
         DOCS.put("rules", new DocPage("Rules", "docs/rules.md"));
@@ -58,8 +60,14 @@ public class DocsView extends VerticalLayout implements HasUrlParameter<String> 
         UI.getCurrent().getPage().executeJs("window.scrollTo(0, 0)");
     }
 
+    @Override
+    public String getPageTitle() {
+        return title;
+    }
+
     private void render(String parameter) {
         content.removeAll();
+        title = "Documentation";
 
         if(parameter.isEmpty()) {
             renderIndex();
@@ -71,7 +79,7 @@ public class DocsView extends VerticalLayout implements HasUrlParameter<String> 
             renderNotFound();
             return;
         }
-
+        title = docPage.title();
         content.add(createBackLink(), createMarkdown(docPage));
     }
 

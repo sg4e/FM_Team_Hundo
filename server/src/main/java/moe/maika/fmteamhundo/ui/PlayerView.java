@@ -14,6 +14,7 @@ import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.UnorderedList;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
@@ -31,7 +32,7 @@ import moe.maika.fmteamhundo.util.RingBuffer;
 
 @Route("players")
 @AnonymousAllowed
-public class PlayerView extends VerticalLayout implements HasUrlParameter<String>, PlayerUpdateListener {
+public class PlayerView extends VerticalLayout implements HasUrlParameter<String>, HasDynamicTitle, PlayerUpdateListener {
 
     private static final int NUMBER_OF_PLAYER_UPDATES_RENDERED = 10;
 
@@ -105,6 +106,12 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<String
         catch(NumberFormatException ex) {
             playerId = -1L;
         }
+    }
+
+    @Override
+    public String getPageTitle() {
+        User player = teamMapping.getUserById(playerId);
+        return player != null ? player.getName() : "Player View";
     }
 
     @Override

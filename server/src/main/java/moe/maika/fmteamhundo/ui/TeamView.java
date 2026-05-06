@@ -22,6 +22,7 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
@@ -44,7 +45,7 @@ import moe.maika.ygofm.gamedata.FMDB;
 
 @Route("teams")
 @AnonymousAllowed
-public class TeamView extends VerticalLayout implements HasUrlParameter<String>, TeamUpdateListener {
+public class TeamView extends VerticalLayout implements HasUrlParameter<String>, HasDynamicTitle, TeamUpdateListener {
 
     private static final int CARDS_PER_FULL_GRID = 100;
     private static final int TOTAL_CARDS = 722;
@@ -118,6 +119,11 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         if(currentUI != null) {
             loadInitialSnapshot();
         }
+    }
+
+    @Override
+    public String getPageTitle() {
+        return teamName != null ? String.format("Team %s", teamName) : "Team View";
     }
 
     @Override

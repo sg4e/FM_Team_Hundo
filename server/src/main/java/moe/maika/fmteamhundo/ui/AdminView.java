@@ -14,6 +14,7 @@ import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 
@@ -24,6 +25,7 @@ import moe.maika.fmteamhundo.data.repos.UserRepository;
 
 @Route("admin")
 @AnonymousAllowed
+@PageTitle("Admin Panel")
 public class AdminView extends VerticalLayout {
 
     private static final String ADMIN_TWITCH_ID = "73758417";
