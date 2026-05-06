@@ -102,7 +102,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: middleware-${{ matrix.os.pretty-name }}
+          name: FM_Sentinel-${{ matrix.os.pretty-name }}
           path: artifact/
 
   build-java:
