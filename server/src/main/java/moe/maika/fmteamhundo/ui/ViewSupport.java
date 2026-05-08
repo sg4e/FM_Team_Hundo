@@ -52,6 +52,7 @@ final class ViewSupport {
         nav.setSpacing(true);
         nav.addClassName("top-bar__nav");
         nav.add(new RouterLink("Home", MainView.class));
+        nav.add(new RouterLink("Setup and Rules", DocsView.class));
         Div actions = new Div();
         actions.addClassName("top-bar__actions");
 
@@ -68,7 +69,6 @@ final class ViewSupport {
             menuBar.addClassName("top-bar__menu");
             MenuItem userMenu = menuBar.addItem((String) user.getAttribute("preferred_username"), event -> { });
             userMenu.getSubMenu().addItem("Profile", event -> UI.getCurrent().navigate(UserProfileView.class));
-            userMenu.getSubMenu().addItem("Docs", event -> UI.getCurrent().navigate(DocsView.class));
             
             String twitchId = (String) user.getAttribute("sub");
             if(ADMIN_TWITCH_ID.equals(twitchId)) {

@@ -135,6 +135,12 @@ div {
   text-decoration: none;
 }
 
+.top-bar__nav a + a {
+  margin-left: var(--spacing-sm);
+  padding-left: var(--spacing-lg);
+  border-left: 1px solid var(--color-border);
+}
+
 .theme-toggle,
 .top-bar__login {
   border-radius: var(--border-radius-pill);

@@ -53,6 +53,7 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div { color: inherit; }
 .top-bar { box-sizing: border-box; padding: var(--spacing-md) var(--spacing-lg); border-bottom: 2px solid var(--color-border); background: color-mix(in srgb, var(--color-surface) 96%, transparent); backdrop-filter: blur(10px); box-shadow: var(--shadow-topbar); }
 .top-bar__nav, .top-bar__actions { display: flex; align-items: center; gap: var(--spacing-sm); }
 .top-bar__nav a { font-weight: var(--font-weight-bold); text-decoration: none; letter-spacing: 0.02em; }
+.top-bar__nav a + a { margin-left: var(--spacing-sm); padding-left: var(--spacing-lg); border-left: 1px solid var(--color-border); }
 .theme-toggle, .top-bar__login { border-radius: var(--border-radius-pill); }
 /* Layout & Container */
 .page-container { box-sizing: border-box; width: 100%; max-width: var(--content-max-width); margin: 0 auto; padding: var(--spacing-xl) var(--spacing-lg); }
