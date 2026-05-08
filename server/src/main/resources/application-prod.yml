@@ -1,5 +1,6 @@
 server:
   port: 51160
+  shutdown: graceful
 spring:
   datasource:
     url: jdbc:mysql://10.0.0.196:3306/fm_team_hundo
