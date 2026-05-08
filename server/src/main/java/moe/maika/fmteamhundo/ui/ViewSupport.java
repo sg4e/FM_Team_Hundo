@@ -23,6 +23,7 @@ import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.state.CardAcquisition;
@@ -53,6 +54,9 @@ final class ViewSupport {
         nav.addClassName("top-bar__nav");
         nav.add(new RouterLink("Home", MainView.class));
         nav.add(new RouterLink("Setup and Rules", DocsView.class));
+
+        Div alert = createAlert();
+
         Div actions = new Div();
         actions.addClassName("top-bar__actions");
 
@@ -61,7 +65,16 @@ final class ViewSupport {
         themeToggle.getElement().setAttribute("aria-label", "Toggle dark mode");
         actions.add(themeToggle);
 
-        topBar.add(nav, actions);
+        topBar.add(nav, alert, actions);
+        topBar.setFlexGrow(1, alert);
+
+        topBar.addAttachListener(event -> {
+            UI ui = event.getUI();
+            ui.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
+            TopBarAlertService.AlertListener listener = message -> ui.access(() -> setAlertMessage(alert, message));
+            TopBarAlertService.addListener(listener);
+            topBar.addDetachListener(detachEvent -> TopBarAlertService.removeListener(listener));
+        });
 
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if(principal instanceof OAuth2User user) {
@@ -85,6 +98,26 @@ final class ViewSupport {
         }
 
         return topBar;
+    }
+
+    private static Div createAlert() {
+        Div alert = new Div();
+        alert.addClassName("top-bar__alert");
+
+        Span alertText = new Span();
+        alertText.addClassName("top-bar__alert-text");
+        alert.add(alertText);
+
+        setAlertMessage(alert, TopBarAlertService.getMessage());
+        return alert;
+    }
+
+    private static void setAlertMessage(Div alert, String message) {
+        boolean hasMessage = message != null && !message.isBlank();
+        alert.setVisible(hasMessage);
+        if(hasMessage && alert.getComponentCount() > 0 && alert.getComponentAt(0) instanceof Span alertText) {
+            alertText.setText(message);
+        }
     }
 
     static String formatInstant(Instant instant) {

@@ -12,6 +12,7 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
@@ -67,6 +68,25 @@ public class AdminView extends VerticalLayout {
     private void renderAdminPanel() {
         content.removeAll();
         content.add(new H1("Admin Panel"));
+
+        VerticalLayout alertSection = createSection("Top Bar Alert");
+
+        TextField alertField = new TextField("Alert Text");
+        alertField.setWidthFull();
+        alertField.setPlaceholder("Enter scrolling alert text");
+        alertField.setValue(TopBarAlertService.getMessage());
+
+        Button setAlertButton = new Button("Set Alert", event -> TopBarAlertService.setMessage(alertField.getValue()));
+        Button clearAlertButton = new Button("Clear Alert", event -> {
+            TopBarAlertService.clearMessage();
+            alertField.clear();
+        });
+
+        HorizontalLayout alertActions = new HorizontalLayout(setAlertButton, clearAlertButton);
+        alertActions.setPadding(false);
+        alertActions.setSpacing(true);
+        alertSection.add(alertField, alertActions);
+        content.add(alertSection);
 
         VerticalLayout createTeamSection = createSection("Create Team");
 

@@ -2,6 +2,7 @@ package moe.maika.fmteamhundo;
 
 import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.theme.Theme;
 
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -12,6 +13,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @Theme("default")
+@Push
 @JsModule("./themes/default/theme-toggle.js")
 @JsModule("./themes/default/card-popover.js")
 @EnableConfigurationProperties(HundoConstants.class)

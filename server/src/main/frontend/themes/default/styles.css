@@ -128,17 +128,58 @@ div {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .top-bar__nav a {
   font-weight: var(--font-weight-semibold);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .top-bar__nav a + a {
   margin-left: var(--spacing-sm);
   padding-left: var(--spacing-lg);
   border-left: 1px solid var(--color-border);
+}
+
+.top-bar__alert {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 var(--spacing-md);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 38%, var(--color-border));
+  border-radius: var(--border-radius-pill);
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.top-bar__alert-text {
+  display: inline-block;
+  min-width: 100%;
+  padding: 0.45rem var(--spacing-md);
+  text-align: right;
+  animation: top-bar-alert-scroll 21s linear infinite;
+}
+
+@keyframes top-bar-alert-scroll {
+  from {
+    transform: translateX(100%);
+  }
+
+  85.714% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 .theme-toggle,
