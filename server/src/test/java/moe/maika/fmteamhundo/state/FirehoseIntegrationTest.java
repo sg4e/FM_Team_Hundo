@@ -129,6 +129,7 @@ class FirehoseIntegrationTest {
         WebSocketSession playerSession = connect("/firehose/player", playerClient);
         WebSocketSession teamSession = connect("/firehose/team", teamClient);
 
+        sleep(); // Allow some time for the handlers to register the new sessions
         assertThat(playerUpdateHandler.getSessionCount()).isEqualTo(1);
         assertThat(teamUpdateHandler.getSessionCount()).isEqualTo(1);
 
@@ -304,6 +305,15 @@ class FirehoseIntegrationTest {
                 Thread.sleep(25);
             }
             return payloads.size() >= expectedCount;
+        }
+    }
+
+    private static void sleep() {
+        try {
+                Thread.sleep(500);
+        }
+        catch(Exception ex) {
+                throw new RuntimeException(ex);
         }
     }
 }
