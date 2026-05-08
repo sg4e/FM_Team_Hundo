@@ -22,7 +22,7 @@ public class Library {
     private final int teamId;
     private final Consumer<LibraryUpdate> onLibraryUpdate;
     private final Map<Integer, CardAcquisition> acquiredCards = new TreeMap<>();
-    private final ConcurrentHashMap<Long, Long> starchips = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, StarchipSnapshot> starchips = new ConcurrentHashMap<>();
     private volatile long totalStarchips = 0;
     private volatile int bewdCount = 0;
     private final List<Instant> bewdInstants = new ArrayList<>();
@@ -38,6 +38,8 @@ public class Library {
         373,  // Suijin
         667   // Gate Guardian Ritual
     );
+
+    private record StarchipSnapshot(long value, Instant time) { }
 
     Library(int teamId, HundoConstants hundoConstants, Consumer<LibraryUpdate> onLibraryUpdate) {
         this.teamId = teamId;
@@ -97,13 +99,17 @@ public class Library {
             }
             for(PlayerUpdate starchip : mostRecentStarchipUpdateByPlayer.values()) {
                 long newValue = starchip.getValue();
-                Long previousValue = starchips.put(starchip.getParticipantId(), newValue);
-                if(previousValue == null) {
+                StarchipSnapshot previous = starchips.get(starchip.getParticipantId());
+                if(previous != null && !starchip.getTime().isAfter(previous.time())) {
+                    continue;
+                }
+                starchips.put(starchip.getParticipantId(), new StarchipSnapshot(newValue, starchip.getTime()));
+                if(previous == null) {
                     totalStarchips += newValue;
                     changed = true;
                 }
-                else if(previousValue.longValue() != newValue) {
-                    totalStarchips += newValue - previousValue.longValue();
+                else if(previous.value() != newValue) {
+                    totalStarchips += newValue - previous.value();
                     changed = true;
                 }
             }
@@ -146,7 +152,8 @@ public class Library {
 
     // not synchronized so PlayerView calls don't block
     public long getStarchips(long participantId) {
-        return starchips.getOrDefault(participantId, 0L);
+        StarchipSnapshot snapshot = starchips.get(participantId);
+        return snapshot != null ? snapshot.value() : 0L;
     }
 
     public long getTotalTeamStarchips() {

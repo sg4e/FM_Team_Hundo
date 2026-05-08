@@ -261,6 +261,25 @@ class GameStateServiceIntegrationTest {
     }
 
     @Test
+    void testOlderStarchipUpdatesDoNotOverwriteNewerValues() {
+        Library library = new Library(1, hundoConstants, _ -> {});
+        User user = team1Users.get(0);
+        Instant baseTime = Instant.now();
+
+        boolean newerChanged = library.update(List.of(
+                createPlayerUpdate(user, MessageType.STARCHIPS, 100, baseTime.plusSeconds(1))
+        ));
+        boolean olderChanged = library.update(List.of(
+                createPlayerUpdate(user, MessageType.STARCHIPS, 50, baseTime)
+        ));
+
+        assertThat(newerChanged).isTrue();
+        assertThat(olderChanged).isFalse();
+        assertThat(library.getStarchips(user.getDatabaseId())).isEqualTo(100);
+        assertThat(library.getTotalTeamStarchips()).isEqualTo(100);
+    }
+
+    @Test
     void testCardAcquisitionTrackedPerTeam() throws Exception {
         // Team 1: User 1 acquires card 122 (DROP)
         List<EmuMessage> team1Card1 = Arrays.asList(
