@@ -158,11 +158,11 @@ class FirehoseIntegrationTest {
 
         List<JsonNode> payloads = playerClient.jsonPayloads(objectMapper);
         assertThat(payloads)
-            .extracting(node -> node.get("source").asText())
+            .extracting(node -> node.get("source").asString())
             .containsExactlyInAnyOrder("drop", "starchips");
 
         JsonNode dropUpdate = payloads.stream()
-            .filter(node -> node.get("source").asText().equals("drop"))
+            .filter(node -> node.get("source").asString().equals("drop"))
             .findFirst()
             .orElseThrow();
         assertThat(dropUpdate.get("value").asInt()).isEqualTo(122);
@@ -209,7 +209,7 @@ class FirehoseIntegrationTest {
         JsonNode teamPayload = objectMapper.readTree(teamClient.payloads().get(0));
 
         assertThat(playerPayload.has("source")).isTrue();
-        assertThat(playerPayload.get("source").asText()).isEqualTo("fuse");
+        assertThat(playerPayload.get("source").asString()).isEqualTo("fuse");
         assertThat(playerPayload.has("teamId")).isFalse();
 
         assertThat(teamPayload.has("teamId")).isTrue();

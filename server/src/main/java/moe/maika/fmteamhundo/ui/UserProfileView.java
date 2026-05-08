@@ -16,8 +16,9 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.component.textfield.TextField;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
@@ -118,9 +119,7 @@ public class UserProfileView extends VerticalLayout {
         );
 
         Button acknowledgeButton = new Button("Acknowledge and Download", event -> {
-            String apiKey = apiKeyService.generateNewApiKey(user);
-            StreamResource resource = createCredentialsResource(apiKey, user.getName());
-            downloadAnchor.setHref(resource);
+            downloadAnchor.setHref(createCredentialsDownloadHandler(user));
             confirmDialog.close();
             UI.getCurrent().getPage().executeJs("document.getElementById($0).click();", downloadAnchor.getId().orElse(""));
         });
@@ -135,9 +134,13 @@ public class UserProfileView extends VerticalLayout {
         confirmDialog.open();
     }
 
-    private StreamResource createCredentialsResource(String apiKey, String username) {
-        String json = buildCredentialsJson(apiKey, username);
-        return new StreamResource(CREDENTIALS_FILENAME, () -> new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+    private DownloadHandler createCredentialsDownloadHandler(User user) {
+        return DownloadHandler.fromInputStream(event -> {
+            String apiKey = apiKeyService.generateNewApiKey(user);
+            String json = buildCredentialsJson(apiKey, user.getName());
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            return new DownloadResponse(new ByteArrayInputStream(bytes), CREDENTIALS_FILENAME, "application/json", bytes.length);
+        });
     }
 
     private String buildCredentialsJson(String apiKey, String username) {

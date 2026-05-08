@@ -59,14 +59,14 @@ public class SecurityConfiguration {
     @Bean
     public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient() {
         RestClient restClient = RestClient.builder()
-            .messageConverters(messageConverters -> {
-                messageConverters.clear();
-                messageConverters.add(new FormHttpMessageConverter());
+            .configureMessageConverters(messageConverters -> {
+                messageConverters.disableDefaults();
+                messageConverters.addCustomConverter(new FormHttpMessageConverter());
                 var tokenConverter = new OAuth2AccessTokenResponseHttpMessageConverter();
                 tokenConverter.setAccessTokenResponseConverter(
                     new TwitchMapOAuth2AccessTokenResponseConverter()
                 );
-                messageConverters.add(tokenConverter);
+                messageConverters.addCustomConverter(tokenConverter);
             })
             .defaultStatusHandler(new OAuth2ErrorResponseErrorHandler())
             .build();

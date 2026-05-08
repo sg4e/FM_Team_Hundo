@@ -26,8 +26,9 @@ import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
-import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.data.entities.Team;
@@ -155,19 +156,18 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     }
 
     private Component createDownloadLink() {
-        StreamResource resource = new StreamResource(
-            teamName.replaceAll("[^a-zA-Z0-9._-]", "_") + "_cards.txt",
-            () -> {
-                List<Integer> cardIds = gameStateService.getLibrary(teamId).getAcquiredCardIds();
-                String content = cardIds.stream()
-                    .map(String::valueOf)
-                    .collect(Collectors.joining("\n"));
-                return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
-            }
-        );
+        DownloadHandler downloadHandler = DownloadHandler.fromInputStream(event -> {
+            List<Integer> cardIds = gameStateService.getLibrary(teamId).getAcquiredCardIds();
+            String content = cardIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining("\n"));
+            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+            String fileName = teamName.replaceAll("[^a-zA-Z0-9._-]", "_") + "_cards.txt";
+            return new DownloadResponse(new ByteArrayInputStream(bytes), fileName, "text/plain", bytes.length);
+        });
 
-        Anchor downloadLink = new Anchor(resource, "Download Team's Library");
-        downloadLink.getElement().setAttribute("download", true);
+        Anchor downloadLink = new Anchor(downloadHandler, "Download Team's Library");
+        downloadLink.setDownload(true);
         return downloadLink;
     }
 
