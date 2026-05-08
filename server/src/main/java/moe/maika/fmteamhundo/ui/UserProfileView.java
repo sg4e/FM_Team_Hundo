@@ -1,6 +1,5 @@
 package moe.maika.fmteamhundo.ui;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -28,9 +27,10 @@ import moe.maika.fmteamhundo.state.UserMappings;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 @Route("profile")
@@ -144,7 +144,7 @@ public class UserProfileView extends VerticalLayout {
         try {
             Credentials dto = new Credentials(apiKey, hundoConstants.getApiUrl(), username);
             return objectMapper.writeValueAsString(dto);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new RuntimeException("Failed to serialize credentials", e);
         }
     }

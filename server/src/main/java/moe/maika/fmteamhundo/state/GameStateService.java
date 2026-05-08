@@ -13,8 +13,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +27,8 @@ import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.util.RingBuffer;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
@@ -194,7 +194,7 @@ public class GameStateService {
                 String asJson = objectMapper.writeValueAsString(update);
                 teamUpdateHandler.broadcast(asJson);
             }
-            catch(JsonProcessingException ex) {
+            catch(JacksonException ex) {
                 log.error("Error broadcasting team update {}: {}", update, ex.getMessage(), ex);
             }
         });
@@ -233,7 +233,7 @@ public class GameStateService {
                 String asJson = objectMapper.writeValueAsString(update);
                 playerUpdateHandler.broadcast(asJson);
             }
-            catch(JsonProcessingException ex) {
+            catch(JacksonException ex) {
                 log.error("Error broadcasting player update {}: {}", update, ex.getMessage(), ex);
             }
         }

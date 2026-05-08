@@ -1,35 +1,33 @@
 package moe.maika.fmteamhundo.security;
 
-import com.vaadin.flow.spring.security.VaadinWebSecurity;
+import com.vaadin.flow.spring.security.VaadinSecurityConfigurer;
+import moe.maika.fmteamhundo.security.twitch.TwitchMapOAuth2AccessTokenResponseConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.core.http.converter.OAuth2AccessTokenResponseHttpMessageConverter;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.http.OAuth2ErrorResponseErrorHandler;
+import org.springframework.security.oauth2.core.http.converter.OAuth2AccessTokenResponseHttpMessageConverter;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.client.RestClient;
-import moe.maika.fmteamhundo.security.twitch.TwitchMapOAuth2AccessTokenResponseConverter;
 
 /**
  *
  */
 @EnableWebSecurity 
 @Configuration
-public class SecurityConfiguration extends VaadinWebSecurity { 
+public class SecurityConfiguration { 
     
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        
-        
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/**").permitAll()
@@ -51,22 +49,11 @@ public class SecurityConfiguration extends VaadinWebSecurity {
         http.csrf(csrf -> csrf
             .ignoringRequestMatchers("/api/**", "/ws/**")  // Only disable for API and WebSocket paths
         );
-        super.configure(http); 
-    }
-    
-    /**
-     * Allows access to static resources, bypassing Spring security.
-     */
-    @Override
-    public void configure(WebSecurity web) throws Exception {
-        // Configure your static resources with public access here:
-        // web.ignoring().requestMatchers(
-        //         "/images/**"
-        // );
 
-        // Delegating the ignoring configuration for Vaadin's
-        // related static resources to the super class:
-        super.configure(web); 
+        http.with(VaadinSecurityConfigurer.vaadin(), configurer -> {
+        });
+
+        return http.build();
     }
 
     @Bean
