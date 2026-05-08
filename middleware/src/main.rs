@@ -24,12 +24,13 @@ use std::process;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
-use tokio::time::{interval, Duration};
+use tokio::time::{interval, Duration, sleep};
 use tokio::select;
 
 mod cards;
 
-const EMU_MESSAGE_BUFFER_SIZE: usize = 100;
+const EMU_MESSAGE_BUFFER_SIZE: usize = 1000;
+const RETRY_INTERVAL_SECONDS: u64 = 15;
 const CREDENTIALS_FILENAME: &str = "credentials_FM_Team_Hundo.json";
 
 #[derive(Debug, Deserialize)]
@@ -163,47 +164,49 @@ async fn consume_cards(mut receiver: mpsc::Receiver<String>) -> Result<(), Box<d
                     eprintln!("Error parsing JSON: {}", e);
                 }
             }
-            // Forward emu messages to collection server
-            if !buffer.is_empty() {
-                let messages = format!("[{}]", buffer.join(","));
-                match http_client.post(format!("{}{}", credentials.url, "/update"))
-                    .header("X-API-Key", &credentials.key)
-                    .header("Content-Type", "application/json")
-                    .body(messages)
-                    .send()
-                    .await {
-                        Ok(resp) => {
-                            let status = resp.status();
-                            match resp.text().await {
-                                Ok(text) => {
-                                    let api_response: ApiResponse = match serde_json::from_str(&text) {
-                                        Ok(res) => res,
-                                        Err(e) => {
-                                            eprintln!("Error parsing API response: {}", e);
-                                            eprintln!("HTTP code was: {}", status);
-                                            eprintln!("Response was: {}", text);
-                                            return Ok(());
-                                        }
-                                    };
-                                    match api_response.result.as_str() {
-                                        "ok" => (),
-                                        "error" => eprintln!("Server returned error: {}", match api_response.message {
-                                            Some(message) => message,
-                                            None => "Unspecified error".to_string()
-                                        }),
-                                        _ => eprintln!("Unexpected response from server: {}", api_response.result)
-                                    }
-                                },
-                                Err(e) => eprintln!("Error reading API response text: {}", e)
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("Error sending request to server: {}\nSubmit your latest card manually.", e);
-                        }
-                    }
-            }
         }
-        buffer.clear();
+        // Forward emu messages to collection server
+        if !buffer.is_empty() {
+            let messages = format!("[{}]", buffer.join(","));
+            let server_response = http_client.post(format!("{}{}", credentials.url, "/update"))
+                .header("X-API-Key", &credentials.key)
+                .header("Content-Type", "application/json")
+                .body(messages)
+                .send()
+                .await;
+            match server_response {
+                    Ok(resp) => {
+                        let status = resp.status();
+                        match resp.text().await {
+                            Ok(text) => {
+                                let api_response: ApiResponse = match serde_json::from_str(&text) {
+                                    Ok(res) => res,
+                                    Err(e) => {
+                                        eprintln!("Error parsing API response: {}", e);
+                                        eprintln!("HTTP code was: {}", status);
+                                        eprintln!("Response was: {}", text);
+                                        return Ok(());
+                                    }
+                                };
+                                match api_response.result.as_str() {
+                                    "ok" => (),
+                                    "error" => eprintln!("Server returned error: {}", match api_response.message {
+                                        Some(message) => message,
+                                        None => "Unspecified error".to_string()
+                                    }),
+                                    _ => eprintln!("Unexpected response from server: {}", api_response.result)
+                                }
+                            },
+                            Err(e) => eprintln!("Error reading API response text: {}", e)
+                        }
+                        buffer.clear();
+                    }
+                    Err(e) => {
+                        eprintln!("Error connecting to collection server: {}\nWaiting {} seconds and then trying again...", e, RETRY_INTERVAL_SECONDS);
+                        sleep(Duration::from_secs(RETRY_INTERVAL_SECONDS)).await;
+                    }
+                }
+        }
     }
 
     Ok(())
