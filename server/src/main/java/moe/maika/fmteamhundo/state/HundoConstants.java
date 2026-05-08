@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 import lombok.Getter;
@@ -16,11 +17,14 @@ public class HundoConstants {
     private final String apiUrl;
     private final int totalObtainableCards;
     private final Set<Integer> unobtainableCards;
+    private final boolean teamAutoAssign;
 
     @ConstructorBinding
-    public HundoConstants(String apiUrl, int totalObtainableCards, List<Integer> unobtainableCards) {
+    public HundoConstants(String apiUrl, int totalObtainableCards, List<Integer> unobtainableCards,
+            @DefaultValue("false") boolean teamAutoAssign) {
         this.apiUrl = apiUrl;
         this.totalObtainableCards = totalObtainableCards;
         this.unobtainableCards = Collections.unmodifiableSet(new HashSet<>(unobtainableCards));
+        this.teamAutoAssign = teamAutoAssign;
     }
 }

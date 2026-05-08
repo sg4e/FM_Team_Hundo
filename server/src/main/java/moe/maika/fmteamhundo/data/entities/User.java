@@ -2,6 +2,8 @@ package moe.maika.fmteamhundo.data.entities;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,7 +22,9 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.state.HundoConstants;
 
 /**
  *
@@ -62,7 +66,8 @@ public class User implements OAuth2User, Serializable {
      * @param userRepository
      * @return 
      */
-    public static User getFromOAuth(OAuth2User oauth, String token, UserRepository userRepository) {
+    public static User getFromOAuth(OAuth2User oauth, String token, UserRepository userRepository,
+            TeamRepository teamRepository, HundoConstants hundoConstants) {
         User u;
         final String twitchId = oauth.getAttribute("sub");
         Optional<User> opt = userRepository.findByTwitchId(twitchId);
@@ -86,6 +91,18 @@ public class User implements OAuth2User, Serializable {
         if(!oauth.getName().equals(u.getName())) {
             u.setName(oauth.getName());
             userRepository.save(u);
+        }
+        if(hundoConstants.isTeamAutoAssign() && u.getTeamId() == 0) {
+            List<Team> teams = teamRepository.findAll();
+            Optional<Team> teamToAssign = teams.stream()
+                    .filter(team -> !team.isNoTeam())
+                    .min(Comparator.comparingLong(team -> userRepository.countByTeamId(team.getTeamId())));
+            if(teamToAssign.isPresent()) {
+                Team team = teamToAssign.get();
+                u.setTeamId(team.getTeamId());
+                userRepository.save(u);
+                log.info("Auto-assigned {} ({}) to team {}", u.getName(), u.getTwitchId(), team.getName());
+            }
         }
         return u;
     }
