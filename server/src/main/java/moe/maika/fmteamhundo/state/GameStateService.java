@@ -13,7 +13,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -46,11 +49,17 @@ public class GameStateService {
     private final PlayerUpdateRepository playerUpdateRepository;
     private final UserMappings userMappings;
     private final HundoConstants hundoConstants;
+    private final FirehoseHandler playerUpdateHandler;
+    private final FirehoseHandler teamUpdateHandler;
+    private final ObjectMapper objectMapper;
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
     public GameStateService(UserRepository userRepo, PlayerUpdateRepository playerUpdateRepository, UserMappings userMappings,
-            HundoConstants hundoConstants) {
+            HundoConstants hundoConstants,
+            @Qualifier("playerUpdateHandler") FirehoseHandler playerUpdateHandler, 
+            @Qualifier("teamUpdateHandler") FirehoseHandler teamUpdateHandler,
+            ObjectMapper objectMapper) {
         teamLibraries = new ConcurrentHashMap<>();
         latestPlayerUpdates = new ConcurrentHashMap<>();
         latestTeamSnapshots = new ConcurrentHashMap<>();
@@ -61,6 +70,9 @@ public class GameStateService {
         this.playerUpdateRepository = playerUpdateRepository;
         this.hundoConstants = hundoConstants;
         this.userMappings = userMappings;
+        this.playerUpdateHandler = playerUpdateHandler;
+        this.teamUpdateHandler = teamUpdateHandler;
+        this.objectMapper = objectMapper;
         reloadFromDatabase();
     }
 
@@ -72,6 +84,8 @@ public class GameStateService {
             Map<Long, List<PlayerUpdate>> mappedUpdates = updates.stream().collect(Collectors.groupingBy(PlayerUpdate::getParticipantId));
             notifyPlayerUpdateListeners(mappedUpdates);
         });
+        // dispatch to firehose
+        executorService.submit(() -> broadcastPlayerUpdates(updates));
         for(PlayerUpdate update : updates) {
             User user = userMappings.getUserById(update.getParticipantId());
             updatesByTeam.computeIfAbsent(user.getTeamId(), _ -> new ArrayList<>()).add(update);
@@ -175,6 +189,15 @@ public class GameStateService {
                 }
             });
         }
+        executorService.submit(() -> {
+            try {
+                String asJson = objectMapper.writeValueAsString(update);
+                teamUpdateHandler.broadcast(asJson);
+            }
+            catch(JsonProcessingException ex) {
+                log.error("Error broadcasting team update {}: {}", update, ex.getMessage(), ex);
+            }
+        });
     }
 
     private void notifyPlayerUpdateListeners(Map<Long, List<PlayerUpdate>> updates) {
@@ -200,6 +223,18 @@ public class GameStateService {
                         }
                     });
                 }
+            }
+        }
+    }
+
+    private void broadcastPlayerUpdates(Collection<PlayerUpdate> updates) {
+        for(PlayerUpdate update : updates) {
+            try {
+                String asJson = objectMapper.writeValueAsString(update);
+                playerUpdateHandler.broadcast(asJson);
+            }
+            catch(JsonProcessingException ex) {
+                log.error("Error broadcasting player update {}: {}", update, ex.getMessage(), ex);
             }
         }
     }

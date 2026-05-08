@@ -33,6 +33,7 @@ public class SecurityConfiguration extends VaadinWebSecurity {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/**").permitAll()
+                .requestMatchers("/firehose/**").permitAll()
             )
             .oauth2Client(oauth2 -> oauth2
                 .authorizationCodeGrant(codeGrant -> codeGrant
@@ -48,7 +49,7 @@ public class SecurityConfiguration extends VaadinWebSecurity {
                 );
             });
         http.csrf(csrf -> csrf
-            .ignoringRequestMatchers("/api/**")  // Only disable for API paths
+            .ignoringRequestMatchers("/api/**", "/ws/**")  // Only disable for API and WebSocket paths
         );
         super.configure(http); 
     }
