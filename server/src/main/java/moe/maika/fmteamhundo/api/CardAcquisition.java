@@ -1,8 +1,6 @@
-package moe.maika.fmteamhundo.state;
+package moe.maika.fmteamhundo.api;
 
 import java.time.Instant;
-
-import moe.maika.fmteamhundo.api.MessageType;
 
 public record CardAcquisition(int cardId, Instant acquisitionTime, MessageType source, long playerId, int opponentId) implements Comparable<CardAcquisition> {
     @Override

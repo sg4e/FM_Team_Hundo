@@ -21,8 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
+import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
+import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -45,12 +47,16 @@ class ApiControllerIntegrationTest {
     private PlayerUpdateRepository playerUpdateRepository;
 
     @Autowired
+    private TeamRepository teamRepository;
+
+    @Autowired
     private ApiKeyService apiKeyService;
 
     @Autowired
     private HundoConstants hundoConstants;
 
     private User testUser;
+    private Team testTeam;
     private String validApiKey;
 
     @BeforeEach
@@ -58,17 +64,75 @@ class ApiControllerIntegrationTest {
         // Clear repositories before each test
         playerUpdateRepository.deleteAll();
         userRepository.deleteAll();
+        teamRepository.deleteAll();
+
+        // Create a test team
+        testTeam = new Team("Test Team");
+        testTeam = teamRepository.save(testTeam);
 
         // Create a test user
         testUser = new User();
         testUser.setTwitchId("test_twitch_id");
         testUser.setName("TestUser");
-        testUser.setTeamId(1);
+        testUser.setAltAccount("TestAlt");
+        testUser.setTeamId(testTeam.getTeamId());
         testUser.setOauth("test_oauth_token");
         testUser = userRepository.save(testUser);
 
         // Generate a valid API key
         validApiKey = apiKeyService.generateNewApiKey(testUser);
+    }
+
+    @Test
+    void testPlayersEndpointReturnsUsersAssignedToTeams() throws Exception {
+        User noTeamUser = new User();
+        noTeamUser.setTwitchId("no_team_user");
+        noTeamUser.setName("NoTeamUser");
+        noTeamUser.setTeamId(0);
+        noTeamUser.setOauth("test_oauth_token");
+        userRepository.save(noTeamUser);
+
+        mockMvc.perform(get("/api/players")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(testUser.getDatabaseId()))
+                .andExpect(jsonPath("$[0].twitchId").value("test_twitch_id"))
+                .andExpect(jsonPath("$[0].name").value("TestUser"))
+                .andExpect(jsonPath("$[0].altAccount").value("TestAlt"))
+                .andExpect(jsonPath("$[0].teamId").value(testTeam.getTeamId()));
+    }
+
+    @Test
+    void testTeamsEndpointReturnsTeams() throws Exception {
+        Team otherTeam = new Team("Other Team");
+        otherTeam = teamRepository.save(otherTeam);
+
+        mockMvc.perform(get("/api/teams")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.id == %s && @.name == 'Test Team')]",
+                        testTeam.getTeamId()).exists())
+                .andExpect(jsonPath("$[?(@.id == %s && @.name == 'Other Team')]",
+                        otherTeam.getTeamId()).exists());
+    }
+
+    @Test
+    void testLibraryEndpointReturnsLatestEmptyLibrarySnapshot() throws Exception {
+        int emptyTeamId = testTeam.getTeamId() + 10_000;
+
+        mockMvc.perform(get("/api/library/{teamId}", emptyTeamId)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teamId").value(emptyTeamId))
+                .andExpect(jsonPath("$.totalStarchips").value(0))
+                .andExpect(jsonPath("$.uniqueCardCount").value(0))
+                .andExpect(jsonPath("$.newAcquisitions").isArray())
+                .andExpect(jsonPath("$.newAcquisitions.length()").value(0))
+                .andExpect(jsonPath("$.hasCompletedHundo").value(false))
+                .andExpect(jsonPath("$.bewdCount").value(0));
     }
 
     @Test

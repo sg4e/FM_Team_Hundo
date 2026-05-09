@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -23,6 +24,8 @@ import lombok.Getter;
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
+import moe.maika.fmteamhundo.data.repos.TeamRepository;
+import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -32,19 +35,47 @@ import moe.maika.fmteamhundo.state.HundoConstants;
 public class ApiController {
 
     private final ApiKeyService apiKeyService;
+    private final UserRepository userRepository;
+    private final TeamRepository teamRepository;
     private final PlayerUpdateRepository playerUpdateRepository;
     private final GameStateService gameStateService;
     private final HundoConstants hundoConstants;
     private final Set<Integer> unobtainableCards;
 
     @Autowired
-    public ApiController(ApiKeyService apiKeyService, PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService, 
-            HundoConstants hundoConstants) {
+    public ApiController(ApiKeyService apiKeyService, UserRepository userRepository, TeamRepository teamRepository,
+            PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService,  HundoConstants hundoConstants) {
         this.apiKeyService = apiKeyService;
+        this.userRepository = userRepository;
+        this.teamRepository = teamRepository;
         this.playerUpdateRepository = playerUpdateRepository;
         this.gameStateService = gameStateService;
         this.hundoConstants = hundoConstants;
         this.unobtainableCards = hundoConstants.getUnobtainableCards();
+    }
+
+    /**
+     * Returns a list of all players on teams (i.e. teamId != 0) with their Twitch ID, display name, and team ID.
+     * @return
+     */
+    @GetMapping("/players")
+    public ResponseEntity<List<PlayerJson>> getPlayers() {
+        return ResponseEntity.ok(userRepository.findAll().stream()
+            .filter(user -> user.getTeamId() != 0)
+            .map(PlayerJson::fromUser)
+            .collect(Collectors.toList()));
+    }
+
+    @GetMapping("/teams")
+    public ResponseEntity<List<TeamJson>> getTeams() {
+        return ResponseEntity.ok(teamRepository.findAll().stream()
+            .map(TeamJson::fromTeam)
+            .collect(Collectors.toList()));
+    }
+
+    @GetMapping("/library/{teamId}")
+    public ResponseEntity<LibraryUpdate> getLibrary(@PathVariable int teamId) {
+        return ResponseEntity.ok(gameStateService.getLatestLibraryUpdate(teamId));
     }
 
     @GetMapping("/validate")

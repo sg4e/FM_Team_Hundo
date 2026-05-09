@@ -25,10 +25,10 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.shared.communication.PushMode;
 
+import moe.maika.fmteamhundo.api.CardAcquisition;
+import moe.maika.fmteamhundo.api.LibraryUpdate;
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
-import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.HundoConstants;
-import moe.maika.fmteamhundo.state.LibraryUpdate;
 import moe.maika.fmteamhundo.state.UserMappings;
 import moe.maika.ygofm.gamedata.FMDB;
 

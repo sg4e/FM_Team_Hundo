@@ -1,7 +1,9 @@
-package moe.maika.fmteamhundo.state;
+package moe.maika.fmteamhundo.api;
 
 import java.time.Instant;
 import java.util.List;
+
+import moe.maika.fmteamhundo.state.Library;
 
 public record LibraryUpdate(
     Library library,

@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import moe.maika.fmteamhundo.api.CardAcquisition;
+import moe.maika.fmteamhundo.api.LibraryUpdate;
 import moe.maika.fmteamhundo.api.MessageType;
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.ygofm.gamedata.Card;

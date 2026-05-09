@@ -24,12 +24,12 @@ import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.shared.communication.PushMode;
 
+import moe.maika.fmteamhundo.api.CardAcquisition;
+import moe.maika.fmteamhundo.api.LibraryUpdate;
 import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.service.TeamService;
-import moe.maika.fmteamhundo.state.CardAcquisition;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
-import moe.maika.fmteamhundo.state.LibraryUpdate;
 import moe.maika.fmteamhundo.state.TeamUpdateListener;
 import moe.maika.fmteamhundo.state.UserMappings;
 
