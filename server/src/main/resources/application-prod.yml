@@ -11,5 +11,5 @@ spring:
           twitch:
             redirect-uri: "https://hundo.maika.moe/login/oauth2/code/{registrationId}"
 ygo:
-  apiUrl: https://hundo-api.maika.moe/api
+  apiUrl: https://hundo.maika.moe/api
   teamAutoAssign: true
