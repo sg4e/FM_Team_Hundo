@@ -14,7 +14,7 @@
 
 3. You may spend your starchips freely to improve your deck, but spent starchips will be automatically deducted from your team's starchip total.
 
-4. All gameplay must be streamed on either the one Twitch account you used to log into the FM Team Hundo website, or the one alt Twitch account you specified on your profile page.
+4. All gameplay must be streamed on either the one Twitch account you used to log into the FM Team Hundo website, or the one alt Twitch account you specified on your profile page. You must have enabled storage of past broadcasts.
 
 5. The start time of the event will be announced in advance. You cannot make progress before the start time and must start a fresh save file for the event. Resetting for decks before the start time is NOT allowed.
 
