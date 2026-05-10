@@ -5,9 +5,11 @@ import javafx.beans.binding.StringBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import moe.maika.fmteamhundo.livestats.api.LibraryUpdate;
@@ -15,7 +17,7 @@ import moe.maika.fmteamhundo.livestats.model.PlayerRowState;
 import moe.maika.fmteamhundo.livestats.model.TeamPanelState;
 
 public class TeamPanelView {
-    public static final double PANEL_WIDTH = 320.0;
+    public static final double PANEL_WIDTH = 520.0;
     private static final double TABLE_ROW_HEIGHT = 28.0;
     private static final int VISIBLE_ROWS = 8;
 
@@ -42,18 +44,24 @@ public class TeamPanelView {
         table.setPrefHeight(TABLE_ROW_HEIGHT * (VISIBLE_ROWS + 1.4));
         table.setMinHeight(TABLE_ROW_HEIGHT * (VISIBLE_ROWS + 1.4));
         table.setMaxHeight(TABLE_ROW_HEIGHT * (VISIBLE_ROWS + 1.4));
+        table.setFocusTraversable(false);
+        table.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
         TableColumn<PlayerRowState, String> player = new TableColumn<>("Player");
         player.setCellValueFactory(data -> data.getValue().playerNameProperty());
-        player.setPrefWidth(112);
+        player.setPrefWidth(120);
 
         TableColumn<PlayerRowState, String> source = new TableColumn<>("Source");
         source.setCellValueFactory(data -> data.getValue().sourceTextProperty());
         source.setPrefWidth(70);
 
-        TableColumn<PlayerRowState, String> value = new TableColumn<>("Value");
+        TableColumn<PlayerRowState, String> value = new TableColumn<>("Card");
         value.setCellValueFactory(data -> data.getValue().valueTextProperty());
-        value.setPrefWidth(58);
+        value.setPrefWidth(116);
+
+        TableColumn<PlayerRowState, String> opponent = new TableColumn<>("Opponent");
+        opponent.setCellValueFactory(data -> data.getValue().opponentTextProperty());
+        opponent.setPrefWidth(74);
 
         TableColumn<PlayerRowState, String> time = new TableColumn<>("Time");
         time.setCellValueFactory(data -> data.getValue().relativeTimeTextProperty());
@@ -62,9 +70,15 @@ public class TeamPanelView {
         table.getColumns().add(player);
         table.getColumns().add(source);
         table.getColumns().add(value);
+        table.getColumns().add(opponent);
         table.getColumns().add(time);
         table.setRowFactory(_ -> {
             TableRow<PlayerRowState> row = new TableRow<>();
+            row.setFocusTraversable(false);
+            row.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+                table.getSelectionModel().clearSelection();
+                event.consume();
+            });
             ChangeListener<Boolean> highlightListener = (_, _, highlighted) ->
                 row.setStyle(Boolean.TRUE.equals(highlighted) ? "-fx-background-color: #fff176;" : "");
             row.itemProperty().addListener((_, oldItem, newItem) -> {

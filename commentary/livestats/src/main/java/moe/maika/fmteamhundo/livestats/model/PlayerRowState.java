@@ -18,9 +18,11 @@ public class PlayerRowState {
     private final StringProperty playerName = new SimpleStringProperty();
     private final ObjectProperty<MessageType> source = new SimpleObjectProperty<>();
     private final ObjectProperty<Integer> value = new SimpleObjectProperty<>();
+    private final ObjectProperty<Integer> opponentId = new SimpleObjectProperty<>();
     private final ObjectProperty<Instant> updateTime = new SimpleObjectProperty<>();
     private final StringProperty sourceText = new SimpleStringProperty("");
     private final StringProperty valueText = new SimpleStringProperty("");
+    private final StringProperty opponentText = new SimpleStringProperty("");
     private final StringProperty relativeTimeText = new SimpleStringProperty("");
     private final BooleanProperty highlighted = new SimpleBooleanProperty(false);
 
@@ -45,6 +47,10 @@ public class PlayerRowState {
         return valueText;
     }
 
+    public StringProperty opponentTextProperty() {
+        return opponentText;
+    }
+
     public StringProperty relativeTimeTextProperty() {
         return relativeTimeText;
     }
@@ -64,9 +70,11 @@ public class PlayerRowState {
     public void apply(PlayerUpdate update, Clock clock) {
         source.set(update.source());
         value.set(update.value());
+        opponentId.set(update.opponentId());
         updateTime.set(update.time());
         sourceText.set(update.source() == null ? "" : update.source().toString());
         valueText.set(String.valueOf(update.value()));
+        opponentText.set(String.valueOf(update.opponentId()));
         refreshRelativeTime(clock);
     }
 

@@ -41,6 +41,7 @@ class LiveStatsStateTest {
         assertTrue(state.applyPlayerUpdate(update, CLOCK));
         assertEquals("drop", state.getPlayerRow(10).orElseThrow().sourceTextProperty().get());
         assertEquals("122", state.getPlayerRow(10).orElseThrow().valueTextProperty().get());
+        assertEquals("3", state.getPlayerRow(10).orElseThrow().opponentTextProperty().get());
         assertEquals("5s ago", state.getPlayerRow(10).orElseThrow().relativeTimeTextProperty().get());
 
         assertFalse(state.applyPlayerUpdate(new PlayerUpdate(1, MessageType.DROP, 999, NOW, 0, 0, 0), CLOCK));
