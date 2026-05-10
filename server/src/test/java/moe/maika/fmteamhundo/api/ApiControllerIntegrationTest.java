@@ -126,6 +126,7 @@ class ApiControllerIntegrationTest {
         mockMvc.perform(get("/api/library/{teamId}", emptyTeamId)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.library").doesNotExist())
                 .andExpect(jsonPath("$.teamId").value(emptyTeamId))
                 .andExpect(jsonPath("$.totalStarchips").value(0))
                 .andExpect(jsonPath("$.uniqueCardCount").value(0))

@@ -3,10 +3,12 @@ package moe.maika.fmteamhundo.api;
 import java.time.Instant;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import moe.maika.fmteamhundo.state.Library;
 
 public record LibraryUpdate(
-    Library library,
+    @JsonIgnore Library library,
     int teamId,
     Instant timestamp,
     long totalStarchips,
