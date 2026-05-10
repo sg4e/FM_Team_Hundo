@@ -2,6 +2,8 @@ package moe.maika.fmteamhundo.data.entities;
 
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,6 +22,7 @@ import moe.maika.fmteamhundo.api.MessageType;
 @NoArgsConstructor
 public class PlayerUpdate implements Comparable<PlayerUpdate> {
     @Id
+    @JsonIgnore
     @GeneratedValue(strategy = GenerationType.IDENTITY)  // IDENTITY over SEQUENCE
     private Long databaseId;
     private int value;
