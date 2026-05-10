@@ -12,6 +12,7 @@ import javafx.beans.property.StringProperty;
 import moe.maika.fmteamhundo.livestats.api.MessageType;
 import moe.maika.fmteamhundo.livestats.api.PlayerJson;
 import moe.maika.fmteamhundo.livestats.api.PlayerUpdate;
+import moe.maika.ygofm.gamedata.FMDB;
 
 public class PlayerRowState {
     private final long playerId;
@@ -25,6 +26,8 @@ public class PlayerRowState {
     private final StringProperty opponentText = new SimpleStringProperty("");
     private final StringProperty relativeTimeText = new SimpleStringProperty("");
     private final BooleanProperty highlighted = new SimpleBooleanProperty(false);
+
+    private static final FMDB fmdb = FMDB.getInstance();
 
     public PlayerRowState(PlayerJson player) {
         this.playerId = player.id();
@@ -74,7 +77,7 @@ public class PlayerRowState {
         updateTime.set(update.time());
         sourceText.set(update.source() == null ? "" : update.source().toString());
         valueText.set(String.valueOf(update.value()));
-        opponentText.set(String.valueOf(update.opponentId()));
+        opponentText.set(String.valueOf(fmdb.getDuelist(update.opponentId()).getName()));
         refreshRelativeTime(clock);
     }
 
