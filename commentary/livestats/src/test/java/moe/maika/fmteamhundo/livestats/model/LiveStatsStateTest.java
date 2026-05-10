@@ -17,6 +17,7 @@ import moe.maika.fmteamhundo.livestats.api.MessageType;
 import moe.maika.fmteamhundo.livestats.api.PlayerJson;
 import moe.maika.fmteamhundo.livestats.api.PlayerUpdate;
 import moe.maika.fmteamhundo.livestats.api.TeamJson;
+import moe.maika.ygofm.gamedata.FMDB;
 
 class LiveStatsStateTest {
     private static final Instant NOW = Instant.parse("2026-05-09T12:00:00Z");
@@ -41,7 +42,7 @@ class LiveStatsStateTest {
         assertTrue(state.applyPlayerUpdate(update, CLOCK));
         assertEquals("drop", state.getPlayerRow(10).orElseThrow().sourceTextProperty().get());
         assertEquals("122", state.getPlayerRow(10).orElseThrow().valueTextProperty().get());
-        assertEquals("3", state.getPlayerRow(10).orElseThrow().opponentTextProperty().get());
+        assertEquals(String.valueOf(FMDB.getInstance().getDuelist(3).getName()), state.getPlayerRow(10).orElseThrow().opponentTextProperty().get());
         assertEquals("5s ago", state.getPlayerRow(10).orElseThrow().relativeTimeTextProperty().get());
 
         assertFalse(state.applyPlayerUpdate(new PlayerUpdate(1, MessageType.DROP, 999, NOW, 0, 0, 0), CLOCK));
