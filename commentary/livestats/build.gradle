@@ -1,0 +1,64 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'io.freefair.lombok' version '9.5.0'
+}
+
+javafx {
+    version = '25.0.3'
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'moe.maika:ygofm-gamedata:1.1.0'
+    implementation 'org.controlsfx:controlsfx:11.2.3'
+    implementation 'com.github.afester.javafx:FranzXaver:0.1'
+    
+    //logging
+    implementation platform('org.apache.logging.log4j:log4j-bom:2.25.4')
+    implementation 'org.apache.logging.log4j:log4j-api'
+    implementation 'org.apache.logging.log4j:log4j-core'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl'
+    
+    //cross-platform runtimes
+    runtimeOnly "org.openjfx:javafx-graphics:$javafx.version:win"
+    runtimeOnly "org.openjfx:javafx-graphics:$javafx.version:linux"
+    runtimeOnly "org.openjfx:javafx-graphics:$javafx.version:mac"
+    
+    testImplementation platform('org.junit:junit-bom:6.0.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.testfx:testfx-junit5:4.0.18'
+    testImplementation 'org.mockito:mockito-core:5.23.0'
+}
+
+// tasks.withType(JavaCompile) {
+//     options.compilerArgs << "-Xlint:unchecked"
+//     options.compilerArgs << "-Xlint:deprecation"
+// }
+
+application {
+    mainClass = 'moe.maika.fmteamhundo.livestats.Launcher'
+    applicationDefaultJvmArgs = ['--add-exports', 'javafx.base/com.sun.javafx.event=ALL-UNNAMED']
+}
+
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes 'Main-Class': 'moe.maika.fmteamhundo.livestats.Launcher',
+                   "Multi-Release": true
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
