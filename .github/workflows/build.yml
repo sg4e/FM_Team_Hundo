@@ -135,6 +135,36 @@ jobs:
       with:
         name: server
         path: server/target/server.jar
+
+  build-livestats:
+    name: Build LiveStats JAR file
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Setup JDK
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'corretto'
+        java-version: '25'
+
+    - name: Build and test LiveStats
+      run: ./gradlew build
+      working-directory: commentary/livestats
+
+    - name: Prepare LiveStats artifact
+      run: |
+        mkdir -p artifact
+        cp build/libs/livestats.jar artifact/LiveStats.jar
+      working-directory: commentary/livestats
+
+    - name: Upload LiveStats.jar as artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: LiveStats.jar
+        path: commentary/livestats/artifact/LiveStats.jar
   
   package-duckstation-patch:
     name: Package DuckStation patch
