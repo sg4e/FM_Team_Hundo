@@ -41,6 +41,7 @@ public class LiveStats extends Application {
 
     private final ObjectMapper objectMapper = JsonSupport.createObjectMapper();
     private final Map<Long, Timeline> highlightTimelines = new HashMap<>();
+    private LiveStatsConfig config;
     private FirehoseClient playerFirehose;
     private FirehoseClient teamFirehose;
     private Timeline relativeTimeTicker;
@@ -58,6 +59,7 @@ public class LiveStats extends Application {
         stage.setTitle("FM Team Hundo Live Stats");
 
         try {
+            config = LiveStatsConfig.fromArgs(getParameters().getRaw().toArray(String[]::new));
             state = loadState();
             stage.setScene(createScene());
             startRelativeTimeTicker();
@@ -86,7 +88,7 @@ public class LiveStats extends Application {
     }
 
     private LiveStatsState loadState() throws Exception {
-        LiveStatsApiClient apiClient = new LiveStatsApiClient(HttpClient.newHttpClient(), objectMapper);
+        LiveStatsApiClient apiClient = new LiveStatsApiClient(HttpClient.newHttpClient(), objectMapper, config);
         return new StartupLoader(apiClient).load();
     }
 
@@ -116,12 +118,12 @@ public class LiveStats extends Application {
     private void startFirehoses() {
         playerFirehose = new FirehoseClient(
             "player",
-            LiveStatsConfig.websocketUri("/firehose/player"),
+            config.websocketUri("/firehose/player"),
             this::handlePlayerFirehoseMessage,
             connected -> Platform.runLater(() -> playerStatus.setText("Player firehose: " + statusText(connected))));
         teamFirehose = new FirehoseClient(
             "team",
-            LiveStatsConfig.websocketUri("/firehose/team"),
+            config.websocketUri("/firehose/team"),
             this::handleTeamFirehoseMessage,
             connected -> Platform.runLater(() -> teamStatus.setText("Team firehose: " + statusText(connected))));
         playerFirehose.start();

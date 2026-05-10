@@ -19,10 +19,12 @@ public class LiveStatsApiClient {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final LiveStatsConfig config;
 
-    public LiveStatsApiClient(HttpClient httpClient, ObjectMapper objectMapper) {
+    public LiveStatsApiClient(HttpClient httpClient, ObjectMapper objectMapper, LiveStatsConfig config) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
+        this.config = config;
     }
 
     public List<PlayerJson> getPlayers() throws IOException, InterruptedException {
@@ -48,7 +50,7 @@ public class LiveStatsApiClient {
     }
 
     private HttpResponse<String> sendGet(String path) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(LiveStatsConfig.restUri(path))
+        HttpRequest request = HttpRequest.newBuilder(config.restUri(path))
             .header("Accept", "application/json")
             .GET()
             .build();
