@@ -111,7 +111,7 @@ class FirehoseIntegrationTest {
         WebSocketSession session = connect("/firehose/player", client);
 
         assertThat(playerUpdateHandler.getEndpointPath()).isEqualTo("/firehose/player");
-        assertThat(playerUpdateHandler.getSessionCount()).isEqualTo(1);
+        assertSessionCount(playerUpdateHandler, 1);
 
         session.sendMessage(new TextMessage("ping-player"));
 
@@ -129,9 +129,8 @@ class FirehoseIntegrationTest {
         WebSocketSession playerSession = connect("/firehose/player", playerClient);
         WebSocketSession teamSession = connect("/firehose/team", teamClient);
 
-        sleep(); // Allow some time for the handlers to register the new sessions
-        assertThat(playerUpdateHandler.getSessionCount()).isEqualTo(1);
-        assertThat(teamUpdateHandler.getSessionCount()).isEqualTo(1);
+        assertSessionCount(playerUpdateHandler, 1);
+        assertSessionCount(teamUpdateHandler, 1);
 
         teamSession.sendMessage(new TextMessage("ping-team"));
 
@@ -141,7 +140,7 @@ class FirehoseIntegrationTest {
 
         playerSession.close(CloseStatus.NORMAL);
         assertSessionCount(playerUpdateHandler, 0);
-        assertThat(teamUpdateHandler.getSessionCount()).isEqualTo(1);
+        assertSessionCount(teamUpdateHandler, 1);
     }
 
     @Test
@@ -231,7 +230,7 @@ class FirehoseIntegrationTest {
 
         assertThat(activeClient.awaitMessages(1)).isTrue();
         assertThat(closedClient.payloads()).isEmpty();
-        assertThat(playerUpdateHandler.getSessionCount()).isEqualTo(1);
+        assertSessionCount(playerUpdateHandler, 1);
     }
 
     private User createUser(String twitchId, String name, int teamId) {
@@ -305,15 +304,6 @@ class FirehoseIntegrationTest {
                 Thread.sleep(25);
             }
             return payloads.size() >= expectedCount;
-        }
-    }
-
-    private static void sleep() {
-        try {
-                Thread.sleep(500);
-        }
-        catch(Exception ex) {
-                throw new RuntimeException(ex);
         }
     }
 }
