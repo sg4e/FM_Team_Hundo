@@ -4,7 +4,7 @@ import java.net.URI;
 import java.net.URL;
 
 public class LiveStatsConfig {
-    public static final String DEFAULT_BASE_URL = "http://localhost:8080";
+    public static final String DEFAULT_BASE_URL = "https://hundo.maika.moe";
 
     private final URI baseUri;
 

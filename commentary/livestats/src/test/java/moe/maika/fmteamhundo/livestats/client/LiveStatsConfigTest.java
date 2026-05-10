@@ -7,12 +7,12 @@ import org.junit.jupiter.api.Test;
 
 class LiveStatsConfigTest {
     @Test
-    void usesLocalhostWhenNoArgsAreProvided() {
+    void usesHostedServerWhenNoArgsAreProvided() {
         LiveStatsConfig config = LiveStatsConfig.fromArgs(new String[0]);
 
-        assertEquals("http://localhost:8080", config.baseUri().toString());
-        assertEquals("http://localhost:8080/api/teams", config.restUri("/api/teams").toString());
-        assertEquals("ws://localhost:8080/firehose/player", config.websocketUri("/firehose/player").toString());
+        assertEquals("https://hundo.maika.moe", config.baseUri().toString());
+        assertEquals("https://hundo.maika.moe/api/teams", config.restUri("/api/teams").toString());
+        assertEquals("wss://hundo.maika.moe/firehose/player", config.websocketUri("/firehose/player").toString());
     }
 
     @Test

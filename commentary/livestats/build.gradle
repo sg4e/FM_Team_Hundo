@@ -50,6 +50,10 @@ application {
     applicationDefaultJvmArgs = ['--add-exports', 'javafx.base/com.sun.javafx.event=ALL-UNNAMED']
 }
 
+tasks.named('run') {
+    args 'http://localhost:8080'
+}
+
 
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
