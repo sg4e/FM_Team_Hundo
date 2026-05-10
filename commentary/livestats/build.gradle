@@ -6,7 +6,7 @@ plugins {
 
 javafx {
     version = '25.0.3'
-    modules = [ 'javafx.controls', 'javafx.fxml' ]
+    modules = [ 'javafx.controls' ]
 }
 
 repositories {
