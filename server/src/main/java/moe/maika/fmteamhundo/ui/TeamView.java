@@ -2,6 +2,7 @@ package moe.maika.fmteamhundo.ui;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,10 +61,17 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     private final FMDB fmdb;
 
     private Integer teamId;
+    private Integer renderedTeamId;
     private String teamName;
     private List<User> teamMembers;
     private LibraryUpdate renderedSnapshot;
     private UI currentUI;
+    private Div statsBar;
+    private Div completionBanner;
+    private Span completionBannerText;
+    private UnorderedList latestAcquisitionsList;
+    private final Map<Integer, Div> cardCellsById = new HashMap<>();
+    private final Map<Integer, CardAcquisition> renderedCardAcquisitions = new HashMap<>();
 
     @Autowired
     public TeamView(GameStateService gameStateService, UserRepository userRepository, 
@@ -143,14 +151,28 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     }
 
     private void renderIfNewer(LibraryUpdate snapshot) {
-        if(renderedSnapshot != null && snapshot.timestamp().isBefore(renderedSnapshot.timestamp())) {
+        if(Objects.equals(renderedTeamId, teamId) && renderedSnapshot != null
+                && snapshot.timestamp().isBefore(renderedSnapshot.timestamp())) {
             return;
         }
+        if(!Objects.equals(renderedTeamId, teamId) || statsBar == null) {
+            buildTeamShell(snapshot);
+        }
+        else {
+            applySnapshot(snapshot);
+        }
         renderedSnapshot = snapshot;
-        render(snapshot);
     }
 
     private void renderMissingTeam() {
+        renderedTeamId = null;
+        renderedSnapshot = null;
+        statsBar = null;
+        completionBanner = null;
+        completionBannerText = null;
+        latestAcquisitionsList = null;
+        cardCellsById.clear();
+        renderedCardAcquisitions.clear();
         content.removeAll();
         content.add(new H1("Team not found"));
     }
@@ -171,23 +193,48 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         return downloadLink;
     }
 
-    private void render(LibraryUpdate snapshot) {
+    private void buildTeamShell(LibraryUpdate snapshot) {
+        renderedTeamId = teamId;
+        cardCellsById.clear();
+        renderedCardAcquisitions.clear();
         content.removeAll();
 
         H1 title = new H1(teamName);
         title.addClassName("team-view__title");
-        Div stats = new Div();
-        stats.addClassName("dashboard-stats-bar");
-        stats.add(ViewSupport.createAllStats(snapshot, hundoConstants));
+        statsBar = new Div();
+        statsBar.addClassName("dashboard-stats-bar");
 
-        content.add(title);
-        if(snapshot.hasCompletedHundo()) {
-            Div banner = new Div(new Icon(VaadinIcon.TROPHY), new Span("Completed at " + ViewSupport.formatInstant(snapshot.completionTime())));
-            banner.addClassName("completion-banner");
-            content.add(banner);
-        }
-        content.add(stats, createDownloadLink(), createObsStatsWidgetLink(), createLatestAcquisitions(snapshot),
+        completionBannerText = new Span();
+        completionBanner = new Div(new Icon(VaadinIcon.TROPHY), completionBannerText);
+        completionBanner.addClassName("completion-banner");
+
+        content.add(title, completionBanner);
+        content.add(statsBar, createDownloadLink(), createObsStatsWidgetLink(), createLatestAcquisitions(),
                 createMembers(snapshot), createCardGrids(gameStateService.getLibrary(teamId).getAcquiredCards()));
+        applySnapshot(snapshot);
+        if(currentUI != null) {
+            currentUI.getPage().executeJs("if(window.initCardPopovers) window.initCardPopovers()");
+        }
+    }
+
+    private void applySnapshot(LibraryUpdate snapshot) {
+        updateStats(snapshot);
+        updateCompletionBanner(snapshot);
+        updateLatestAcquisitions();
+        updateCardGrid(snapshot);
+    }
+
+    private void updateStats(LibraryUpdate snapshot) {
+        statsBar.removeAll();
+        statsBar.add(ViewSupport.createAllStats(snapshot, hundoConstants));
+    }
+
+    private void updateCompletionBanner(LibraryUpdate snapshot) {
+        boolean completed = snapshot.hasCompletedHundo() && snapshot.completionTime() != null;
+        completionBanner.setVisible(completed);
+        if(completed) {
+            completionBannerText.setText("Completed at " + ViewSupport.formatInstant(snapshot.completionTime()));
+        }
     }
 
     private Component createObsStatsWidgetLink() {
@@ -195,26 +242,30 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         return link;
     }
 
-    private Component createLatestAcquisitions(LibraryUpdate snapshot) {
+    private Component createLatestAcquisitions() {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
         section.setSpacing(false);
         section.addClassName("content-section");
         section.add(new H3("Latest 10 new cards"));
 
+        latestAcquisitionsList = new UnorderedList();
+        latestAcquisitionsList.addClassName("activity-list");
+        section.add(latestAcquisitionsList);
+        return section;
+    }
+
+    private void updateLatestAcquisitions() {
+        latestAcquisitionsList.removeAll();
         List<CardAcquisition> latestAcquisitions = gameStateService.getLatestCardAcquisitions(teamId);
-        UnorderedList list = new UnorderedList();
-        list.addClassName("activity-list");
         if(latestAcquisitions.isEmpty()) {
-            list.add(new ListItem("No cards acquired yet."));
+            latestAcquisitionsList.add(new ListItem("No cards acquired yet."));
         }
         else {
             latestAcquisitions.stream().limit(10).forEach(acquisition -> {
-                list.add(ViewSupport.createFromCardAcquisition(acquisition, userMappings));
+                latestAcquisitionsList.add(ViewSupport.createFromCardAcquisition(acquisition, userMappings));
             });
         }
-        section.add(list);
-        return section;
     }
 
     private Component createMembers(LibraryUpdate snapshot) {
@@ -268,9 +319,6 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             grid.add(createCardCell(cardId, acquiredCards.get(cardId)));
         }
         gridWrapper.add(grid);
-        if(currentUI != null) {
-            currentUI.getPage().executeJs("if(window.initCardPopovers) window.initCardPopovers()");
-        }
         return gridWrapper;
     }
 
@@ -279,26 +327,76 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         cell.setText(Integer.toString(cardId));
         cell.addClassName("card-cell");
         cell.getElement().setAttribute("data-card-id", Objects.toString(fmdb.getCard(cardId)));
+        cardCellsById.put(cardId, cell);
 
         if(hundoConstants.getUnobtainableCards().contains(cardId)) {
             cell.addClassName("card-cell--unobtainable");
             cell.getElement().setAttribute("data-status", "unobtainable");
         }
         else if(acquisition != null) {
-            cell.addClassName("card-cell--acquired");
-            cell.getElement().setAttribute("data-status", "acquired");
-            cell.getElement().setAttribute("data-player-name", userMappings.getUserById(acquisition.playerId()).getName());
-            cell.getElement().setAttribute("data-source", acquisition.source().toString());
-            cell.getElement().setAttribute("data-acquisition-time", ViewSupport.formatInstant(acquisition.acquisitionTime()));
-            Duelist opponent = fmdb.getDuelist(acquisition.opponentId());
-            if(opponent != null) {
-                cell.getElement().setAttribute("data-opponent", opponent.toString());
-            }
+            updateCardCell(cardId, acquisition);
         }
         else {
-            cell.addClassName("card-cell--unacquired");
-            cell.getElement().setAttribute("data-status", "unacquired");
+            resetCardCellToUnacquired(cell);
         }
         return cell;
+    }
+
+    private void updateCardGrid(LibraryUpdate snapshot) {
+        for(CardAcquisition acquisition : snapshot.newAcquisitions()) {
+            updateCardCell(acquisition.cardId(), acquisition);
+        }
+        if(renderedCardAcquisitions.size() != snapshot.uniqueCardCount()) {
+            resyncCardGrid(gameStateService.getLibrary(teamId).getAcquiredCards());
+        }
+    }
+
+    private void resyncCardGrid(Map<Integer, CardAcquisition> acquiredCards) {
+        renderedCardAcquisitions.clear();
+        for(Map.Entry<Integer, Div> entry : cardCellsById.entrySet()) {
+            int cardId = entry.getKey();
+            Div cell = entry.getValue();
+            if(hundoConstants.getUnobtainableCards().contains(cardId)) {
+                continue;
+            }
+            CardAcquisition acquisition = acquiredCards.get(cardId);
+            if(acquisition != null) {
+                updateCardCell(cardId, acquisition);
+            }
+            else {
+                resetCardCellToUnacquired(cell);
+            }
+        }
+    }
+
+    private void updateCardCell(int cardId, CardAcquisition acquisition) {
+        Div cell = cardCellsById.get(cardId);
+        if(cell == null || hundoConstants.getUnobtainableCards().contains(cardId)) {
+            return;
+        }
+        renderedCardAcquisitions.put(cardId, acquisition);
+        cell.removeClassName("card-cell--unacquired");
+        cell.addClassName("card-cell--acquired");
+        cell.getElement().setAttribute("data-status", "acquired");
+        cell.getElement().setAttribute("data-player-name", userMappings.getUserById(acquisition.playerId()).getName());
+        cell.getElement().setAttribute("data-source", acquisition.source().toString());
+        cell.getElement().setAttribute("data-acquisition-time", ViewSupport.formatInstant(acquisition.acquisitionTime()));
+        Duelist opponent = fmdb.getDuelist(acquisition.opponentId());
+        if(opponent != null) {
+            cell.getElement().setAttribute("data-opponent", opponent.toString());
+        }
+        else {
+            cell.getElement().removeAttribute("data-opponent");
+        }
+    }
+
+    private void resetCardCellToUnacquired(Div cell) {
+        cell.removeClassName("card-cell--acquired");
+        cell.addClassName("card-cell--unacquired");
+        cell.getElement().setAttribute("data-status", "unacquired");
+        cell.getElement().removeAttribute("data-player-name");
+        cell.getElement().removeAttribute("data-source");
+        cell.getElement().removeAttribute("data-acquisition-time");
+        cell.getElement().removeAttribute("data-opponent");
     }
 }
