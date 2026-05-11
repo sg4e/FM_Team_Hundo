@@ -1,0 +1,109 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import os
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+
+DEFAULT_API_BASE_URL = "https://hundo.maika.moe"
+
+
+@dataclass(frozen=True)
+class ApiConfig:
+    base_url: str = DEFAULT_API_BASE_URL
+
+
+@dataclass(frozen=True)
+class ObsConfig:
+    host: str = "127.0.0.1"
+    port: int = 4455
+    password: str | None = None
+    overlay_scene: str = "FM Hundo Overlay"
+    overlay_source: str = "FM Hundo Overlay Browser"
+
+    @property
+    def websocket_url(self) -> str:
+        return f"ws://{self.host}:{self.port}"
+
+
+@dataclass(frozen=True)
+class OverlayConfig:
+    host: str = "127.0.0.1"
+    port: int = 8765
+    connect_timeout_seconds: float = 10.0
+    canvas_width: int = 1920
+    canvas_height: int = 1080
+
+    @property
+    def url(self) -> str:
+        return f"http://{self.host}:{self.port}/overlay"
+
+
+@dataclass(frozen=True)
+class TimingConfig:
+    acquisition_window_seconds: float = 30.0
+    intro_seconds: float = 3.0
+
+
+@dataclass
+class FeatureFlags:
+    paused: bool = False
+    scene_switching: bool = True
+    intro_overlay: bool = True
+    banner_overlay: bool = True
+    audio_rotation: bool = True
+
+
+@dataclass(frozen=True)
+class GroupSceneConfig:
+    scene: str
+    audio_sources: tuple[str, ...]
+    interval_seconds: float = 180.0
+
+
+@dataclass(frozen=True)
+class AppConfig:
+    api: ApiConfig = field(default_factory=ApiConfig)
+    obs: ObsConfig = field(default_factory=ObsConfig)
+    overlay: OverlayConfig = field(default_factory=OverlayConfig)
+    timing: TimingConfig = field(default_factory=TimingConfig)
+    features: FeatureFlags = field(default_factory=FeatureFlags)
+    player_scenes: dict[int, str] = field(default_factory=dict)
+    group_scenes: tuple[GroupSceneConfig, ...] = ()
+
+
+def load_config(path: Path | str) -> AppConfig:
+    config_path = Path(path)
+    data: dict[str, Any] = {}
+    if config_path.exists():
+        with config_path.open("r", encoding="utf-8") as handle:
+            loaded = yaml.safe_load(handle) or {}
+            if not isinstance(loaded, dict):
+                raise ValueError(f"{config_path} must contain a YAML mapping")
+            data = loaded
+
+    obs_data = dict(data.get("obs") or {})
+    if os.getenv("OBS_WS_PASSWORD"):
+        obs_data["password"] = os.environ["OBS_WS_PASSWORD"]
+
+    return AppConfig(
+        api=ApiConfig(**dict(data.get("api") or {})),
+        obs=ObsConfig(**obs_data),
+        overlay=OverlayConfig(**dict(data.get("overlay") or {})),
+        timing=TimingConfig(**dict(data.get("timing") or {})),
+        features=FeatureFlags(**dict(data.get("features") or {})),
+        player_scenes={int(key): str(value) for key, value in (data.get("player_scenes") or {}).items()},
+        group_scenes=tuple(_group_scene(item) for item in data.get("group_scenes") or ()),
+    )
+
+
+def _group_scene(data: dict[str, Any]) -> GroupSceneConfig:
+    return GroupSceneConfig(
+        scene=str(data["scene"]),
+        audio_sources=tuple(str(source) for source in data.get("audio_sources") or ()),
+        interval_seconds=float(data.get("interval_seconds", 180.0)),
+    )
+

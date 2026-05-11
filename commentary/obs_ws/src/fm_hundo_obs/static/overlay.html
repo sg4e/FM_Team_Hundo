@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FM Hundo Overlay</title>
+  <style>
+    :root {
+      --canvas-width: __CANVAS_WIDTH__;
+      --canvas-height: __CANVAS_HEIGHT__;
+      --gold: #f5c542;
+      --ink: #111318;
+      --cyan: #57d7ff;
+      --red: #ff4d6d;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      font-family: "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .banner {
+      position: absolute;
+      left: 0;
+      width: 100vw;
+      height: 58px;
+      display: none;
+      align-items: center;
+      overflow: hidden;
+      background: linear-gradient(90deg, var(--ink), #26313a, var(--ink));
+      border-block: 2px solid var(--gold);
+      box-shadow: 0 0 22px rgba(245, 197, 66, 0.45);
+    }
+
+    .banner.top { top: 0; }
+    .banner.bottom { bottom: 0; }
+    .banner.active { display: flex; }
+
+    .track {
+      white-space: nowrap;
+      font-size: 30px;
+      font-weight: 900;
+      color: white;
+      text-transform: uppercase;
+      text-shadow: 0 2px 0 rgba(0,0,0,0.55);
+      animation: scroll 9s linear infinite;
+    }
+
+    .bottom .track { animation-direction: reverse; }
+
+    @keyframes scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    .intro {
+      position: absolute;
+      left: 50%;
+      bottom: 92px;
+      min-width: min(760px, 82vw);
+      transform: translateX(-50%) translateY(28px);
+      opacity: 0;
+      color: white;
+      background: rgba(17, 19, 24, 0.88);
+      border-left: 8px solid var(--cyan);
+      padding: 18px 24px 20px;
+      box-shadow: 0 18px 55px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+
+    .intro.active {
+      animation: introIn 220ms ease-out forwards, introOut 260ms ease-in forwards;
+      animation-delay: 0ms, var(--intro-hide-delay);
+    }
+
+    .player {
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.05;
+      overflow-wrap: anywhere;
+    }
+
+    .opponent {
+      margin-top: 6px;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gold);
+      overflow-wrap: anywhere;
+    }
+
+    @keyframes introIn {
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    @keyframes introOut {
+      to { opacity: 0; transform: translateX(-50%) translateY(24px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="banner top"><div class="track"></div></div>
+  <div class="banner bottom"><div class="track"></div></div>
+  <div class="intro">
+    <div class="player"></div>
+    <div class="opponent"></div>
+  </div>
+
+  <script>
+    const topBanner = document.querySelector(".banner.top");
+    const bottomBanner = document.querySelector(".banner.bottom");
+    const tracks = document.querySelectorAll(".track");
+    const intro = document.querySelector(".intro");
+    const player = document.querySelector(".player");
+    const opponent = document.querySelector(".opponent");
+    let bannerTimer = null;
+    let introTimer = null;
+
+    function repeatedLabel(label) {
+      const chunk = `   ✦   ${label}   ✦   `;
+      return Array(18).fill(chunk).join("");
+    }
+
+    function showBanner(payload) {
+      clearTimeout(bannerTimer);
+      tracks.forEach(track => { track.textContent = repeatedLabel(payload.label); });
+      topBanner.classList.add("active");
+      bottomBanner.classList.add("active");
+      bannerTimer = setTimeout(() => {
+        topBanner.classList.remove("active");
+        bottomBanner.classList.remove("active");
+      }, Math.max(0, Number(payload.durationSeconds || 30)) * 1000);
+    }
+
+    function showIntro(payload) {
+      clearTimeout(introTimer);
+      player.textContent = payload.playerName || "Player";
+      opponent.textContent = `vs ${payload.opponentName || "Opponent"}`;
+      intro.classList.remove("active");
+      void intro.offsetWidth;
+      const duration = Math.max(0.5, Number(payload.durationSeconds || 3));
+      intro.style.setProperty("--intro-hide-delay", `${Math.max(0, duration - 0.26)}s`);
+      intro.classList.add("active");
+      introTimer = setTimeout(() => intro.classList.remove("active"), duration * 1000);
+    }
+
+    function connect() {
+      const scheme = location.protocol === "https:" ? "wss" : "ws";
+      const ws = new WebSocket(`${scheme}://${location.host}/events`);
+      ws.onmessage = event => {
+        const message = JSON.parse(event.data);
+        if (message.type === "banner") showBanner(message.payload);
+        if (message.type === "intro") showIntro(message.payload);
+      };
+      ws.onclose = () => setTimeout(connect, 1000);
+    }
+
+    connect();
+  </script>
+</body>
+</html>
+

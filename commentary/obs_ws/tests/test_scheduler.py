@@ -1,0 +1,158 @@
+from __future__ import annotations
+
+import pytest
+
+from fm_hundo_obs.config import FeatureFlags, TimingConfig
+from fm_hundo_obs.mapping import NameResolver
+from fm_hundo_obs.models import CardAcquisition, LibraryUpdate, Player
+from fm_hundo_obs.scheduler import AcquisitionScheduler
+
+from .fakes import FakeObs, FakeOverlay
+
+
+def scheduler(
+    *,
+    obs: FakeObs | None = None,
+    overlay: FakeOverlay | None = None,
+    features: FeatureFlags | None = None,
+    player_scenes: dict[int, str] | None = None,
+    window_seconds: float = 0.01,
+) -> AcquisitionScheduler:
+    names = NameResolver(
+        [Player(10, "ten", "Runner Ten", None, 1), Player(11, "eleven", "Runner Eleven", None, 1)],
+        {5: "Villager2"},
+    )
+    return AcquisitionScheduler(
+        obs or FakeObs(),
+        overlay or FakeOverlay(),
+        names,
+        player_scenes if player_scenes is not None else {10: "Player Ten", 11: "Player Eleven"},
+        features or FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=window_seconds, intro_seconds=3),
+    )
+
+
+@pytest.mark.asyncio
+async def test_uses_first_acquisition_only_and_switches_then_restores():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    subject = scheduler(obs=obs, overlay=overlay)
+    update = LibraryUpdate(
+        1,
+        (
+            CardAcquisition.test_event(10, "drop", 5),
+            CardAcquisition.test_event(11, "ritual", 5),
+        ),
+    )
+
+    result = await subject.handle_update(update)
+
+    assert result.accepted is True
+    assert obs.scene_changes == ["Player Ten"]
+    assert overlay.banners == [("Big Drop Alert", 0.01)]
+    assert overlay.intros == [("Runner Ten", "Villager2", 3)]
+    await subject._active_task
+    assert obs.scene_changes == ["Player Ten", "Main"]
+
+
+@pytest.mark.asyncio
+async def test_active_window_skips_new_acquisitions():
+    obs = FakeObs(current_scene="Main")
+    subject = scheduler(obs=obs, window_seconds=0.2)
+
+    first = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+    second = await subject.handle_acquisition(CardAcquisition.test_event(11, "ritual", 5))
+
+    assert first.accepted is True
+    assert second.accepted is False
+    assert second.reason == "active acquisition window"
+
+
+@pytest.mark.asyncio
+async def test_pause_skips_acquisitions():
+    subject = scheduler(features=FeatureFlags(paused=True))
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is False
+    assert result.reason == "paused"
+
+
+@pytest.mark.asyncio
+async def test_missing_scene_alert_only_locks_window():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    subject = scheduler(obs=obs, overlay=overlay, player_scenes={})
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert obs.scene_changes == []
+    assert overlay.banners == [("Big Drop Alert", 0.01)]
+
+
+@pytest.mark.asyncio
+async def test_same_scene_locks_without_intro_or_switch():
+    obs = FakeObs(current_scene="Player Ten")
+    overlay = FakeOverlay()
+    subject = scheduler(obs=obs, overlay=overlay)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert obs.scene_changes == []
+    assert overlay.intros == []
+    assert subject.acquisition_active()
+
+
+@pytest.mark.asyncio
+async def test_scene_disabled_banner_enabled_still_locks():
+    obs = FakeObs(current_scene="Main")
+    features = FeatureFlags(scene_switching=False)
+    subject = scheduler(obs=obs, features=features)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert obs.scene_changes == []
+    assert subject.acquisition_active()
+
+
+@pytest.mark.asyncio
+async def test_banner_disabled_scene_switch_still_locks():
+    obs = FakeObs(current_scene="Main")
+    features = FeatureFlags(banner_overlay=False)
+    overlay = FakeOverlay()
+    subject = scheduler(obs=obs, overlay=overlay, features=features)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert overlay.banners == []
+    assert obs.scene_changes == ["Player Ten"]
+
+
+@pytest.mark.asyncio
+async def test_restore_respects_manual_scene_change():
+    obs = FakeObs(current_scene="Main")
+    subject = scheduler(obs=obs)
+
+    await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+    obs.current_scene = "Manual"
+    await subject._active_task
+
+    assert obs.scene_changes == ["Player Ten"]
+    assert obs.current_scene == "Manual"
+
+
+@pytest.mark.asyncio
+async def test_obs_disconnected_skips():
+    obs = FakeObs()
+    obs.connected_value = False
+    subject = scheduler(obs=obs)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is False
+    assert result.reason == "OBS disconnected"
+

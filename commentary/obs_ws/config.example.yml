@@ -1,0 +1,39 @@
+api:
+  base_url: "https://hundo.maika.moe"
+
+obs:
+  host: "127.0.0.1"
+  port: 4455
+  password: null
+  overlay_scene: "FM Hundo Overlay"
+  overlay_source: "FM Hundo Overlay Browser"
+
+overlay:
+  host: "127.0.0.1"
+  port: 8765
+  connect_timeout_seconds: 10
+  canvas_width: 1920
+  canvas_height: 1080
+
+timing:
+  acquisition_window_seconds: 30
+  intro_seconds: 3
+
+features:
+  paused: false
+  scene_switching: true
+  intro_overlay: true
+  banner_overlay: true
+  audio_rotation: true
+
+player_scenes:
+  # Player database id from /api/players: exact OBS scene name
+  # 123: "Player - ExampleRunner"
+
+group_scenes:
+  - scene: "Group Scene"
+    interval_seconds: 180
+    audio_sources:
+      - "Runner 1 Audio"
+      - "Runner 2 Audio"
+
