@@ -186,8 +186,13 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             banner.addClassName("completion-banner");
             content.add(banner);
         }
-        content.add(stats, createDownloadLink(), createLatestAcquisitions(snapshot),
+        content.add(stats, createDownloadLink(), createObsStatsWidgetLink(), createLatestAcquisitions(snapshot),
                 createMembers(snapshot), createCardGrids(gameStateService.getLibrary(teamId).getAcquiredCards()));
+    }
+
+    private Component createObsStatsWidgetLink() {
+        Anchor link = new Anchor(String.format("/widgets/stats/team/%d?cards=true&starchips=true&cost_of_buyables=true&unbuyables=true&bewds=true&dark_mode=false", teamId), "OBS Stats Widget");
+        return link;
     }
 
     private Component createLatestAcquisitions(LibraryUpdate snapshot) {

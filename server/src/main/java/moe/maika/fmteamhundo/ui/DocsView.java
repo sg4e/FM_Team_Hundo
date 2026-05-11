@@ -33,6 +33,7 @@ public class DocsView extends VerticalLayout implements HasUrlParameter<String>,
         DOCS.put("rules", new DocPage("Rules", "docs/rules.md"));
         DOCS.put("setup", new DocPage("Before the Event: Getting Set Up", "docs/setup.md"));
         DOCS.put("playing", new DocPage("Ready to Play: Connecting Your Emulator", "docs/playing.md"));
+        DOCS.put("tips", new DocPage("Helpful Tips", "docs/tips.md"));
     }
 
     private final VerticalLayout content;
