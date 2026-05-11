@@ -472,6 +472,39 @@ body.dark-mode .admin-section {
   background: var(--color-surface);
 }
 
+/* OBS Stats Widget */
+html.stats-widget-page,
+body.stats-widget-page,
+html.stats-widget-page #outlet,
+body.stats-widget-page #outlet {
+  min-height: 0;
+  background: transparent;
+}
+
+.stats-widget-view {
+  width: max-content;
+  max-width: 100vw;
+  background: transparent;
+}
+
+.stats-widget-stats {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 100vw;
+  margin: 0;
+}
+
+.stats-widget-stats .stat-chip {
+  white-space: nowrap;
+}
+
+.stats-widget-dark {
+  --color-surface: #162132;
+  --color-text-primary: #edf2ff;
+  --color-border: #2b3a55;
+  --color-dashboard-bg: linear-gradient(180deg, #182438, #152033);
+}
+
 @media (max-width: 720px) {
   .page-container {
     padding: var(--spacing-md);

@@ -131,13 +131,9 @@ final class ViewSupport {
     }
 
     static List<Component> createAllStats(LibraryUpdate snapshot, HundoConstants hundoConstants) {
-        return List.of(
-            createStat("Cards", String.format("%d/%d", snapshot.uniqueCardCount(), hundoConstants.getTotalObtainableCards())),
-            createStarchipsStat(snapshot.totalStarchips()),
-            createStat("Cost of Buyables", Integer.toString(snapshot.totalCostOfBuyables())),
-            createStat("Unbuyables", Integer.toString(snapshot.totalUnbuyables())),
-            createStat("BEWDs", Integer.toString(snapshot.bewdCount()))
-        );
+        return StatKind.all().stream()
+            .map(stat -> stat.createComponent(snapshot, hundoConstants))
+            .toList();
     }
 
     static Component createStarchipsStat(long starchips) {

@@ -32,6 +32,7 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/**").permitAll()
                 .requestMatchers("/firehose/**").permitAll()
+                .requestMatchers("/widgets/**").permitAll()
             )
             .oauth2Client(oauth2 -> oauth2
                 .authorizationCodeGrant(codeGrant -> codeGrant
