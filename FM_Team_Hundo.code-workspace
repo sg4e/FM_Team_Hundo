@@ -1,0 +1,22 @@
+{
+  "folders": [
+    {
+      "name": "FM_Team_Hundo",
+      "path": "."
+    },
+    {
+      "name": "server-maven",
+      "path": "server"
+    },
+    {
+      "name": "livestats-gradle",
+      "path": "commentary/livestats"
+    }
+  ],
+  "settings": {
+    "java.import.maven.enabled": true,
+    "java.import.gradle.enabled": true,
+    "java.import.gradle.wrapper.enabled": true,
+    "java.autobuild.enabled": true
+  }
+}

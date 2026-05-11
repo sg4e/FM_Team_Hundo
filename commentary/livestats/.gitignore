@@ -3,6 +3,13 @@
 
 # Ignore Gradle build output directory
 build
+bin
 
 # Ignore Kotlin plugin data
 .kotlin
+
+# Generated Java IDE metadata
+.project
+.classpath
+.settings/
+.factorypath
