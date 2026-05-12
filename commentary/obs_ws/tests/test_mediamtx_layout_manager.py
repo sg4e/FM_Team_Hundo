@@ -32,6 +32,28 @@ def registry(active: set[str]) -> StreamRegistry:
     return streams
 
 
+def latest_transform(obs: FakeObs, scene: str, source: str):
+    item_id = obs.scene_items[(scene, source)]
+    matches = [
+        transform
+        for transform_scene, transform_item_id, transform in obs.transforms
+        if transform_scene == scene and transform_item_id == item_id
+    ]
+    assert matches
+    return matches[-1]
+
+
+def latest_enabled(obs: FakeObs, scene: str, source: str) -> bool:
+    item_id = obs.scene_items[(scene, source)]
+    matches = [
+        enabled
+        for enabled_scene, enabled_item_id, enabled in obs.enabled
+        if enabled_scene == scene and enabled_item_id == item_id
+    ]
+    assert matches
+    return matches[-1]
+
+
 def test_parse_active_paths_handles_ready_and_source_shapes():
     payload = {
         "items": [
@@ -75,11 +97,19 @@ async def test_layout_manager_creates_managed_scenes_and_hides_inactive_streams(
 
     assert "FM Hundo - All Streamers" in obs.scenes
     assert "FM Hundo - Team - Alpha" in obs.scenes
+    assert ("FM Hundo - All Streamers", "FM Hundo Overlay") in obs.scene_items
+    assert ("FM Hundo - Team - Alpha", "FM Hundo Overlay") in obs.scene_items
+    assert ("FM Hundo - Player - Runner Ten", "FM Hundo Overlay") in obs.scene_items
+    for scene in ("FM Hundo - All Streamers", "FM Hundo - Team - Alpha", "FM Hundo - Player - Runner Ten"):
+        overlay_id = obs.scene_items[(scene, "FM Hundo Overlay")]
+        assert (scene, overlay_id) in obs.top_moves
     assert manager.player_scene_name(10) == "FM Hundo - Player - Runner Ten"
     assert manager.is_player_active(10) is True
     assert manager.is_player_active(11) is False
     assert obs.inputs_settings["FM Hundo Media - Runner Ten"]["input"] == "rtsp://127.0.0.1:8554/runner10"
     assert obs.inputs_settings["FM Hundo Media - Runner Ten"]["close_when_inactive"] is True
+    assert obs.inputs_settings["FM Hundo Label - Runner Ten"]["font"]["size"] == 26
+    assert obs.inputs_settings["FM Hundo Audio Note - Runner Ten"]["font"]["size"] == 30
 
 
 @pytest.mark.asyncio
@@ -94,6 +124,49 @@ async def test_layout_manager_prepares_inactive_player_placeholder():
 
 
 @pytest.mark.asyncio
+async def test_all_streamers_offline_message_toggles_with_active_streams():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry(set()))
+
+    await manager.setup()
+
+    source = "FM Hundo Offline Message - All Streamers"
+    assert obs.inputs_settings[source]["text"] == "All players offline. Stay tuned for more live coverage of FM Team Hundo!"
+    assert latest_enabled(obs, "FM Hundo - All Streamers", source) is True
+    transform = latest_transform(obs, "FM Hundo - All Streamers", source)
+    assert transform.x == pytest.approx(268.8)
+    assert transform.y == 450
+    assert transform.width == pytest.approx(1382.4)
+    overlay_id = obs.scene_items[("FM Hundo - All Streamers", "FM Hundo Overlay")]
+    assert ("FM Hundo - All Streamers", overlay_id) in obs.top_moves
+
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10"}))
+    await manager.setup()
+
+    assert latest_enabled(obs, "FM Hundo - All Streamers", source) is False
+
+
+@pytest.mark.asyncio
+async def test_team_offline_message_toggles_with_active_team_streams():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha"), Team(2, "Beta")], registry({"runner10"}))
+
+    await manager.setup()
+
+    alpha_source = "FM Hundo Offline Message - Team - Alpha"
+    beta_source = "FM Hundo Offline Message - Team - Beta"
+    assert obs.inputs_settings[alpha_source]["text"] == "All members of Alpha currently offline"
+    assert obs.inputs_settings[beta_source]["text"] == "All members of Beta currently offline"
+    assert latest_enabled(obs, "FM Hundo - Team - Alpha", alpha_source) is False
+    assert latest_enabled(obs, "FM Hundo - Team - Beta", beta_source) is True
+    transform = latest_transform(obs, "FM Hundo - Team - Beta", beta_source)
+    assert transform.x == pytest.approx(268.8)
+    assert transform.y == 450
+    assert transform.width == pytest.approx(1382.4)
+
+
+@pytest.mark.asyncio
 async def test_all_streamers_and_team_audio_rotation():
     obs = FakeObs(current_scene="FM Hundo - All Streamers")
     manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
@@ -101,7 +174,100 @@ async def test_all_streamers_and_team_audio_rotation():
 
     assert await manager.tick_all_streamers_audio(force=True) is True
     assert ("FM Hundo Media - Runner Eleven", False) in obs.mutes
+    all_note_id = obs.scene_items[("FM Hundo - All Streamers", "FM Hundo Audio Note - Runner Eleven")]
+    assert ("FM Hundo - All Streamers", all_note_id, True) in obs.enabled
 
     obs.current_scene = "FM Hundo - Team - Alpha"
     assert await manager.tick_team_showcases(force=True) is True
     assert any(muted is False for _, muted in obs.mutes)
+    team_note_id = obs.scene_items[("FM Hundo - Team - Alpha", "FM Hundo Audio Note - Runner Ten")]
+    assert ("FM Hundo - Team - Alpha", team_note_id, False) in obs.enabled
+    assert ("FM Hundo - Team - Alpha", team_note_id, True) not in obs.enabled
+
+
+@pytest.mark.asyncio
+async def test_layout_manager_keeps_text_natural_size_and_media_bounded():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
+
+    await manager.setup()
+
+    media = latest_transform(obs, "FM Hundo - All Streamers", "FM Hundo Media - Runner Ten")
+    all_label = latest_transform(obs, "FM Hundo - All Streamers", "FM Hundo Label - Runner Ten")
+    all_note = latest_transform(obs, "FM Hundo - All Streamers", "FM Hundo Audio Note - Runner Ten")
+    team_label = latest_transform(obs, "FM Hundo - Team - Alpha", "FM Hundo Label - Runner Ten")
+    player_label = latest_transform(obs, "FM Hundo - Player - Runner Ten", "FM Hundo Label - Runner Ten")
+
+    assert media.bounds_type == "OBS_BOUNDS_STRETCH"
+    assert all_label.bounds_type == ""
+    assert team_label.bounds_type == ""
+    assert player_label.bounds_type == ""
+    assert all_label.alignment == 5
+    assert all_note.bounds_type == ""
+    assert all_note.alignment == 6
+
+
+@pytest.mark.asyncio
+async def test_focus_player_for_alert_unmutes_only_target_media():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
+    await manager.setup()
+
+    await manager.focus_player_for_alert(10)
+
+    assert obs.mutes[-3:] == [
+        ("FM Hundo Media - Runner Eleven", True),
+        ("FM Hundo Media - Runner Ten", False),
+        ("FM Hundo Media - Runner Twenty", True),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_focus_player_for_all_streamers_sets_note_and_resets_rotation():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
+    await manager.setup()
+
+    await manager.focus_player_for_scene(10, "FM Hundo - All Streamers")
+
+    assert obs.mutes[-3:] == [
+        ("FM Hundo Media - Runner Eleven", True),
+        ("FM Hundo Media - Runner Ten", False),
+        ("FM Hundo Media - Runner Twenty", True),
+    ]
+    assert latest_enabled(obs, "FM Hundo - All Streamers", "FM Hundo Audio Note - Runner Ten") is True
+    assert latest_enabled(obs, "FM Hundo - All Streamers", "FM Hundo Audio Note - Runner Eleven") is False
+    assert manager._all_audio_player_id == 10
+    assert manager._all_audio_last_rotation > 0
+
+
+@pytest.mark.asyncio
+async def test_focus_player_for_team_scene_showcases_target_and_resets_rotation():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
+    await manager.setup()
+
+    await manager.focus_player_for_scene(10, "FM Hundo - Team - Alpha")
+
+    state = manager.team_rotations[1]
+    ten_media = latest_transform(obs, "FM Hundo - Team - Alpha", "FM Hundo Media - Runner Ten")
+    eleven_media = latest_transform(obs, "FM Hundo - Team - Alpha", "FM Hundo Media - Runner Eleven")
+    assert state.showcased_player_id == 10
+    assert state.last_rotation > 0
+    assert ten_media.width > eleven_media.width
+    assert ("FM Hundo Media - Runner Ten", False) in obs.mutes
+    assert ("FM Hundo Media - Runner Eleven", True) in obs.mutes
+
+
+@pytest.mark.asyncio
+async def test_focus_player_for_scene_ignores_inactive_player():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner11"}))
+    await manager.setup()
+    mute_count = len(obs.mutes)
+
+    await manager.focus_player_for_scene(10, "FM Hundo - All Streamers")
+    await manager.focus_player_for_scene(10, "FM Hundo - Team - Alpha")
+
+    assert len(obs.mutes) == mute_count
+    assert manager._all_audio_player_id is None

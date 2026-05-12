@@ -3,8 +3,9 @@ from __future__ import annotations
 import pytest
 
 from fm_hundo_obs.audio import AudioRotator
+from fm_hundo_obs.config import ObsConfig
 from fm_hundo_obs.config import FeatureFlags, GroupSceneConfig
-from fm_hundo_obs.obs import ObsError
+from fm_hundo_obs.obs import ObsError, SimpleObsController
 
 from .fakes import FakeObs
 
@@ -15,6 +16,26 @@ class Window:
 
     def acquisition_active(self) -> bool:
         return self.active
+
+
+class FakeWs:
+    close_code = 4009
+    close_reason = "Authentication failed."
+
+
+class FailingObsClient:
+    def __init__(self, **_: object) -> None:
+        self.ws = FakeWs()
+        self.disconnected = False
+
+    async def connect(self) -> None:
+        pass
+
+    async def wait_until_identified(self) -> bool:
+        return False
+
+    async def disconnect(self) -> None:
+        self.disconnected = True
 
 
 @pytest.mark.asyncio
@@ -30,6 +51,19 @@ async def test_obs_validation_checks_scenes_overlay_and_audio():
 
     with pytest.raises(ObsError):
         await obs.validate((), (), "Overlay", "Overlay Browser", ("Missing Audio",))
+
+
+@pytest.mark.asyncio
+async def test_obs_authentication_failure_raises_operator_friendly_error():
+    controller = SimpleObsController(ObsConfig(password="wrong"), client_factory=FailingObsClient)
+
+    with pytest.raises(ObsError) as error:
+        await controller.connect()
+
+    message = str(error.value)
+    assert "authentication failed" in message.lower()
+    assert "obs.password" in message
+    assert "OBS_WS_PASSWORD" in message
 
 
 @pytest.mark.asyncio
@@ -65,4 +99,3 @@ async def test_audio_rotation_only_on_group_scene_and_pauses_during_window():
     window.active = True
     assert await rotator.tick(force=True) is False
     assert obs.mutes == []
-

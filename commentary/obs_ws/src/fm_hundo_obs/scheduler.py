@@ -30,6 +30,12 @@ class PlayerSceneResolver(Protocol):
     async def prepare_cut_to_player(self, player_id: int, message: str | None = None) -> None:
         ...
 
+    async def focus_player_for_alert(self, player_id: int) -> None:
+        ...
+
+    async def focus_player_for_scene(self, player_id: int, scene_name: str) -> None:
+        ...
+
 
 @dataclass(frozen=True)
 class AcquisitionResult:
@@ -106,11 +112,14 @@ class AcquisitionScheduler:
                         active = self.player_scenes.is_player_active(acquisition.player_id)
                         message = None if active else f"{context.alert_label}\nStream offline"
                         await self.player_scenes.prepare_cut_to_player(acquisition.player_id, message)
+                        await self.player_scenes.focus_player_for_alert(acquisition.player_id)
                     await self.obs.set_current_program_scene(scene_name)
                     automated_scene = scene_name
                     switched_scene = True
                     visible_action = True
                 else:
+                    if isinstance(self.player_scenes, PlayerSceneResolver):
+                        await self.player_scenes.focus_player_for_alert(acquisition.player_id)
                     visible_action = True
 
         if self.features.banner_overlay:
@@ -122,7 +131,7 @@ class AcquisitionScheduler:
         if not visible_action:
             return AcquisitionResult(False, "no visible action", context)
 
-        self._start_window(previous_scene, automated_scene)
+        self._start_window(previous_scene, automated_scene, acquisition.player_id)
         return AcquisitionResult(True, "accepted", context)
 
     def _scene_for_player(self, player_id: int) -> str | None:
@@ -130,18 +139,20 @@ class AcquisitionScheduler:
             return self.player_scenes.player_scene_name(player_id)
         return self.player_scenes.get(player_id)
 
-    def _start_window(self, previous_scene: str | None, automated_scene: str | None) -> None:
+    def _start_window(self, previous_scene: str | None, automated_scene: str | None, player_id: int) -> None:
         if self._active_task is not None and not self._active_task.done():
             self._active_task.cancel()
-        self._active_task = asyncio.create_task(self._window(previous_scene, automated_scene))
+        self._active_task = asyncio.create_task(self._window(previous_scene, automated_scene, player_id))
 
-    async def _window(self, previous_scene: str | None, automated_scene: str | None) -> None:
+    async def _window(self, previous_scene: str | None, automated_scene: str | None, player_id: int) -> None:
         try:
             await asyncio.sleep(self.timing.acquisition_window_seconds)
             if previous_scene and automated_scene and self.obs.connected:
                 current_scene = await self.obs.get_current_program_scene()
                 if current_scene == automated_scene:
                     await self.obs.set_current_program_scene(previous_scene)
+                    if isinstance(self.player_scenes, PlayerSceneResolver):
+                        await self.player_scenes.focus_player_for_scene(player_id, previous_scene)
         except asyncio.CancelledError:
             raise
         except Exception:

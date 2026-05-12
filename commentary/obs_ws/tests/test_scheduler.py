@@ -14,6 +14,8 @@ class FakeResolver:
     def __init__(self, active: bool) -> None:
         self.active = active
         self.prepared: list[tuple[int, str | None]] = []
+        self.alert_focuses: list[int] = []
+        self.scene_focuses: list[tuple[int, str]] = []
 
     def player_scene_name(self, player_id: int) -> str | None:
         return "Player Ten"
@@ -23,6 +25,12 @@ class FakeResolver:
 
     async def prepare_cut_to_player(self, player_id: int, message: str | None = None) -> None:
         self.prepared.append((player_id, message))
+
+    async def focus_player_for_alert(self, player_id: int) -> None:
+        self.alert_focuses.append(player_id)
+
+    async def focus_player_for_scene(self, player_id: int, scene_name: str) -> None:
+        self.scene_focuses.append((player_id, scene_name))
 
 
 def scheduler(
@@ -190,4 +198,69 @@ async def test_inactive_managed_player_prepares_placeholder_before_cut():
 
     assert result.accepted is True
     assert resolver.prepared == [(10, "Big Drop Alert\nStream offline")]
+    assert resolver.alert_focuses == [10]
     assert obs.scene_changes == ["Player Ten"]
+
+
+@pytest.mark.asyncio
+async def test_managed_player_focuses_audio_when_already_on_player_scene():
+    obs = FakeObs(current_scene="Player Ten")
+    resolver = FakeResolver(active=True)
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    subject = AcquisitionScheduler(
+        obs,
+        FakeOverlay(),
+        names,
+        resolver,
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert resolver.alert_focuses == [10]
+    assert obs.scene_changes == []
+
+
+@pytest.mark.asyncio
+async def test_restore_focuses_managed_previous_scene_after_switch_back():
+    obs = FakeObs(current_scene="FM Hundo - All Streamers")
+    resolver = FakeResolver(active=True)
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    subject = AcquisitionScheduler(
+        obs,
+        FakeOverlay(),
+        names,
+        resolver,
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+    )
+
+    await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+    await subject._active_task
+
+    assert obs.scene_changes == ["Player Ten", "FM Hundo - All Streamers"]
+    assert resolver.scene_focuses == [(10, "FM Hundo - All Streamers")]
+
+
+@pytest.mark.asyncio
+async def test_manual_scene_change_prevents_restore_focus():
+    obs = FakeObs(current_scene="FM Hundo - All Streamers")
+    resolver = FakeResolver(active=True)
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    subject = AcquisitionScheduler(
+        obs,
+        FakeOverlay(),
+        names,
+        resolver,
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+    )
+
+    await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+    obs.current_scene = "Manual"
+    await subject._active_task
+
+    assert obs.scene_changes == ["Player Ten"]
+    assert resolver.scene_focuses == []

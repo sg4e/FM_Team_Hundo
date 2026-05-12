@@ -40,7 +40,8 @@ created production scenes alone.
 - `banner on|off`
 - `audio on|off|next`
 - `reconcile`
-- `test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]`
+- production: `test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]`
+- simulation: `test <mediamtx_path> <drop|fusion|fuse|ritual> <opponent_id> [--force]`
 - `quit`
 
 ## Managed OBS Scenes
@@ -53,3 +54,23 @@ Media Sources are stable per player and use MediaMTX RTSP URLs. Inactive streams
 are hidden and configured to close when inactive where OBS supports that Media
 Source setting. Acquisition alerts cut to a player scene; inactive players show a
 managed placeholder rather than a dead RTSP source.
+
+## MediaMTX Simulation Mode
+
+For pre-event OBS rehearsal with streams that are not registered website
+players:
+
+```powershell
+fm-hundo-obs --config config.yml --simulate-mediamtx
+```
+
+Simulation mode bypasses the website API and firehose. It discovers active
+MediaMTX paths, creates simulated players from those paths, puts them all on a
+single `Simulation` team, and keeps the normal managed OBS scenes updated as
+paths appear or disappear.
+
+Use `status` to see active paths, then trigger rehearsal alerts with:
+
+```text
+test <mediamtx_path> <drop|fusion|fuse|ritual> <opponent_id> [--force]
+```

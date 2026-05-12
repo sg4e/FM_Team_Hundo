@@ -17,18 +17,20 @@ from .managed_layout import ObsLayoutManager
 from .mapping import NameResolver, load_duelist_names
 from .mediamtx import MediaMtxClient, StreamRegistry
 from .models import CardAcquisition
-from .obs import DryRunObsController, SimpleObsController
-from .overlay import OverlayEvents, OverlayServer
+from .obs import DryRunObsController, ObsError, SimpleObsController
+from .overlay import OverlayClientTimeout, OverlayEvents, OverlayServer
 from .scheduler import AcquisitionScheduler
+from .simulation import SimulationRoster, build_simulation_roster
 
 LOGGER = logging.getLogger(__name__)
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 
 
 class Application:
-    def __init__(self, config: AppConfig, config_path: Path) -> None:
+    def __init__(self, config: AppConfig, config_path: Path, *, simulate_mediamtx: bool = False) -> None:
         self.config = config
         self.config_path = config_path
+        self.simulate_mediamtx = simulate_mediamtx
         self.console = Console()
         real_obs = SimpleObsController(config.obs)
         self.obs = DryRunObsController(real_obs) if config.obs.dry_run else real_obs
@@ -37,26 +39,45 @@ class Application:
         self.scheduler: AcquisitionScheduler | None = None
         self.layout_manager: ObsLayoutManager | None = None
         self.streams: StreamRegistry | None = None
+        self.simulation_roster: SimulationRoster | None = None
+        self.names: NameResolver | None = None
         self.firehose_connected = False
         self._stop = asyncio.Event()
 
     async def run(self) -> None:
         async with ClientSession() as session:
             api = HundoApiClient(self.config.api.base_url, session)
-            players = await api.get_players()
-            teams = await api.get_teams()
             duelists = load_duelist_names(PROJECT_DIR / "duelistinfo.json")
-            names = NameResolver(players, duelists)
             mediamtx = MediaMtxClient(self.config.mediamtx, session)
-            self.streams = StreamRegistry(players, mediamtx)
-            await self.streams.refresh()
+            if self.simulate_mediamtx:
+                self.streams = StreamRegistry([], mediamtx)
+                await self.streams.refresh()
+                self.simulation_roster = build_simulation_roster(self.streams.active_paths_snapshot())
+                players = self.simulation_roster.players
+                teams = self.simulation_roster.teams
+                self.streams.update_players(players)
+            else:
+                players = await api.get_players()
+                teams = await api.get_teams()
+                self.streams = StreamRegistry(players, mediamtx)
+                await self.streams.refresh()
+            names = NameResolver(players, duelists)
+            self.names = names
 
-            await self.overlay_server.start()
-            await self.obs.connect()
-            await self._validate_obs()
-            self.layout_manager = ObsLayoutManager(self.obs, self.config, players, teams, self.streams)
-            await self.layout_manager.setup()
-            await self.overlay_server.wait_for_client(self.config.overlay.connect_timeout_seconds)
+            startup_complete = False
+            try:
+                await self.overlay_server.start()
+                await self.obs.connect()
+                await self._ensure_overlay_obs_setup()
+                await self._validate_obs()
+                self.layout_manager = ObsLayoutManager(self.obs, self.config, players, teams, self.streams)
+                await self.layout_manager.setup()
+                await self.overlay_server.wait_for_client(self.config.overlay.connect_timeout_seconds)
+                startup_complete = True
+            finally:
+                if not startup_complete:
+                    await self.overlay_server.stop()
+                    await self.obs.disconnect()
 
             overlay = OverlayEvents(self.overlay_server)
             self.scheduler = AcquisitionScheduler(
@@ -67,18 +88,20 @@ class Application:
                 self.config.features,
                 self.config.timing,
             )
-            self.firehose = TeamFirehose(
-                api.team_firehose_url(),
-                session,
-                on_connection=self._set_firehose_connected,
-            )
+            if not self.simulate_mediamtx:
+                self.firehose = TeamFirehose(
+                    api.team_firehose_url(),
+                    session,
+                    on_connection=self._set_firehose_connected,
+                )
 
             tasks = [
-                asyncio.create_task(self._consume_firehose(), name="firehose"),
-                asyncio.create_task(self.layout_manager.run(), name="mediamtx-layout"),
+                asyncio.create_task(self._simulation_layout_loop() if self.simulate_mediamtx else self.layout_manager.run(), name="mediamtx-layout"),
                 asyncio.create_task(self._managed_cycle_loop(), name="managed-cycles"),
                 asyncio.create_task(self._console_loop(), name="console"),
             ]
+            if self.firehose is not None:
+                tasks.append(asyncio.create_task(self._consume_firehose(), name="firehose"))
             try:
                 await self._stop.wait()
             finally:
@@ -106,6 +129,22 @@ class Application:
             audio_sources=audio_sources,
         )
 
+    async def _ensure_overlay_obs_setup(self) -> None:
+        await self.obs.ensure_scene(self.config.obs.overlay_scene)
+        await self.obs.ensure_input(
+            self.config.obs.overlay_scene,
+            self.config.obs.overlay_source,
+            self.config.obs.browser_source_kind,
+            {
+                "url": self.config.overlay.url,
+                "width": self.config.overlay.canvas_width,
+                "height": self.config.overlay.canvas_height,
+                "reroute_audio": False,
+                "shutdown": False,
+            },
+            enabled=True,
+        )
+
     async def _managed_cycle_loop(self) -> None:
         assert self.layout_manager is not None
         assert self.scheduler is not None
@@ -114,6 +153,19 @@ class Application:
                 await self.layout_manager.tick_all_streamers_audio()
                 await self.layout_manager.tick_team_showcases()
             await asyncio.sleep(1)
+
+    async def _simulation_layout_loop(self) -> None:
+        assert self.streams is not None
+        assert self.layout_manager is not None
+        while True:
+            changed = await self.streams.refresh()
+            if changed:
+                self.simulation_roster = build_simulation_roster(self.streams.active_paths_snapshot())
+                self.streams.update_players(self.simulation_roster.players)
+                if self.names is not None:
+                    self.names.update_players(self.simulation_roster.players)
+                await self.layout_manager.update_roster(self.simulation_roster.players, self.simulation_roster.teams)
+            await asyncio.sleep(self.config.mediamtx.poll_seconds)
 
     async def _consume_firehose(self) -> None:
         assert self.firehose is not None
@@ -199,10 +251,12 @@ class Application:
 
     async def _handle_test(self, args: tuple[str, ...], force: bool) -> None:
         if self.scheduler is None or len(args) != 3:
-            self.console.print("Expected: test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]")
+            expected = "test <mediamtx_path> <drop|fusion|fuse|ritual> <opponent_id> [--force]" if self.simulate_mediamtx else "test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]"
+            self.console.print(f"Expected: {expected}")
             return
         try:
-            acquisition = CardAcquisition.test_event(int(args[0]), args[1].lower(), int(args[2]))
+            player_id = self._test_player_id(args[0])
+            acquisition = CardAcquisition.test_event(player_id, args[1].lower(), int(args[2]))
         except Exception as ex:
             self.console.print(f"Invalid test acquisition: {ex}")
             return
@@ -215,11 +269,16 @@ class Application:
         table.add_column("Item")
         table.add_column("State")
         table.add_row("Config", str(self.config_path))
+        table.add_row("Simulation", str(self.simulate_mediamtx))
         table.add_row("OBS", "connected" if self.obs.connected else "disconnected")
         table.add_row("Firehose", "connected" if self.firehose_connected else "disconnected")
         table.add_row("Overlay clients", str(self.overlay_server.connected_clients))
         if self.streams is not None:
             table.add_row("Active streams", str(len(self.streams.active_player_ids())))
+            if self.simulate_mediamtx:
+                table.add_row("MediaMTX paths", ", ".join(sorted(self.streams.active_paths_snapshot())) or "(none)")
+        if self.simulation_roster is not None:
+            table.add_row("Simulated players", str(len(self.simulation_roster.players)))
         table.add_row("Active acquisition", "yes" if self.scheduler.acquisition_active() else "no")
         table.add_row("Paused", str(self.config.features.paused))
         table.add_row("Scene switching", str(self.config.features.scene_switching))
@@ -232,23 +291,42 @@ class Application:
     def _set_firehose_connected(self, connected: bool) -> None:
         self.firehose_connected = connected
 
+    def _test_player_id(self, raw: str) -> int:
+        if not self.simulate_mediamtx:
+            return int(raw)
+        if self.simulation_roster is None:
+            raise ValueError("simulation roster is not loaded")
+        player_id = self.simulation_roster.player_id_for_path(raw)
+        if player_id is None:
+            raise ValueError(f"unknown MediaMTX path {raw!r}; use status to see active paths")
+        return player_id
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=PROJECT_DIR / "config.yml")
+    parser.add_argument("--simulate-mediamtx", action="store_true", help="Bypass website/firehose and use active MediaMTX paths as simulated players")
     return parser.parse_args()
 
 
-async def async_main() -> None:
+async def async_main() -> int:
     args = parse_args()
     setup_logging(PROJECT_DIR)
     config = load_config(args.config)
-    app = Application(config, args.config)
-    await app.run()
+    app = Application(config, args.config, simulate_mediamtx=args.simulate_mediamtx)
+    try:
+        await app.run()
+    except ObsError as ex:
+        Console(stderr=True).print(f"[bold red]OBS startup error:[/bold red] {ex}")
+        return 1
+    except OverlayClientTimeout as ex:
+        Console(stderr=True).print(f"[bold red]Overlay startup error:[/bold red] {ex}")
+        return 1
+    return 0
 
 
 def main() -> None:
-    asyncio.run(async_main())
+    raise SystemExit(asyncio.run(async_main()))
 
 
 if __name__ == "__main__":

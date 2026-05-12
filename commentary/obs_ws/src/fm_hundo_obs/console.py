@@ -34,7 +34,8 @@ HELP_TEXT = """Commands:
   banner on|off
   audio on|off|next
   reconcile
-  test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]
+  production test:  test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]
+  simulation test: test <mediamtx_path> <drop|fusion|fuse|ritual> <opponent_id> [--force]
   quit
 """
 

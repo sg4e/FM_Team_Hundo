@@ -45,7 +45,14 @@ class OverlayServer:
     async def wait_for_client(self, timeout_seconds: float) -> None:
         if self._clients:
             return
-        await asyncio.wait_for(self._connected_event.wait(), timeout=timeout_seconds)
+        try:
+            await asyncio.wait_for(self._connected_event.wait(), timeout=timeout_seconds)
+        except TimeoutError as ex:
+            raise OverlayClientTimeout(
+                f"Overlay Browser Source did not connect to {self.config.url} within {timeout_seconds:g} seconds. "
+                "Check that OBS has loaded the generated Browser Source, that its URL is correct, and try refreshing "
+                "the source cache if OBS shows a blank browser."
+            ) from ex
 
     async def send(self, event_type: str, payload: dict[str, Any]) -> bool:
         if not self._clients:
@@ -102,3 +109,6 @@ class OverlayEvents:
             },
         )
 
+
+class OverlayClientTimeout(RuntimeError):
+    pass

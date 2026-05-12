@@ -14,8 +14,12 @@ def load_duelist_names(path: Path) -> dict[int, str]:
 
 class NameResolver:
     def __init__(self, players: list[Player], duelists: dict[int, str]) -> None:
-        self._players = {player.id: player for player in players}
+        self._players: dict[int, Player] = {}
+        self.update_players(players)
         self._duelists = duelists
+
+    def update_players(self, players: list[Player]) -> None:
+        self._players = {player.id: player for player in players}
 
     def player_name(self, player_id: int) -> str:
         player = self._players.get(player_id)
@@ -23,4 +27,3 @@ class NameResolver:
 
     def opponent_name(self, opponent_id: int) -> str:
         return self._duelists.get(opponent_id, f"Opponent {opponent_id}")
-

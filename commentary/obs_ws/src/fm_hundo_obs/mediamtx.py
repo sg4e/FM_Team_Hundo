@@ -35,11 +35,8 @@ class MediaMtxClient:
 class StreamRegistry:
     def __init__(self, players: list[Player], mediamtx: MediaMtxClient) -> None:
         self.mediamtx = mediamtx
-        self.paths_by_player_id = {
-            player.id: player.twitch_id
-            for player in players
-            if player.twitch_id
-        }
+        self.paths_by_player_id: dict[int, str] = {}
+        self.update_players(players)
         self._active_paths: set[str] = set()
 
     async def refresh(self) -> bool:
@@ -48,8 +45,18 @@ class StreamRegistry:
         self._active_paths = next_paths
         return changed
 
+    def update_players(self, players: list[Player]) -> None:
+        self.paths_by_player_id = {
+            player.id: player.twitch_id
+            for player in players
+            if player.twitch_id
+        }
+
     def set_active_paths_for_tests(self, paths: set[str]) -> None:
         self._active_paths = set(paths)
+
+    def active_paths_snapshot(self) -> set[str]:
+        return set(self._active_paths)
 
     def path_for_player(self, player_id: int) -> str | None:
         return self.paths_by_player_id.get(player_id)
@@ -92,4 +99,3 @@ def _path_is_active(item: dict) -> bool:
     if source:
         return True
     return bool(item.get("readers"))
-

@@ -26,6 +26,7 @@ class ObsConfig:
     managed_scene_prefix: str = "FM Hundo"
     media_source_kind: str = "ffmpeg_source"
     text_source_kind: str = "text_gdiplus_v3"
+    browser_source_kind: str = "browser_source"
     dry_run: bool = False
 
     @property

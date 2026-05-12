@@ -25,6 +25,8 @@ class FakeObs(ObsController):
         self.scene_items: dict[tuple[str, str], int] = {}
         self.enabled: list[tuple[str, int, bool]] = []
         self.transforms: list[tuple[str, int, SceneItemTransform]] = []
+        self.indices: list[tuple[str, int, int]] = []
+        self.top_moves: list[tuple[str, int]] = []
 
     async def connect(self) -> None:
         self.connected_value = True
@@ -95,6 +97,15 @@ class FakeObs(ObsController):
 
     async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
         self.inputs_settings[input_name] = {**self.inputs_settings.get(input_name, {}), **settings}
+
+    async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
+        self.indices.append((scene_name, item_id, index))
+
+    async def move_scene_item_to_top(self, scene_name: str, item_id: int) -> None:
+        scene_item_count = sum(1 for item_scene, _source in self.scene_items if item_scene == scene_name)
+        top_index = max(0, scene_item_count - 1)
+        self.top_moves.append((scene_name, item_id))
+        await self.set_scene_item_index(scene_name, item_id, top_index)
 
 
 class FakeOverlay:

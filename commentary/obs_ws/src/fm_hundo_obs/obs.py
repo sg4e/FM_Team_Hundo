@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import logging
 
@@ -22,6 +22,8 @@ class SceneItemTransform:
     y: float
     width: float
     height: float
+    bounds_type: str = "OBS_BOUNDS_STRETCH"
+    alignment: int = 5
 
 
 class ObsController:
@@ -80,10 +82,21 @@ class ObsController:
     async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
         raise NotImplementedError
 
+    async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
+        raise NotImplementedError
+
+    async def move_scene_item_to_top(self, scene_name: str, item_id: int) -> None:
+        raise NotImplementedError
+
 
 class SimpleObsController(ObsController):
-    def __init__(self, config: ObsConfig) -> None:
+    def __init__(
+        self,
+        config: ObsConfig,
+        client_factory: Callable[..., simpleobsws.WebSocketClient] = simpleobsws.WebSocketClient,
+    ) -> None:
         self.config = config
+        self._client_factory = client_factory
         self._client: simpleobsws.WebSocketClient | None = None
         self._connected = False
 
@@ -92,16 +105,45 @@ class SimpleObsController(ObsController):
         return self._connected
 
     async def connect(self) -> None:
-        client = simpleobsws.WebSocketClient(url=self.config.websocket_url, password=self.config.password or "")
+        LOGGER.info("Connecting to OBS WebSocket at %s", self.config.websocket_url)
+        client = self._client_factory(url=self.config.websocket_url, password=self.config.password or "")
         await client.connect()
-        await client.wait_until_identified()
+        identified = await client.wait_until_identified()
+        if not identified:
+            await self._disconnect_failed_client(client)
+            raise ObsError(self._identification_failure_message(client))
         self._client = client
         self._connected = True
+        LOGGER.info("Connected to OBS WebSocket at %s", self.config.websocket_url)
 
     async def disconnect(self) -> None:
         if self._client is not None:
             await self._client.disconnect()
         self._connected = False
+
+    async def _disconnect_failed_client(self, client) -> None:
+        try:
+            await client.disconnect()
+        except Exception:
+            LOGGER.debug("Failed to disconnect un-identified OBS WebSocket client cleanly", exc_info=True)
+        self._connected = False
+
+    def _identification_failure_message(self, client) -> str:
+        ws = getattr(client, "ws", None)
+        close_code = getattr(ws, "close_code", None)
+        close_reason = getattr(ws, "close_reason", None)
+        detail = f"close code {close_code}, reason {close_reason!r}" if close_code else "no close code reported"
+        if close_code == 4009 or close_reason == "Authentication failed.":
+            return (
+                "OBS WebSocket authentication failed. Check obs.password in config.yml or "
+                "set OBS_WS_PASSWORD to the password shown in OBS Tools > WebSocket Server Settings. "
+                f"Connection detail: {detail}."
+            )
+        return (
+            "OBS WebSocket connected but did not complete identification. "
+            "Verify OBS WebSocket Server Settings, password, and that OBS is fully started. "
+            f"Connection detail: {detail}."
+        )
 
     async def validate(
         self,
@@ -182,20 +224,18 @@ class SimpleObsController(ObsController):
         )
 
     async def set_scene_item_transform(self, scene_name: str, item_id: int, transform: SceneItemTransform) -> None:
+        scene_item_transform = {
+            "positionX": transform.x,
+            "positionY": transform.y,
+            "alignment": transform.alignment,
+        }
+        if transform.bounds_type:
+            scene_item_transform["boundsType"] = transform.bounds_type
+            scene_item_transform["boundsWidth"] = transform.width
+            scene_item_transform["boundsHeight"] = transform.height
         await self._call(
             "SetSceneItemTransform",
-            {
-                "sceneName": scene_name,
-                "sceneItemId": item_id,
-                "sceneItemTransform": {
-                    "positionX": transform.x,
-                    "positionY": transform.y,
-                    "boundsType": "OBS_BOUNDS_STRETCH",
-                    "boundsWidth": transform.width,
-                    "boundsHeight": transform.height,
-                    "alignment": 5,
-                },
-            },
+            {"sceneName": scene_name, "sceneItemId": item_id, "sceneItemTransform": scene_item_transform},
         )
 
     async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
@@ -203,6 +243,17 @@ class SimpleObsController(ObsController):
             "SetInputSettings",
             {"inputName": input_name, "inputSettings": settings, "overlay": overlay},
         )
+
+    async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
+        await self._call(
+            "SetSceneItemIndex",
+            {"sceneName": scene_name, "sceneItemId": item_id, "sceneItemIndex": index},
+        )
+
+    async def move_scene_item_to_top(self, scene_name: str, item_id: int) -> None:
+        data = await self._call("GetSceneItemList", {"sceneName": scene_name})
+        top_index = max(0, len(data["sceneItems"]) - 1)
+        await self.set_scene_item_index(scene_name, item_id, top_index)
 
     async def _scene_names(self) -> list[str]:
         data = await self._call("GetSceneList")
@@ -294,6 +345,12 @@ class DryRunObsController(ObsController):
     async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
         self.actions.append(f"set input settings {input_name} overlay={overlay} -> {settings}")
 
+    async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
+        self.actions.append(f"set item {item_id} index in {scene_name} -> {index}")
+
+    async def move_scene_item_to_top(self, scene_name: str, item_id: int) -> None:
+        self.actions.append(f"move item {item_id} to top in {scene_name}")
+
     def report(self) -> str:
         return "\n".join(self.actions)
 
@@ -304,3 +361,7 @@ def stable_item_id(scene_name: str, source_name: str) -> int:
 
 def transform_from_fit(fit: Fit | Rect) -> SceneItemTransform:
     return SceneItemTransform(x=fit.x, y=fit.y, width=fit.width, height=fit.height)
+
+
+def positioned_transform(x: float, y: float, alignment: int = 5) -> SceneItemTransform:
+    return SceneItemTransform(x=x, y=y, width=0, height=0, bounds_type="", alignment=alignment)

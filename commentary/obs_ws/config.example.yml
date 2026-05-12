@@ -10,6 +10,7 @@ obs:
   managed_scene_prefix: "FM Hundo"
   media_source_kind: "ffmpeg_source"
   text_source_kind: "text_gdiplus_v3"
+  browser_source_kind: "browser_source"
   dry_run: false
 
 overlay:
