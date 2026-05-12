@@ -6,7 +6,7 @@ import logging
 
 from aiohttp import ClientSession, WSMsgType
 
-from .models import LibraryUpdate, Player
+from .models import LibraryUpdate, Player, Team
 
 LOGGER = logging.getLogger(__name__)
 
@@ -21,6 +21,12 @@ class HundoApiClient:
             response.raise_for_status()
             data = await response.json()
         return [Player.from_json(item) for item in data]
+
+    async def get_teams(self) -> list[Team]:
+        async with self.session.get(f"{self.base_url}/api/teams", headers={"Accept": "application/json"}) as response:
+            response.raise_for_status()
+            data = await response.json()
+        return [Team.from_json(item) for item in data]
 
     def team_firehose_url(self) -> str:
         if self.base_url.startswith("https://"):
@@ -66,4 +72,3 @@ class TeamFirehose:
             self.on_connection(False)
             if not self._closed:
                 await asyncio.sleep(self.reconnect_seconds)
-

@@ -23,6 +23,10 @@ class ObsConfig:
     password: str | None = None
     overlay_scene: str = "FM Hundo Overlay"
     overlay_source: str = "FM Hundo Overlay Browser"
+    managed_scene_prefix: str = "FM Hundo"
+    media_source_kind: str = "ffmpeg_source"
+    text_source_kind: str = "text_gdiplus_v3"
+    dry_run: bool = False
 
     @property
     def websocket_url(self) -> str:
@@ -43,9 +47,18 @@ class OverlayConfig:
 
 
 @dataclass(frozen=True)
+class MediaMtxConfig:
+    api_base_url: str = "http://127.0.0.1:9997"
+    rtsp_base_url: str = "rtsp://127.0.0.1:8554"
+    poll_seconds: float = 2.0
+
+
+@dataclass(frozen=True)
 class TimingConfig:
     acquisition_window_seconds: float = 30.0
     intro_seconds: float = 3.0
+    all_streamers_audio_seconds: float = 180.0
+    team_showcase_seconds: float = 180.0
 
 
 @dataclass
@@ -69,6 +82,7 @@ class AppConfig:
     api: ApiConfig = field(default_factory=ApiConfig)
     obs: ObsConfig = field(default_factory=ObsConfig)
     overlay: OverlayConfig = field(default_factory=OverlayConfig)
+    mediamtx: MediaMtxConfig = field(default_factory=MediaMtxConfig)
     timing: TimingConfig = field(default_factory=TimingConfig)
     features: FeatureFlags = field(default_factory=FeatureFlags)
     player_scenes: dict[int, str] = field(default_factory=dict)
@@ -93,6 +107,7 @@ def load_config(path: Path | str) -> AppConfig:
         api=ApiConfig(**dict(data.get("api") or {})),
         obs=ObsConfig(**obs_data),
         overlay=OverlayConfig(**dict(data.get("overlay") or {})),
+        mediamtx=MediaMtxConfig(**dict(data.get("mediamtx") or {})),
         timing=TimingConfig(**dict(data.get("timing") or {})),
         features=FeatureFlags(**dict(data.get("features") or {})),
         player_scenes={int(key): str(value) for key, value in (data.get("player_scenes") or {}).items()},
@@ -106,4 +121,3 @@ def _group_scene(data: dict[str, Any]) -> GroupSceneConfig:
         audio_sources=tuple(str(source) for source in data.get("audio_sources") or ()),
         interval_seconds=float(data.get("interval_seconds", 180.0)),
     )
-

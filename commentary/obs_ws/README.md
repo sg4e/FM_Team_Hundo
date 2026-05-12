@@ -13,6 +13,13 @@ $env:OBS_WS_PASSWORD = "your OBS websocket password"
 fm-hundo-obs --config config.yml
 ```
 
+Enable the MediaMTX Control API on localhost and keep RTSP enabled. The
+controller expects player paths to match `/api/players` Twitch IDs:
+
+```text
+rtsp://127.0.0.1:8554/{twitchId}
+```
+
 OBS should contain one reusable overlay scene with a Browser Source pointed at:
 
 ```text
@@ -20,6 +27,8 @@ http://127.0.0.1:8765/overlay
 ```
 
 Add that overlay scene as a source on every scene where alerts should be visible.
+The controller manages scenes prefixed by `FM Hundo` and leaves manually
+created production scenes alone.
 
 ## Console Commands
 
@@ -30,6 +39,17 @@ Add that overlay scene as a source on every scene where alerts should be visible
 - `intro on|off`
 - `banner on|off`
 - `audio on|off|next`
+- `reconcile`
 - `test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]`
 - `quit`
 
+## Managed OBS Scenes
+
+- `FM Hundo - All Streamers`
+- `FM Hundo - Team - {team name}`
+- `FM Hundo - Player - {player name}`
+
+Media Sources are stable per player and use MediaMTX RTSP URLs. Inactive streams
+are hidden and configured to close when inactive where OBS supports that Media
+Source setting. Acquisition alerts cut to a player scene; inactive players show a
+managed placeholder rather than a dead RTSP source.

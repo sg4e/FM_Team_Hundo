@@ -14,6 +14,7 @@ class CommandType(StrEnum):
     INTRO = "intro"
     BANNER = "banner"
     AUDIO = "audio"
+    RECONCILE = "reconcile"
     TEST = "test"
     UNKNOWN = "unknown"
 
@@ -32,6 +33,7 @@ HELP_TEXT = """Commands:
   intro on|off
   banner on|off
   audio on|off|next
+  reconcile
   test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]
   quit
 """
@@ -63,4 +65,3 @@ def parse_on_off(args: tuple[str, ...]) -> bool | None:
     if value == "off":
         return False
     return None
-

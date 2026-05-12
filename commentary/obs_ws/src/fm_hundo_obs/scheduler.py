@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import logging
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from .config import FeatureFlags, TimingConfig
 from .mapping import NameResolver
@@ -16,6 +16,18 @@ LOGGER = logging.getLogger(__name__)
 
 class WindowObserver(Protocol):
     def acquisition_active(self) -> bool:
+        ...
+
+
+@runtime_checkable
+class PlayerSceneResolver(Protocol):
+    def player_scene_name(self, player_id: int) -> str | None:
+        ...
+
+    def is_player_active(self, player_id: int) -> bool:
+        ...
+
+    async def prepare_cut_to_player(self, player_id: int, message: str | None = None) -> None:
         ...
 
 
@@ -32,7 +44,7 @@ class AcquisitionScheduler:
         obs: ObsController,
         overlay: OverlayEvents,
         names: NameResolver,
-        player_scenes: dict[int, str],
+        player_scenes: dict[int, str] | PlayerSceneResolver,
         features: FeatureFlags,
         timing: TimingConfig,
     ) -> None:
@@ -68,7 +80,7 @@ class AcquisitionScheduler:
         if acquisition.alert_label is None:
             return AcquisitionResult(False, f"unsupported source {acquisition.source}")
 
-        scene_name = self.player_scenes.get(acquisition.player_id)
+        scene_name = self._scene_for_player(acquisition.player_id)
         context = AcquisitionContext(
             acquisition=acquisition,
             player_name=self.names.player_name(acquisition.player_id),
@@ -90,6 +102,10 @@ class AcquisitionScheduler:
             previous_scene = current_scene
             if self.features.scene_switching:
                 if current_scene != scene_name:
+                    if isinstance(self.player_scenes, PlayerSceneResolver):
+                        active = self.player_scenes.is_player_active(acquisition.player_id)
+                        message = None if active else f"{context.alert_label}\nStream offline"
+                        await self.player_scenes.prepare_cut_to_player(acquisition.player_id, message)
                     await self.obs.set_current_program_scene(scene_name)
                     automated_scene = scene_name
                     switched_scene = True
@@ -109,6 +125,11 @@ class AcquisitionScheduler:
         self._start_window(previous_scene, automated_scene)
         return AcquisitionResult(True, "accepted", context)
 
+    def _scene_for_player(self, player_id: int) -> str | None:
+        if isinstance(self.player_scenes, PlayerSceneResolver):
+            return self.player_scenes.player_scene_name(player_id)
+        return self.player_scenes.get(player_id)
+
     def _start_window(self, previous_scene: str | None, automated_scene: str | None) -> None:
         if self._active_task is not None and not self._active_task.done():
             self._active_task.cancel()
@@ -125,4 +146,3 @@ class AcquisitionScheduler:
             raise
         except Exception:
             LOGGER.exception("Failed while completing acquisition window")
-

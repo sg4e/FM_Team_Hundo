@@ -40,6 +40,16 @@ class Player:
 
 
 @dataclass(frozen=True)
+class Team:
+    id: int
+    name: str
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> Team:
+        return cls(id=int(data["id"]), name=str(data["name"]))
+
+
+@dataclass(frozen=True)
 class CardAcquisition:
     card_id: int
     acquisition_time: datetime | None
@@ -96,4 +106,3 @@ class AcquisitionContext:
     scene_name: str | None
     alert_label: str
     team_id: int | None = None
-

@@ -7,6 +7,10 @@ obs:
   password: null
   overlay_scene: "FM Hundo Overlay"
   overlay_source: "FM Hundo Overlay Browser"
+  managed_scene_prefix: "FM Hundo"
+  media_source_kind: "ffmpeg_source"
+  text_source_kind: "text_gdiplus_v3"
+  dry_run: false
 
 overlay:
   host: "127.0.0.1"
@@ -15,9 +19,16 @@ overlay:
   canvas_width: 1920
   canvas_height: 1080
 
+mediamtx:
+  api_base_url: "http://127.0.0.1:9997"
+  rtsp_base_url: "rtsp://127.0.0.1:8554"
+  poll_seconds: 2
+
 timing:
   acquisition_window_seconds: 30
   intro_seconds: 3
+  all_streamers_audio_seconds: 180
+  team_showcase_seconds: 180
 
 features:
   paused: false
@@ -26,14 +37,5 @@ features:
   banner_overlay: true
   audio_rotation: true
 
-player_scenes:
-  # Player database id from /api/players: exact OBS scene name
-  # 123: "Player - ExampleRunner"
-
-group_scenes:
-  - scene: "Group Scene"
-    interval_seconds: 180
-    audio_sources:
-      - "Runner 1 Audio"
-      - "Runner 2 Audio"
-
+# Player stream paths are derived from /api/players twitchId:
+# rtsp://127.0.0.1:8554/{twitchId}

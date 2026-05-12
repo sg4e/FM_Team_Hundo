@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from fm_hundo_obs.obs import ObsController, ObsError
+from fm_hundo_obs.obs import ObsController, ObsError, SceneItemTransform, stable_item_id
 
 
 class FakeObs(ObsController):
@@ -20,6 +20,11 @@ class FakeObs(ObsController):
         self.connected_value = True
         self.scene_changes: list[str] = []
         self.mutes: list[tuple[str, bool]] = []
+        self.created_scenes: list[str] = []
+        self.inputs_settings: dict[str, dict] = {}
+        self.scene_items: dict[tuple[str, str], int] = {}
+        self.enabled: list[tuple[str, int, bool]] = []
+        self.transforms: list[tuple[str, int, SceneItemTransform]] = []
 
     async def connect(self) -> None:
         self.connected_value = True
@@ -59,6 +64,38 @@ class FakeObs(ObsController):
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         self.mutes.append((input_name, muted))
 
+    async def ensure_scene(self, scene_name: str) -> None:
+        self.scenes.add(scene_name)
+        self.created_scenes.append(scene_name)
+
+    async def ensure_input(
+        self,
+        scene_name: str,
+        input_name: str,
+        input_kind: str,
+        settings: dict,
+        *,
+        enabled: bool = True,
+    ) -> int:
+        self.inputs.add(input_name)
+        self.inputs_settings[input_name] = settings
+        return await self.ensure_scene_item(scene_name, input_name, enabled=enabled)
+
+    async def ensure_scene_item(self, scene_name: str, source_name: str, *, enabled: bool = True) -> int:
+        key = (scene_name, source_name)
+        item_id = self.scene_items.setdefault(key, stable_item_id(scene_name, source_name))
+        await self.set_scene_item_enabled(scene_name, item_id, enabled)
+        return item_id
+
+    async def set_scene_item_enabled(self, scene_name: str, item_id: int, enabled: bool) -> None:
+        self.enabled.append((scene_name, item_id, enabled))
+
+    async def set_scene_item_transform(self, scene_name: str, item_id: int, transform: SceneItemTransform) -> None:
+        self.transforms.append((scene_name, item_id, transform))
+
+    async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
+        self.inputs_settings[input_name] = {**self.inputs_settings.get(input_name, {}), **settings}
+
 
 class FakeOverlay:
     def __init__(self, banner_success: bool = True) -> None:
@@ -73,4 +110,3 @@ class FakeOverlay:
     async def intro(self, player_name: str, opponent_name: str, duration_seconds: float) -> bool:
         self.intros.append((player_name, opponent_name, duration_seconds))
         return True
-

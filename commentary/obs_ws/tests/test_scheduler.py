@@ -10,6 +10,21 @@ from fm_hundo_obs.scheduler import AcquisitionScheduler
 from .fakes import FakeObs, FakeOverlay
 
 
+class FakeResolver:
+    def __init__(self, active: bool) -> None:
+        self.active = active
+        self.prepared: list[tuple[int, str | None]] = []
+
+    def player_scene_name(self, player_id: int) -> str | None:
+        return "Player Ten"
+
+    def is_player_active(self, player_id: int) -> bool:
+        return self.active
+
+    async def prepare_cut_to_player(self, player_id: int, message: str | None = None) -> None:
+        self.prepared.append((player_id, message))
+
+
 def scheduler(
     *,
     obs: FakeObs | None = None,
@@ -156,3 +171,23 @@ async def test_obs_disconnected_skips():
     assert result.accepted is False
     assert result.reason == "OBS disconnected"
 
+
+@pytest.mark.asyncio
+async def test_inactive_managed_player_prepares_placeholder_before_cut():
+    obs = FakeObs(current_scene="Main")
+    resolver = FakeResolver(active=False)
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    subject = AcquisitionScheduler(
+        obs,
+        FakeOverlay(),
+        names,
+        resolver,
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert resolver.prepared == [(10, "Big Drop Alert\nStream offline")]
+    assert obs.scene_changes == ["Player Ten"]
