@@ -165,6 +165,27 @@ jobs:
       with:
         name: LiveStats.jar
         path: commentary/livestats/artifact/LiveStats.jar
+
+  test-obs-ws:
+    name: Test OBS WebSocket controller
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install OBS WebSocket controller
+      run: python -m pip install -e .[dev]
+      working-directory: commentary/obs_ws
+
+    - name: Run OBS WebSocket controller tests
+      run: python -m pytest
+      working-directory: commentary/obs_ws
   
   package-duckstation-patch:
     name: Package DuckStation patch
