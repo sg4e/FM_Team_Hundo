@@ -123,7 +123,14 @@ class AcquisitionScheduler:
                     visible_action = True
 
         if self.features.banner_overlay:
-            visible_action = await self.overlay.banner(context.alert_label, self.timing.acquisition_window_seconds) or visible_action
+            visible_action = (
+                await self.overlay.banner(
+                    context.alert_label,
+                    context.acquisition.source,
+                    self.timing.acquisition_window_seconds,
+                )
+                or visible_action
+            )
 
         if switched_scene and self.features.intro_overlay:
             await self.overlay.intro(context.player_name, context.opponent_name, self.timing.intro_seconds)

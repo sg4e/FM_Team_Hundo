@@ -9,6 +9,7 @@ from typing import Any
 from aiohttp import web
 
 from .config import OverlayConfig
+from .models import MessageType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -96,8 +97,11 @@ class OverlayEvents:
     def __init__(self, server: OverlayServer) -> None:
         self.server = server
 
-    async def banner(self, label: str, duration_seconds: float) -> bool:
-        return await self.server.send("banner", {"label": label, "durationSeconds": duration_seconds})
+    async def banner(self, label: str, source: MessageType, duration_seconds: float) -> bool:
+        return await self.server.send(
+            "banner",
+            {"label": label, "source": str(source), "durationSeconds": duration_seconds},
+        )
 
     async def intro(self, player_name: str, opponent_name: str, duration_seconds: float) -> bool:
         return await self.server.send(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from fm_hundo_obs.models import MessageType
 from fm_hundo_obs.obs import ObsController, ObsError, SceneItemTransform, stable_item_id
 
 
@@ -111,11 +112,11 @@ class FakeObs(ObsController):
 class FakeOverlay:
     def __init__(self, banner_success: bool = True) -> None:
         self.banner_success = banner_success
-        self.banners: list[tuple[str, float]] = []
+        self.banners: list[tuple[str, MessageType, float]] = []
         self.intros: list[tuple[str, str, float]] = []
 
-    async def banner(self, label: str, duration_seconds: float) -> bool:
-        self.banners.append((label, duration_seconds))
+    async def banner(self, label: str, source: MessageType, duration_seconds: float) -> bool:
+        self.banners.append((label, source, duration_seconds))
         return self.banner_success
 
     async def intro(self, player_name: str, opponent_name: str, duration_seconds: float) -> bool:

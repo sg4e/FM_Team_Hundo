@@ -4,7 +4,7 @@ import pytest
 
 from fm_hundo_obs.config import FeatureFlags, TimingConfig
 from fm_hundo_obs.mapping import NameResolver
-from fm_hundo_obs.models import CardAcquisition, LibraryUpdate, Player
+from fm_hundo_obs.models import CardAcquisition, LibraryUpdate, MessageType, Player
 from fm_hundo_obs.scheduler import AcquisitionScheduler
 
 from .fakes import FakeObs, FakeOverlay
@@ -72,7 +72,7 @@ async def test_uses_first_acquisition_only_and_switches_then_restores():
 
     assert result.accepted is True
     assert obs.scene_changes == ["Player Ten"]
-    assert overlay.banners == [("Big Drop Alert", 0.01)]
+    assert overlay.banners == [("Big Drop Alert", MessageType.DROP, 0.01)]
     assert overlay.intros == [("Runner Ten", "Villager2", 3)]
     await subject._active_task
     assert obs.scene_changes == ["Player Ten", "Main"]
@@ -111,7 +111,29 @@ async def test_missing_scene_alert_only_locks_window():
 
     assert result.accepted is True
     assert obs.scene_changes == []
-    assert overlay.banners == [("Big Drop Alert", 0.01)]
+    assert overlay.banners == [("Big Drop Alert", MessageType.DROP, 0.01)]
+
+
+@pytest.mark.asyncio
+async def test_fusion_banner_includes_source_for_overlay_coloring():
+    overlay = FakeOverlay()
+    subject = scheduler(obs=FakeObs(current_scene="Main"), overlay=overlay)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "fusion", 5))
+
+    assert result.accepted is True
+    assert overlay.banners == [("New Fusion Alert", MessageType.FUSE, 0.01)]
+
+
+@pytest.mark.asyncio
+async def test_ritual_banner_includes_source_for_overlay_coloring():
+    overlay = FakeOverlay()
+    subject = scheduler(obs=FakeObs(current_scene="Main"), overlay=overlay)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "ritual", 5))
+
+    assert result.accepted is True
+    assert overlay.banners == [("New Ritual Alert", MessageType.RITUAL, 0.01)]
 
 
 @pytest.mark.asyncio

@@ -9,9 +9,10 @@
       --canvas-width: __CANVAS_WIDTH__;
       --canvas-height: __CANVAS_HEIGHT__;
       --gold: #f5c542;
+      --fusion: #ff6b7f;
+      --ritual: #a879ff;
       --ink: #111318;
       --cyan: #57d7ff;
-      --red: #ff4d6d;
     }
 
     html, body {
@@ -33,8 +34,25 @@
       align-items: center;
       overflow: hidden;
       background: linear-gradient(90deg, var(--ink), #26313a, var(--ink));
-      border-block: 2px solid var(--gold);
-      box-shadow: 0 0 22px rgba(245, 197, 66, 0.45);
+      --banner-accent: var(--gold);
+      --banner-glow: rgba(245, 197, 66, 0.45);
+      border-block: 2px solid var(--banner-accent);
+      box-shadow: 0 0 22px var(--banner-glow);
+    }
+
+    .banner.source-drop {
+      --banner-accent: var(--gold);
+      --banner-glow: rgba(245, 197, 66, 0.45);
+    }
+
+    .banner.source-fuse {
+      --banner-accent: var(--fusion);
+      --banner-glow: rgba(255, 107, 127, 0.45);
+    }
+
+    .banner.source-ritual {
+      --banner-accent: var(--ritual);
+      --banner-glow: rgba(168, 121, 255, 0.45);
     }
 
     .banner.top { top: 0; }
@@ -49,6 +67,10 @@
       text-transform: uppercase;
       text-shadow: 0 2px 0 rgba(0,0,0,0.55);
       animation: scroll 9s linear infinite;
+    }
+
+    .source-word {
+      color: var(--banner-accent);
     }
 
     .bottom .track { animation-direction: reverse; }
@@ -119,15 +141,46 @@
     const opponent = document.querySelector(".opponent");
     let bannerTimer = null;
     let introTimer = null;
+    const sourceClasses = ["source-drop", "source-fuse", "source-ritual"];
+    const sourceWords = {
+      drop: "Drop",
+      fuse: "Fusion",
+      ritual: "Ritual",
+    };
 
-    function repeatedLabel(label) {
-      const chunk = `   ✦   ${label}   ✦   `;
-      return Array(18).fill(chunk).join("");
+    function appendLabel(track, label, source) {
+      const sourceWord = sourceWords[source];
+      for (let i = 0; i < 18; i += 1) {
+        track.append("   ✦   ");
+        if (sourceWord && label.includes(sourceWord)) {
+          const [before, after] = label.split(sourceWord, 2);
+          const word = document.createElement("span");
+          word.className = "source-word";
+          word.textContent = sourceWord;
+          track.append(before, word, after);
+        } else {
+          track.append(label);
+        }
+        track.append("   ✦   ");
+      }
+    }
+
+    function setBannerSource(source) {
+      const normalized = sourceWords[source] ? source : "drop";
+      [topBanner, bottomBanner].forEach(banner => {
+        banner.classList.remove(...sourceClasses);
+        banner.classList.add(`source-${normalized}`);
+      });
     }
 
     function showBanner(payload) {
       clearTimeout(bannerTimer);
-      tracks.forEach(track => { track.textContent = repeatedLabel(payload.label); });
+      const source = sourceWords[payload.source] ? payload.source : "drop";
+      setBannerSource(source);
+      tracks.forEach(track => {
+        track.replaceChildren();
+        appendLabel(track, payload.label || "Alert", source);
+      });
       topBanner.classList.add("active");
       bottomBanner.classList.add("active");
       bannerTimer = setTimeout(() => {
@@ -163,4 +216,3 @@
   </script>
 </body>
 </html>
-
