@@ -2,7 +2,9 @@ package moe.maika.fmteamhundo.service;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,7 +12,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +30,7 @@ public class AcquisitionVideoService {
 
     private final AcquisitionVideoRepository repository;
     private final Set<AcquisitionVideoListener> listeners = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<AcquisitionVideoKey, AcquisitionVideo> resolvedVideoCache = new ConcurrentHashMap<>();
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
@@ -62,17 +68,35 @@ public class AcquisitionVideoService {
     }
 
     public Optional<AcquisitionVideo> getResolvedVideo(int teamId, int cardId) {
-        return repository.findByTeamIdAndCardIdAndStatus(teamId, cardId, AcquisitionVideoStatus.RESOLVED)
-                .filter(video -> video.getTwitchVideoId() != null && video.getOffsetSeconds() != null);
+        return Optional.ofNullable(resolvedVideoCache.get(new AcquisitionVideoKey(teamId, cardId)));
     }
 
     public List<AcquisitionVideo> getResolvedVideos(int teamId, Collection<Integer> cardIds) {
         if(cardIds.isEmpty()) {
             return List.of();
         }
-        return repository.findByTeamIdAndCardIdInAndStatus(teamId, cardIds, AcquisitionVideoStatus.RESOLVED).stream()
-                .filter(video -> video.getTwitchVideoId() != null && video.getOffsetSeconds() != null)
+        return cardIds.stream()
+                .map(cardId -> resolvedVideoCache.get(new AcquisitionVideoKey(teamId, cardId)))
+                .filter(video -> video != null)
                 .toList();
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void loadResolvedVideoCacheOnStartup() {
+        refreshResolvedVideoCache();
+    }
+
+    @Scheduled(fixedDelay = 5 * 60 * 1000)
+    public void refreshResolvedVideoCache() {
+        List<AcquisitionVideo> resolvedVideos = repository.findByStatus(AcquisitionVideoStatus.RESOLVED).stream()
+                .filter(AcquisitionVideoService::hasResolvedUrl)
+                .toList();
+        Map<AcquisitionVideoKey, AcquisitionVideo> refreshedCache = new HashMap<>();
+        for(AcquisitionVideo video : resolvedVideos) {
+            refreshedCache.put(AcquisitionVideoKey.from(video), video);
+        }
+        resolvedVideoCache.clear();
+        resolvedVideoCache.putAll(refreshedCache);
     }
 
     public synchronized AcquisitionVideo markResolved(AcquisitionVideo row, TwitchVodMatch match, Instant now) {
@@ -90,6 +114,7 @@ public class AcquisitionVideoService {
         current.setNextAttemptAt(null);
         current.setLastError(null);
         AcquisitionVideo saved = repository.save(current);
+        putResolvedVideoInCache(saved);
         notifyResolved(saved);
         return saved;
     }
@@ -139,5 +164,21 @@ public class AcquisitionVideoService {
             return value;
         }
         return value.substring(0, 1000);
+    }
+
+    private static boolean hasResolvedUrl(AcquisitionVideo video) {
+        return video.getTwitchVideoId() != null && video.getOffsetSeconds() != null;
+    }
+
+    private void putResolvedVideoInCache(AcquisitionVideo video) {
+        if(hasResolvedUrl(video)) {
+            resolvedVideoCache.put(AcquisitionVideoKey.from(video), video);
+        }
+    }
+
+    private record AcquisitionVideoKey(int teamId, int cardId) {
+        static AcquisitionVideoKey from(AcquisitionVideo video) {
+            return new AcquisitionVideoKey(video.getTeamId(), video.getCardId());
+        }
     }
 }

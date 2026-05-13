@@ -1,7 +1,6 @@
 package moe.maika.fmteamhundo.data.repos;
 
 import java.time.Instant;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,11 +14,8 @@ public interface AcquisitionVideoRepository extends JpaRepository<AcquisitionVid
 
     Optional<AcquisitionVideo> findByTeamIdAndCardId(int teamId, int cardId);
 
-    Optional<AcquisitionVideo> findByTeamIdAndCardIdAndStatus(int teamId, int cardId, AcquisitionVideoStatus status);
+    List<AcquisitionVideo> findByStatus(AcquisitionVideoStatus status);
 
     List<AcquisitionVideo> findByStatusAndNextAttemptAtLessThanEqualOrderByNextAttemptAtAsc(
             AcquisitionVideoStatus status, Instant now, Pageable pageable);
-
-    List<AcquisitionVideo> findByTeamIdAndCardIdInAndStatus(
-            int teamId, Collection<Integer> cardIds, AcquisitionVideoStatus status);
 }
