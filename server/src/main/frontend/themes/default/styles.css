@@ -365,6 +365,11 @@ div {
   margin-top: var(--spacing-2xs);
 }
 
+.card-popover__link {
+  color: var(--color-link);
+  font-weight: var(--font-weight-semibold);
+}
+
 /* Player View */
 .player-view__team-link {
   display: inline-block;
@@ -426,6 +431,12 @@ div {
 
 .profile-view__save-status--error {
   color: var(--color-danger);
+}
+
+.profile-view__save-message {
+  margin-bottom: 0.7rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
 }
 
 .profile-view__dialog-actions {

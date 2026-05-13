@@ -13,3 +13,6 @@ spring:
 ygo:
   apiUrl: https://hundo.maika.moe/api
   teamAutoAssign: true
+hundo:
+  twitch-vod:
+    enabled: false  # Switch to true for real event

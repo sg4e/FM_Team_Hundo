@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,8 +30,10 @@ import moe.maika.fmteamhundo.api.CardAcquisition;
 import moe.maika.fmteamhundo.api.EmuMessage;
 import moe.maika.fmteamhundo.api.LibraryUpdate;
 import moe.maika.fmteamhundo.api.MessageType;
+import moe.maika.fmteamhundo.data.entities.AcquisitionVideo;
 import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.data.entities.User;
+import moe.maika.fmteamhundo.data.repos.AcquisitionVideoRepository;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
@@ -55,6 +58,9 @@ class GameStateServiceIntegrationTest {
 
     @Autowired
     private PlayerUpdateRepository playerUpdateRepository;
+
+    @Autowired
+    private AcquisitionVideoRepository acquisitionVideoRepository;
 
     @Autowired
     private UserMappings userMappings;
@@ -85,6 +91,7 @@ class GameStateServiceIntegrationTest {
         gameStateService.reset();
         
         // Clear repositories before each test
+        acquisitionVideoRepository.deleteAll();
         playerUpdateRepository.deleteAll();
         userRepository.deleteAll();
         userMappings.clearCaches();
@@ -322,6 +329,11 @@ class GameStateServiceIntegrationTest {
         assertThat(team1Cards).containsKeys(122, 456);
         assertThat(team1Cards.get(122).cardId()).isEqualTo(122);
         assertThat(team1Cards.get(456).cardId()).isEqualTo(456);
+
+        AcquisitionVideo acquisitionVideo = acquisitionVideoRepository.findByTeamIdAndCardId(1, 122).orElseThrow();
+        assertThat(acquisitionVideo.getPlayerId()).isEqualTo(team1Users.get(0).getDatabaseId());
+        assertThat(Duration.between(acquisitionVideo.getAcquisitionTime(), team1Cards.get(122).acquisitionTime()).abs())
+                .isLessThan(Duration.ofMillis(1));
 
         assertThat(team2Cards).containsKeys(666);
         assertThat(team2Cards.get(666).cardId()).isEqualTo(666);

@@ -34,9 +34,12 @@ import com.vaadin.flow.shared.communication.PushMode;
 
 import moe.maika.fmteamhundo.api.CardAcquisition;
 import moe.maika.fmteamhundo.api.LibraryUpdate;
+import moe.maika.fmteamhundo.data.entities.AcquisitionVideo;
 import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.service.AcquisitionVideoListener;
+import moe.maika.fmteamhundo.service.AcquisitionVideoService;
 import moe.maika.fmteamhundo.service.TeamService;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -47,13 +50,14 @@ import moe.maika.ygofm.gamedata.FMDB;
 
 @Route("teams")
 @AnonymousAllowed
-public class TeamView extends VerticalLayout implements HasUrlParameter<String>, HasDynamicTitle, TeamUpdateListener {
+public class TeamView extends VerticalLayout implements HasUrlParameter<String>, HasDynamicTitle, TeamUpdateListener, AcquisitionVideoListener {
 
     private static final int CARDS_PER_FULL_GRID = 100;
     private static final int TOTAL_CARDS = 722;
 
     private final GameStateService gameStateService;
     private final UserRepository userRepository;
+    private final AcquisitionVideoService acquisitionVideoService;
     private final HundoConstants hundoConstants;
     private final UserMappings userMappings;
     private final TeamService teamService;
@@ -75,10 +79,12 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
 
     @Autowired
     public TeamView(GameStateService gameStateService, UserRepository userRepository, 
-            HundoConstants hundoConstants, UserMappings userMappings, TeamService teamService
+            HundoConstants hundoConstants, UserMappings userMappings, TeamService teamService,
+            AcquisitionVideoService acquisitionVideoService
     ) {
         this.gameStateService = gameStateService;
         this.userRepository = userRepository;
+        this.acquisitionVideoService = acquisitionVideoService;
         this.hundoConstants = hundoConstants;
         this.userMappings = userMappings;
         this.teamService = teamService;
@@ -99,10 +105,12 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             currentUI = event.getUI();
             currentUI.getPushConfiguration().setPushMode(PushMode.AUTOMATIC);
             gameStateService.addTeamUpdateListener(this);
+            acquisitionVideoService.addListener(this);
             loadInitialSnapshot();
         });
         addDetachListener(event -> {
             gameStateService.removeTeamUpdateListener(this);
+            acquisitionVideoService.removeListener(this);
             currentUI = null;
         });
     }
@@ -139,6 +147,13 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     public void onTeamUpdate(LibraryUpdate snapshot) {
         if(teamId != null && teamId == snapshot.teamId() && currentUI != null) {
             currentUI.access(() -> renderIfNewer(snapshot));
+        }
+    }
+
+    @Override
+    public void onAcquisitionVideoResolved(AcquisitionVideo acquisitionVideo) {
+        if(teamId != null && teamId == acquisitionVideo.getTeamId() && currentUI != null) {
+            currentUI.access(() -> updateCardVideoAttributes(acquisitionVideo.getCardId(), acquisitionVideo));
         }
     }
 
@@ -381,6 +396,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         cell.getElement().setAttribute("data-player-name", userMappings.getUserById(acquisition.playerId()).getName());
         cell.getElement().setAttribute("data-source", acquisition.source().toString());
         cell.getElement().setAttribute("data-acquisition-time", ViewSupport.formatInstant(acquisition.acquisitionTime()));
+        updateCardVideoAttributes(cardId, acquisitionVideoService.getResolvedVideo(teamId, cardId).orElse(null));
         Duelist opponent = fmdb.getDuelist(acquisition.opponentId());
         if(opponent != null) {
             cell.getElement().setAttribute("data-opponent", opponent.toString());
@@ -397,6 +413,22 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         cell.getElement().removeAttribute("data-player-name");
         cell.getElement().removeAttribute("data-source");
         cell.getElement().removeAttribute("data-acquisition-time");
+        cell.getElement().removeAttribute("data-vod-url");
+        cell.getElement().removeAttribute("data-vod-label");
         cell.getElement().removeAttribute("data-opponent");
+    }
+
+    private void updateCardVideoAttributes(int cardId, AcquisitionVideo acquisitionVideo) {
+        Div cell = cardCellsById.get(cardId);
+        if(cell == null) {
+            return;
+        }
+        if(acquisitionVideo == null || acquisitionVideo.getTwitchUrl() == null) {
+            cell.getElement().removeAttribute("data-vod-url");
+            cell.getElement().removeAttribute("data-vod-label");
+            return;
+        }
+        cell.getElement().setAttribute("data-vod-url", acquisitionVideo.getTwitchUrl());
+        cell.getElement().setAttribute("data-vod-label", "Watch VoD");
     }
 }

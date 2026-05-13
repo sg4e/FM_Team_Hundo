@@ -2,6 +2,7 @@ package moe.maika.fmteamhundo.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,9 +31,12 @@ import com.vaadin.flow.server.VaadinService;
 import moe.maika.fmteamhundo.api.CardAcquisition;
 import moe.maika.fmteamhundo.api.LibraryUpdate;
 import moe.maika.fmteamhundo.api.MessageType;
+import moe.maika.fmteamhundo.data.entities.AcquisitionVideo;
+import moe.maika.fmteamhundo.data.entities.AcquisitionVideoStatus;
 import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.service.AcquisitionVideoService;
 import moe.maika.fmteamhundo.service.TeamService;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -43,6 +47,7 @@ class TeamViewTest {
 
     private GameStateService gameStateService;
     private UserRepository userRepository;
+    private AcquisitionVideoService acquisitionVideoService;
     private UserMappings userMappings;
     private TeamView view;
     private Library library;
@@ -62,6 +67,7 @@ class TeamViewTest {
 
         gameStateService = mock(GameStateService.class);
         userRepository = mock(UserRepository.class);
+        acquisitionVideoService = mock(AcquisitionVideoService.class);
         userMappings = mock(UserMappings.class);
         TeamService teamService = mock(TeamService.class);
         library = mock(Library.class);
@@ -78,9 +84,10 @@ class TeamViewTest {
         when(gameStateService.getLibrary(1)).thenReturn(library);
         when(library.getAcquiredCards()).thenReturn(Map.of());
         when(gameStateService.getLatestCardAcquisitions(1)).thenReturn(List.of());
+        when(acquisitionVideoService.getResolvedVideo(anyInt(), anyInt())).thenReturn(Optional.empty());
         when(userMappings.getUserById(10L)).thenReturn(player);
 
-        view = new TeamView(gameStateService, userRepository, hundoConstants, userMappings, teamService);
+        view = new TeamView(gameStateService, userRepository, hundoConstants, userMappings, teamService, acquisitionVideoService);
         view.setParameter(null, "1");
     }
 
@@ -133,6 +140,24 @@ class TeamViewTest {
         assertThat(cardCell.getElement().getAttribute("data-status")).isEqualTo("acquired");
         assertThat(cardCell.getElement().getAttribute("data-player-name")).isEqualTo("Mai");
         assertThat(cardCell.getElement().getAttribute("data-source")).isEqualTo("drop");
+    }
+
+    @Test
+    void resolvedVodLinkIsAddedToAcquiredCardCell() throws Exception {
+        CardAcquisition acquisition = acquisition(122, "2026-05-10T12:09:23Z");
+        AcquisitionVideo video = new AcquisitionVideo();
+        video.setStatus(AcquisitionVideoStatus.RESOLVED);
+        video.setTwitchVideoId("2770883762");
+        video.setOffsetSeconds(563L);
+        when(gameStateService.getLatestCardAcquisitions(1)).thenReturn(List.of(acquisition));
+        when(acquisitionVideoService.getResolvedVideo(1, 122)).thenReturn(Optional.of(video));
+
+        renderIfNewer(snapshot("2026-05-10T12:09:23Z", 0, 1, List.of(acquisition), false));
+
+        Div cardCell = cardCells().get(122);
+        assertThat(cardCell.getElement().getAttribute("data-vod-url"))
+                .isEqualTo("https://www.twitch.tv/videos/2770883762?t=0h9m23s");
+        assertThat(cardCell.getElement().getAttribute("data-vod-label")).isEqualTo("Watch VoD");
     }
 
     @Test

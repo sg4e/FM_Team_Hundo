@@ -8,6 +8,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
@@ -21,8 +22,8 @@ import com.vaadin.flow.server.streams.DownloadHandler;
 import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.component.textfield.TextField;
 import moe.maika.fmteamhundo.data.entities.User;
-import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
+import moe.maika.fmteamhundo.service.TwitchAccountService;
 import moe.maika.fmteamhundo.state.HundoConstants;
 import moe.maika.fmteamhundo.state.UserMappings;
 
@@ -41,20 +42,20 @@ public class UserProfileView extends VerticalLayout {
 
     private static final String CREDENTIALS_FILENAME = "credentials_FM_Team_Hundo.json";
 
-    private final UserRepository userRepository;
     private final UserMappings teamMapping;
     private final ApiKeyService apiKeyService;
+    private final TwitchAccountService twitchAccountService;
     private final HundoConstants hundoConstants;
     private final ObjectMapper objectMapper;
     private final Anchor downloadAnchor;
     private final VerticalLayout content;
 
     @Autowired
-    public UserProfileView(UserRepository userRepository, UserMappings teamMapping, ApiKeyService apiKeyService, ObjectMapper objectMapper,
-                           HundoConstants hundoConstants) {
-        this.userRepository = userRepository;
+    public UserProfileView(UserMappings teamMapping, ApiKeyService apiKeyService, ObjectMapper objectMapper,
+                           HundoConstants hundoConstants, TwitchAccountService twitchAccountService) {
         this.teamMapping = teamMapping;
         this.apiKeyService = apiKeyService;
+        this.twitchAccountService = twitchAccountService;
         this.objectMapper = objectMapper;
         this.hundoConstants = hundoConstants;
         this.downloadAnchor = new Anchor();
@@ -177,11 +178,17 @@ public class UserProfileView extends VerticalLayout {
         Icon statusIcon = VaadinIcon.CHECK.create();
         statusIcon.addClassName("profile-view__save-status");
         statusIcon.setVisible(false);
+        Span statusMessage = new Span();
+        statusMessage.addClassName("profile-view__save-message");
+        statusMessage.setVisible(false);
 
-        altAccountField.addValueChangeListener(event -> statusIcon.setVisible(false));
-        saveButton.addClickListener(event -> saveAltAccount(user, altAccountField, statusIcon));
+        altAccountField.addValueChangeListener(event -> {
+            statusIcon.setVisible(false);
+            statusMessage.setVisible(false);
+        });
+        saveButton.addClickListener(event -> saveAltAccount(user, altAccountField, statusIcon, statusMessage));
 
-        HorizontalLayout editorRow = new HorizontalLayout(altAccountField, saveButton, statusIcon);
+        HorizontalLayout editorRow = new HorizontalLayout(altAccountField, saveButton, statusIcon, statusMessage);
         editorRow.setWidthFull();
         editorRow.setAlignItems(FlexComponent.Alignment.END);
         editorRow.addClassName("profile-view__alt-account-row");
@@ -189,22 +196,25 @@ public class UserProfileView extends VerticalLayout {
         return editorRow;
     }
 
-    private void saveAltAccount(User user, TextField altAccountField, Icon statusIcon) {
-        String value = altAccountField.getValue() == null ? null : altAccountField.getValue().trim();
-        user.setAltAccount(value == null || value.isEmpty() ? null : value);
-
-        try {
-            userRepository.save(user);
+    private void saveAltAccount(User user, TextField altAccountField, Icon statusIcon, Span statusMessage) {
+        TwitchAccountService.AltAccountSaveResult result = twitchAccountService.applyAltAccount(user, altAccountField.getValue());
+        if(result.saved()) {
+            if(result.canonicalLogin() != null) {
+                altAccountField.setValue(result.canonicalLogin());
+            }
             statusIcon.setIcon(VaadinIcon.CHECK);
             statusIcon.removeClassName("profile-view__save-status--error");
             statusIcon.addClassName("profile-view__save-status--success");
+            statusMessage.setText("Saved");
         }
-        catch(RuntimeException ex) {
+        else {
             statusIcon.setIcon(VaadinIcon.CLOSE_SMALL);
             statusIcon.removeClassName("profile-view__save-status--success");
             statusIcon.addClassName("profile-view__save-status--error");
+            statusMessage.setText(result.message());
         }
 
         statusIcon.setVisible(true);
+        statusMessage.setVisible(true);
     }
 }

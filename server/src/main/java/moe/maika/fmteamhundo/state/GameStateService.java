@@ -28,6 +28,8 @@ import moe.maika.fmteamhundo.data.entities.PlayerUpdate;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.service.AcquisitionVideoService;
+import moe.maika.fmteamhundo.service.TwitchVodResolver;
 import moe.maika.fmteamhundo.util.RingBuffer;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -51,6 +53,8 @@ public class GameStateService {
     private final PlayerUpdateRepository playerUpdateRepository;
     private final UserMappings userMappings;
     private final HundoConstants hundoConstants;
+    private final AcquisitionVideoService acquisitionVideoService;
+    private final TwitchVodResolver twitchVodResolver;
     private final FirehoseHandler playerUpdateHandler;
     private final FirehoseHandler teamUpdateHandler;
     private final ObjectMapper objectMapper;
@@ -59,6 +63,8 @@ public class GameStateService {
     @Autowired
     public GameStateService(UserRepository userRepo, PlayerUpdateRepository playerUpdateRepository, UserMappings userMappings,
             HundoConstants hundoConstants,
+            AcquisitionVideoService acquisitionVideoService,
+            TwitchVodResolver twitchVodResolver,
             @Qualifier("playerUpdateHandler") FirehoseHandler playerUpdateHandler, 
             @Qualifier("teamUpdateHandler") FirehoseHandler teamUpdateHandler,
             ObjectMapper objectMapper) {
@@ -71,6 +77,8 @@ public class GameStateService {
         this.userRepo = userRepo;
         this.playerUpdateRepository = playerUpdateRepository;
         this.hundoConstants = hundoConstants;
+        this.acquisitionVideoService = acquisitionVideoService;
+        this.twitchVodResolver = twitchVodResolver;
         this.userMappings = userMappings;
         this.playerUpdateHandler = playerUpdateHandler;
         this.teamUpdateHandler = teamUpdateHandler;
@@ -105,6 +113,7 @@ public class GameStateService {
     private void consumeLibraryUpdate(LibraryUpdate libraryUpdate) {
         RingBuffer<CardAcquisition> teamAcquisitions = latestTeamAcquisitions.computeIfAbsent(libraryUpdate.teamId(), _ -> new RingBuffer<>(TEAM_PAGE_UPDATE_LIMIT));
         for(CardAcquisition card : libraryUpdate.newAcquisitions()) {
+            twitchVodResolver.submit(acquisitionVideoService.recordAcquisition(libraryUpdate.teamId(), card));
             teamAcquisitions.addOrReplace(card, oldCard -> {
                 if(card.cardId() != oldCard.cardId())
                     return Boolean.FALSE;

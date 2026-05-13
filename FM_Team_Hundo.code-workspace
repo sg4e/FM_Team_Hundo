@@ -17,6 +17,7 @@
     "java.import.maven.enabled": true,
     "java.import.gradle.enabled": true,
     "java.import.gradle.wrapper.enabled": true,
-    "java.autobuild.enabled": true
+    "java.autobuild.enabled": true,
+    "java.configuration.updateBuildConfiguration": "interactive"
   }
 }

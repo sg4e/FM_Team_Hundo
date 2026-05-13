@@ -60,3 +60,9 @@ ygo:
     - 717
     - 721
     - 722
+hundo:
+  twitch-vod:
+    enabled: false
+    retry-cadence: 5m
+    retry-grace-period: 24h
+    match-tolerance: 2m

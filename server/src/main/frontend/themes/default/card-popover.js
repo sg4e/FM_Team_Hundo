@@ -24,34 +24,47 @@
     return popover;
   }
 
-  function buildLines(cell) {
+  function buildItems(cell) {
     const cardId = cell.dataset.cardId;
     const status = cell.dataset.status;
     if (status === "unobtainable") {
-      return [`${cardId}`, "Unobtainable"];
+      return [{ text: `${cardId}` }, { text: "Unobtainable" }];
     }
     if (status === "unacquired") {
-      return [`${cardId}`, "Not acquired"];
+      return [{ text: `${cardId}` }, { text: "Not acquired" }];
     }
 
-    const lines = [
-      `${cardId}`,
-      `Acquired by: ${cell.dataset.playerName}`,
-      `Source: ${cell.dataset.source}`
+    const items = [
+      { text: `${cardId}` },
+      { text: `Acquired by: ${cell.dataset.playerName}` },
+      { text: `Source: ${cell.dataset.source}` }
     ];
     if (cell.dataset.opponent) {
-      lines.push(`Opponent: ${cell.dataset.opponent}`);
+      items.push({ text: `Opponent: ${cell.dataset.opponent}` });
     }
-    lines.push(`At: ${cell.dataset.acquisitionTime}`);
-    return lines;
+    items.push({ text: `At: ${cell.dataset.acquisitionTime}` });
+    if (cell.dataset.vodUrl) {
+      items.push({ text: cell.dataset.vodLabel || "Watch VoD", href: cell.dataset.vodUrl });
+    }
+    return items;
   }
 
   function renderPopover(popover, cell) {
     popover.innerHTML = "";
-    for (const line of buildLines(cell)) {
+    for (const item of buildItems(cell)) {
       const lineElement = document.createElement("div");
       lineElement.className = "card-popover__line";
-      lineElement.textContent = line;
+      if (item.href) {
+        const link = document.createElement("a");
+        link.className = "card-popover__link";
+        link.href = item.href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = item.text;
+        lineElement.appendChild(link);
+      } else {
+        lineElement.textContent = item.text;
+      }
       popover.appendChild(lineElement);
     }
   }
