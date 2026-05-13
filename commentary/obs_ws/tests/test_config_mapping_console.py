@@ -14,6 +14,8 @@ def test_load_config_and_env_override(tmp_path, monkeypatch):
         """
 obs:
   password: yaml-secret
+  all_managed_master_scene: Prod Global
+  stream_layout_master_scene: Prod Stream Layout
 player_scenes:
   10: Player Ten
 group_scenes:
@@ -28,10 +30,22 @@ group_scenes:
     config = load_config(config_path)
 
     assert config.obs.password == "env-secret"
+    assert config.obs.all_managed_master_scene == "Prod Global"
+    assert config.obs.stream_layout_master_scene == "Prod Stream Layout"
     assert config.player_scenes == {10: "Player Ten"}
     assert config.group_scenes[0].scene == "Group"
     assert config.group_scenes[0].interval_seconds == 120
     assert config.group_scenes[0].audio_sources == ("A", "B")
+
+
+def test_master_scene_config_defaults_disabled(tmp_path):
+    config_path = tmp_path / "config.yml"
+    config_path.write_text("obs:\n  password: secret\n", encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.obs.all_managed_master_scene is None
+    assert config.obs.stream_layout_master_scene is None
 
 
 def test_name_resolver_and_duelist_file(tmp_path):
@@ -62,4 +76,3 @@ def test_parse_commands():
     assert parse_on_off(("on",)) is True
     assert parse_on_off(("off",)) is False
     assert parse_on_off(("maybe",)) is None
-

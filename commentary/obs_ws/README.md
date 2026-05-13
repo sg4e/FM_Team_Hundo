@@ -55,6 +55,23 @@ are hidden and configured to close when inactive where OBS supports that Media
 Source setting. Acquisition alerts cut to a player scene; inactive players show a
 managed placeholder rather than a dead RTSP source.
 
+Optional production-owned master scenes can be configured in `config.yml`:
+
+```yaml
+obs:
+  all_managed_master_scene: "Production - Managed Global"
+  stream_layout_master_scene: "Production - Stream Layout Chrome"
+```
+
+If configured, Python creates these scenes if missing and nests them into managed
+layouts, but never edits their contents. Put commentary audio sources in
+`all_managed_master_scene`; it is added to every managed scene at the bottom.
+Put LiveSplit, Discord streaming kit, and related labels in
+`stream_layout_master_scene`; it is added only to All Streamers and Team scenes
+above stream tiles but below alert overlays. OBS source and scene names are
+global, so keep these names distinct from generated `FM Hundo` scenes and other
+sources.
+
 ## MediaMTX Simulation Mode
 
 For pre-event OBS rehearsal with streams that are not registered website

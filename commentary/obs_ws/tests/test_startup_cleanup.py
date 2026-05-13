@@ -85,6 +85,9 @@ class SetupObs:
     async def move_scene_item_to_top(self, *_args, **_kwargs) -> None:
         pass
 
+    async def move_scene_item_to_bottom(self, *_args, **_kwargs) -> None:
+        pass
+
     async def validate(self, *_, **__) -> None:
         pass
 

@@ -27,6 +27,8 @@ class ObsConfig:
     media_source_kind: str = "ffmpeg_source"
     text_source_kind: str = "text_gdiplus_v3"
     browser_source_kind: str = "browser_source"
+    all_managed_master_scene: str | None = None
+    stream_layout_master_scene: str | None = None
     dry_run: bool = False
 
     @property

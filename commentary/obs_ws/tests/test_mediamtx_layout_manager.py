@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from fm_hundo_obs.config import AppConfig, MediaMtxConfig
+from fm_hundo_obs.config import AppConfig, MediaMtxConfig, ObsConfig
 from fm_hundo_obs.layout import Rect, fit_inside, grid_layout
 from fm_hundo_obs.managed_layout import ObsLayoutManager
 from fm_hundo_obs.mediamtx import StreamRegistry, parse_active_paths
 from fm_hundo_obs.models import Player, Team
+from fm_hundo_obs.obs import ObsError
 
 from .fakes import FakeObs
 
@@ -30,6 +31,15 @@ def registry(active: set[str]) -> StreamRegistry:
     streams = StreamRegistry(players(), FakeMediaMtx())  # type: ignore[arg-type]
     streams.set_active_paths_for_tests(active)
     return streams
+
+
+def app_config_with_master_scenes() -> AppConfig:
+    return AppConfig(
+        obs=ObsConfig(
+            all_managed_master_scene="Prod Global",
+            stream_layout_master_scene="Prod Stream Layout",
+        )
+    )
 
 
 def latest_transform(obs: FakeObs, scene: str, source: str):
@@ -164,6 +174,63 @@ async def test_team_offline_message_toggles_with_active_team_streams():
     assert transform.x == pytest.approx(268.8)
     assert transform.y == 450
     assert transform.width == pytest.approx(1382.4)
+
+
+@pytest.mark.asyncio
+async def test_master_scenes_are_nested_into_configured_managed_scenes():
+    obs = FakeObs()
+    manager = ObsLayoutManager(
+        obs,
+        app_config_with_master_scenes(),
+        players(),
+        [Team(1, "Alpha"), Team(2, "Beta")],
+        registry({"runner10"}),
+    )
+
+    await manager.setup()
+
+    generated_scenes = {
+        "FM Hundo - All Streamers",
+        "FM Hundo - Team - Alpha",
+        "FM Hundo - Team - Beta",
+        "FM Hundo - Player - Runner Ten",
+        "FM Hundo - Player - Runner Eleven",
+        "FM Hundo - Player - Runner Twenty",
+    }
+    assert "Prod Global" in obs.created_scenes
+    assert "Prod Stream Layout" in obs.created_scenes
+    for scene in generated_scenes:
+        assert (scene, "Prod Global") in obs.scene_items
+        global_id = obs.scene_items[(scene, "Prod Global")]
+        assert (scene, global_id) in obs.bottom_moves
+    for scene in ("FM Hundo - All Streamers", "FM Hundo - Team - Alpha", "FM Hundo - Team - Beta"):
+        assert (scene, "Prod Stream Layout") in obs.scene_items
+        stream_id = obs.scene_items[(scene, "Prod Stream Layout")]
+        overlay_id = obs.scene_items[(scene, "FM Hundo Overlay")]
+        assert (scene, stream_id) in obs.top_moves
+        assert (scene, overlay_id) in obs.top_moves
+        assert obs.top_moves.index((scene, stream_id)) < obs.top_moves.index((scene, overlay_id))
+    for scene in ("FM Hundo - Player - Runner Ten", "FM Hundo - Player - Runner Eleven", "FM Hundo - Player - Runner Twenty"):
+        assert (scene, "Prod Stream Layout") not in obs.scene_items
+
+
+def test_master_scene_names_cannot_self_nest_generated_or_overlay_scenes():
+    with pytest.raises(ObsError, match="master scene"):
+        ObsLayoutManager(
+            FakeObs(),
+            AppConfig(obs=ObsConfig(all_managed_master_scene="FM Hundo Overlay")),
+            players(),
+            [Team(1, "Alpha")],
+            registry(set()),
+        )
+    with pytest.raises(ObsError, match="master scene"):
+        ObsLayoutManager(
+            FakeObs(),
+            AppConfig(obs=ObsConfig(stream_layout_master_scene="FM Hundo - All Streamers")),
+            players(),
+            [Team(1, "Alpha")],
+            registry(set()),
+        )
 
 
 @pytest.mark.asyncio

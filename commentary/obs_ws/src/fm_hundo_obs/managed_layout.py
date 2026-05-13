@@ -10,7 +10,7 @@ from .config import AppConfig
 from .layout import Rect, fit_inside, grid_layout, team_showcase_layout
 from .mediamtx import StreamRegistry
 from .models import Player, Team
-from .obs import ObsController, positioned_transform, transform_from_fit
+from .obs import ObsController, ObsError, positioned_transform, transform_from_fit
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ class ObsLayoutManager:
         self._all_audio_last_rotation = 0.0
         self._all_audio_player_id: int | None = None
         self._closed = False
+        self._validate_master_scene_names()
 
     def player_scene_name(self, player_id: int) -> str | None:
         sources = self.sources.get(player_id)
@@ -123,9 +124,11 @@ class ObsLayoutManager:
         await self.setup()
 
     async def setup(self) -> None:
+        await self._ensure_master_scenes()
         for scene in self.generated_scene_names():
             await self.obs.ensure_scene(scene)
             if scene != self.config.obs.overlay_scene:
+                await self._ensure_master_scenes_for_scene(scene)
                 await self._ensure_overlay_on_top(scene)
         await self._ensure_scene_offline_inputs()
         for player in self.players:
@@ -353,6 +356,7 @@ class ObsLayoutManager:
             transform_from_fit(Rect(0, self.config.overlay.canvas_height * 0.38, self.config.overlay.canvas_width, 180)),
         )
         await self.obs.set_scene_item_transform(scene, label_id, positioned_transform(32, 28))
+        await self._ensure_master_scenes_for_scene(scene)
         await self._ensure_overlay_on_top(scene)
 
     async def _layout_all_streamers(self) -> None:
@@ -373,6 +377,7 @@ class ObsLayoutManager:
                 await self.obs.set_scene_item_transform(self.all_scene, media_id, transform_from_fit(media_fit))
                 await self.obs.set_scene_item_transform(self.all_scene, label_id, positioned_transform(rect.x + 10, rect.y + 10))
                 await self.obs.set_scene_item_transform(self.all_scene, note_id, positioned_transform(rect.x + rect.width - 10, rect.y + 10, alignment=6))
+        await self._ensure_master_scenes_for_scene(self.all_scene)
         await self._ensure_overlay_on_top(self.all_scene)
 
     async def _layout_team_scenes(self) -> None:
@@ -406,6 +411,7 @@ class ObsLayoutManager:
                 media_fit = fit_inside(STREAM_WIDTH, STREAM_HEIGHT, rect)
                 await self.obs.set_scene_item_transform(scene, media_id, transform_from_fit(media_fit))
                 await self.obs.set_scene_item_transform(scene, label_id, positioned_transform(rect.x + 10, rect.y + 10))
+        await self._ensure_master_scenes_for_scene(scene)
         await self._ensure_overlay_on_top(scene)
 
     async def _ensure_overlay_top_for_generated_scenes(self) -> None:
@@ -416,6 +422,39 @@ class ObsLayoutManager:
     async def _ensure_overlay_on_top(self, scene: str) -> None:
         item_id = await self.obs.ensure_scene_item(scene, self.config.obs.overlay_scene, enabled=True)
         await self.obs.move_scene_item_to_top(scene, item_id)
+
+    async def _ensure_master_scenes(self) -> None:
+        for scene in self._configured_master_scenes():
+            await self.obs.ensure_scene(scene)
+
+    async def _ensure_master_scenes_for_scene(self, scene: str) -> None:
+        all_master = self.config.obs.all_managed_master_scene
+        if all_master:
+            item_id = await self.obs.ensure_scene_item(scene, all_master, enabled=True)
+            await self.obs.move_scene_item_to_bottom(scene, item_id)
+        stream_master = self.config.obs.stream_layout_master_scene
+        if stream_master and scene in (self.all_scene, *self.team_scenes.values()):
+            item_id = await self.obs.ensure_scene_item(scene, stream_master, enabled=True)
+            await self.obs.move_scene_item_to_top(scene, item_id)
+
+    def _configured_master_scenes(self) -> tuple[str, ...]:
+        return tuple(
+            scene
+            for scene in (
+                self.config.obs.all_managed_master_scene,
+                self.config.obs.stream_layout_master_scene,
+            )
+            if scene
+        )
+
+    def _validate_master_scene_names(self) -> None:
+        generated = set(self.generated_scene_names())
+        forbidden = generated | {self.config.obs.overlay_scene}
+        for scene in self._configured_master_scenes():
+            if scene in forbidden:
+                raise ObsError(
+                    f"Configured master scene {scene!r} cannot be the overlay scene or a generated managed scene"
+                )
 
     def _offline_message_transform(self):
         width = self.config.overlay.canvas_width * 0.72

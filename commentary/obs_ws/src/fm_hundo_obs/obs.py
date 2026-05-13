@@ -88,6 +88,9 @@ class ObsController:
     async def move_scene_item_to_top(self, scene_name: str, item_id: int) -> None:
         raise NotImplementedError
 
+    async def move_scene_item_to_bottom(self, scene_name: str, item_id: int) -> None:
+        raise NotImplementedError
+
 
 class SimpleObsController(ObsController):
     def __init__(
@@ -255,6 +258,9 @@ class SimpleObsController(ObsController):
         top_index = max(0, len(data["sceneItems"]) - 1)
         await self.set_scene_item_index(scene_name, item_id, top_index)
 
+    async def move_scene_item_to_bottom(self, scene_name: str, item_id: int) -> None:
+        await self.set_scene_item_index(scene_name, item_id, 0)
+
     async def _scene_names(self) -> list[str]:
         data = await self._call("GetSceneList")
         return [str(scene["sceneName"]) for scene in data["scenes"]]
@@ -350,6 +356,9 @@ class DryRunObsController(ObsController):
 
     async def move_scene_item_to_top(self, scene_name: str, item_id: int) -> None:
         self.actions.append(f"move item {item_id} to top in {scene_name}")
+
+    async def move_scene_item_to_bottom(self, scene_name: str, item_id: int) -> None:
+        self.actions.append(f"move item {item_id} to bottom in {scene_name}")
 
     def report(self) -> str:
         return "\n".join(self.actions)

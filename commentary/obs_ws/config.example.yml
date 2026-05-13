@@ -11,6 +11,10 @@ obs:
   media_source_kind: "ffmpeg_source"
   text_source_kind: "text_gdiplus_v3"
   browser_source_kind: "browser_source"
+  # Optional production-owned master scenes. Python creates the empty scenes if
+  # configured, nests them into generated scenes, and never edits their contents.
+  all_managed_master_scene: null
+  stream_layout_master_scene: null
   dry_run: false
 
 overlay:
