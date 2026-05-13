@@ -19,6 +19,7 @@ STREAM_WIDTH = 1920
 STREAM_HEIGHT = 1080
 LABEL_FONT_SIZE = 26
 NOTE_FONT_SIZE = 30
+TEAM_SCENE_LABEL_FONT_SIZE = 34
 OFFLINE_MESSAGE_FONT_SIZE = 42
 ALL_STREAMERS_OFFLINE_MESSAGE = "All players offline. Stay tuned for more live coverage of FM Team Hundo!"
 
@@ -77,6 +78,10 @@ class ObsLayoutManager:
             team.id: f"{config.obs.managed_scene_prefix} Offline Message - Team - {team.name}"
             for team in teams
         }
+        self.team_label_inputs = {
+            team.id: f"{config.obs.managed_scene_prefix} Team Label - {team.name}"
+            for team in teams
+        }
         self.team_rotations = {
             team_id: TeamRotation([player.id for player in self.players if player.team_id == team_id])
             for team_id in self.team_scenes
@@ -115,6 +120,10 @@ class ObsLayoutManager:
         }
         self.team_offline_inputs = {
             team.id: f"{self.config.obs.managed_scene_prefix} Offline Message - Team - {team.name}"
+            for team in teams
+        }
+        self.team_label_inputs = {
+            team.id: f"{self.config.obs.managed_scene_prefix} Team Label - {team.name}"
             for team in teams
         }
         self.team_rotations = {
@@ -324,6 +333,13 @@ class ObsLayoutManager:
             team = self.teams_by_id[team_id]
             await self.obs.ensure_input(
                 scene,
+                self.team_label_inputs[team_id],
+                self.config.obs.text_source_kind,
+                _text_settings(team.name, size=TEAM_SCENE_LABEL_FONT_SIZE),
+                enabled=True,
+            )
+            await self.obs.ensure_input(
+                scene,
                 self.team_offline_inputs[team_id],
                 self.config.obs.text_source_kind,
                 _text_settings(
@@ -397,6 +413,8 @@ class ObsLayoutManager:
         rects = team_showcase_layout(len(ordered_ids), self.config.overlay.canvas_width, self.config.overlay.canvas_height)
         offline_id = await self.obs.ensure_scene_item(scene, self.team_offline_inputs[team_id], enabled=not active_ids)
         await self.obs.set_scene_item_transform(scene, offline_id, self._offline_message_transform())
+        team_label_id = await self.obs.ensure_scene_item(scene, self.team_label_inputs[team_id], enabled=True)
+        await self.obs.set_scene_item_transform(scene, team_label_id, self._team_label_transform())
 
         for player_id in team_player_ids:
             player = self.players_by_id[player_id]
@@ -412,6 +430,7 @@ class ObsLayoutManager:
                 await self.obs.set_scene_item_transform(scene, media_id, transform_from_fit(media_fit))
                 await self.obs.set_scene_item_transform(scene, label_id, positioned_transform(rect.x + 10, rect.y + 10))
         await self._ensure_master_scenes_for_scene(scene)
+        await self._ensure_team_label_on_top(team_id)
         await self._ensure_overlay_on_top(scene)
 
     async def _ensure_overlay_top_for_generated_scenes(self) -> None:
@@ -421,6 +440,11 @@ class ObsLayoutManager:
 
     async def _ensure_overlay_on_top(self, scene: str) -> None:
         item_id = await self.obs.ensure_scene_item(scene, self.config.obs.overlay_scene, enabled=True)
+        await self.obs.move_scene_item_to_top(scene, item_id)
+
+    async def _ensure_team_label_on_top(self, team_id: int) -> None:
+        scene = self.team_scenes[team_id]
+        item_id = await self.obs.ensure_scene_item(scene, self.team_label_inputs[team_id], enabled=True)
         await self.obs.move_scene_item_to_top(scene, item_id)
 
     async def _ensure_master_scenes(self) -> None:
@@ -467,6 +491,9 @@ class ObsLayoutManager:
                 height,
             )
         )
+
+    def _team_label_transform(self):
+        return positioned_transform(self.config.overlay.canvas_width / 2, 12, alignment=4)
 
     def _sources_for(self, player: Player) -> PlayerSources:
         slug = _slug(player.name or str(player.id))

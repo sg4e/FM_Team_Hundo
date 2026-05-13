@@ -4,7 +4,7 @@ import pytest
 
 from fm_hundo_obs.config import FeatureFlags, TimingConfig
 from fm_hundo_obs.mapping import NameResolver
-from fm_hundo_obs.models import CardAcquisition, LibraryUpdate, MessageType, Player
+from fm_hundo_obs.models import CardAcquisition, LibraryUpdate, MessageType, Player, Team
 from fm_hundo_obs.scheduler import AcquisitionScheduler
 
 from .fakes import FakeObs, FakeOverlay
@@ -44,6 +44,7 @@ def scheduler(
     names = NameResolver(
         [Player(10, "ten", "Runner Ten", None, 1), Player(11, "eleven", "Runner Eleven", None, 1)],
         {5: "Villager2"},
+        [Team(1, "Alpha")],
     )
     return AcquisitionScheduler(
         obs or FakeObs(),
@@ -73,7 +74,7 @@ async def test_uses_first_acquisition_only_and_switches_then_restores():
     assert result.accepted is True
     assert obs.scene_changes == ["Player Ten"]
     assert overlay.banners == [("Big Drop Alert", MessageType.DROP, 0.01)]
-    assert overlay.intros == [("Runner Ten", "Villager2", 3)]
+    assert overlay.intros == [("Alpha - Runner Ten", "Villager2", 3)]
     await subject._active_task
     assert obs.scene_changes == ["Player Ten", "Main"]
 
@@ -134,6 +135,38 @@ async def test_ritual_banner_includes_source_for_overlay_coloring():
 
     assert result.accepted is True
     assert overlay.banners == [("New Ritual Alert", MessageType.RITUAL, 0.01)]
+
+
+@pytest.mark.asyncio
+async def test_intro_falls_back_to_player_name_when_team_unknown():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 99)], {5: "Villager2"}, [])
+    subject = AcquisitionScheduler(
+        obs,
+        overlay,
+        names,
+        {10: "Player Ten"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5), team_id=99)
+
+    assert result.accepted is True
+    assert overlay.intros == [("Runner Ten", "Villager2", 3)]
+
+
+@pytest.mark.asyncio
+async def test_manual_acquisition_infers_team_from_player_when_team_id_omitted():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    subject = scheduler(obs=obs, overlay=overlay)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert overlay.intros == [("Alpha - Runner Ten", "Villager2", 3)]
 
 
 @pytest.mark.asyncio
@@ -206,7 +239,7 @@ async def test_obs_disconnected_skips():
 async def test_inactive_managed_player_prepares_placeholder_before_cut():
     obs = FakeObs(current_scene="Main")
     resolver = FakeResolver(active=False)
-    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
     subject = AcquisitionScheduler(
         obs,
         FakeOverlay(),
@@ -228,7 +261,7 @@ async def test_inactive_managed_player_prepares_placeholder_before_cut():
 async def test_managed_player_focuses_audio_when_already_on_player_scene():
     obs = FakeObs(current_scene="Player Ten")
     resolver = FakeResolver(active=True)
-    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
     subject = AcquisitionScheduler(
         obs,
         FakeOverlay(),
@@ -249,7 +282,7 @@ async def test_managed_player_focuses_audio_when_already_on_player_scene():
 async def test_restore_focuses_managed_previous_scene_after_switch_back():
     obs = FakeObs(current_scene="FM Hundo - All Streamers")
     resolver = FakeResolver(active=True)
-    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
     subject = AcquisitionScheduler(
         obs,
         FakeOverlay(),
@@ -270,7 +303,7 @@ async def test_restore_focuses_managed_previous_scene_after_switch_back():
 async def test_manual_scene_change_prevents_restore_focus():
     obs = FakeObs(current_scene="FM Hundo - All Streamers")
     resolver = FakeResolver(active=True)
-    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"})
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
     subject = AcquisitionScheduler(
         obs,
         FakeOverlay(),

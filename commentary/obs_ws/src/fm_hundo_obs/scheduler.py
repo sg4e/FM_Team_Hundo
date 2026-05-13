@@ -86,6 +86,7 @@ class AcquisitionScheduler:
         if acquisition.alert_label is None:
             return AcquisitionResult(False, f"unsupported source {acquisition.source}")
 
+        resolved_team_id = team_id if team_id is not None else self.names.player_team_id(acquisition.player_id)
         scene_name = self._scene_for_player(acquisition.player_id)
         context = AcquisitionContext(
             acquisition=acquisition,
@@ -93,7 +94,7 @@ class AcquisitionScheduler:
             opponent_name=self.names.opponent_name(acquisition.opponent_id),
             scene_name=scene_name,
             alert_label=acquisition.alert_label,
-            team_id=team_id,
+            team_id=resolved_team_id,
         )
 
         previous_scene: str | None = None
@@ -133,7 +134,11 @@ class AcquisitionScheduler:
             )
 
         if switched_scene and self.features.intro_overlay:
-            await self.overlay.intro(context.player_name, context.opponent_name, self.timing.intro_seconds)
+            await self.overlay.intro(
+                self.names.intro_player_name(acquisition.player_id, resolved_team_id),
+                context.opponent_name,
+                self.timing.intro_seconds,
+            )
 
         if not visible_action:
             return AcquisitionResult(False, "no visible action", context)

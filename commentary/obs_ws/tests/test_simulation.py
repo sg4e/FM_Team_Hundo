@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from fm_hundo_obs.config import AppConfig, MediaMtxConfig
+from fm_hundo_obs.config import AppConfig, FeatureFlags, MediaMtxConfig, TimingConfig
 from fm_hundo_obs.main import Application
 from fm_hundo_obs.managed_layout import ObsLayoutManager
+from fm_hundo_obs.mapping import NameResolver
 from fm_hundo_obs.mediamtx import StreamRegistry
 from fm_hundo_obs.models import CardAcquisition, Player, Team
+from fm_hundo_obs.scheduler import AcquisitionScheduler
 from fm_hundo_obs.simulation import SIMULATION_TEAM, build_simulation_roster, simulated_player_id
 
-from .fakes import FakeObs
+from .fakes import FakeObs, FakeOverlay
 
 
 class FakeMediaMtx:
@@ -24,10 +26,10 @@ class FakeMediaMtx:
 
 class CapturingScheduler:
     def __init__(self) -> None:
-        self.events: list[tuple[CardAcquisition, bool]] = []
+        self.events: list[tuple[CardAcquisition, int | None, bool]] = []
 
-    async def handle_acquisition(self, acquisition: CardAcquisition, *, force: bool = False):
-        self.events.append((acquisition, force))
+    async def handle_acquisition(self, acquisition: CardAcquisition, team_id: int | None = None, *, force: bool = False):
+        self.events.append((acquisition, team_id, force))
 
         class Result:
             reason = "accepted"
@@ -55,6 +57,48 @@ def test_simulation_test_player_id_looks_up_path():
 
 
 @pytest.mark.asyncio
+async def test_simulation_intro_includes_simulation_team_name():
+    roster = build_simulation_roster({"alpha_cam"})
+    player = roster.players[0]
+    overlay = FakeOverlay()
+    subject = AcquisitionScheduler(
+        FakeObs(current_scene="Main"),
+        overlay,
+        NameResolver(roster.players, {5: "Villager2"}, roster.teams),
+        {player.id: "Player Ten"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(player.id, "drop", 5), team_id=SIMULATION_TEAM.id)
+
+    assert result.accepted is True
+    assert overlay.intros == [("Simulation - alpha_cam", "Villager2", 3.0)]
+    await subject._active_task
+
+
+@pytest.mark.asyncio
+async def test_simulation_intro_infers_team_for_manual_acquisition():
+    roster = build_simulation_roster({"alpha_cam"})
+    player = roster.players[0]
+    overlay = FakeOverlay()
+    subject = AcquisitionScheduler(
+        FakeObs(current_scene="Main"),
+        overlay,
+        NameResolver(roster.players, {5: "Villager2"}, roster.teams),
+        {player.id: "Player Ten"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(player.id, "drop", 5))
+
+    assert result.accepted is True
+    assert overlay.intros == [("Simulation - alpha_cam", "Villager2", 3)]
+    await subject._active_task
+
+
+@pytest.mark.asyncio
 async def test_simulation_path_test_command_routes_to_generated_player():
     app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
     app.simulation_roster = build_simulation_roster({"alpha_cam"})
@@ -65,7 +109,8 @@ async def test_simulation_path_test_command_routes_to_generated_player():
 
     assert scheduler.events[0][0].player_id == simulated_player_id("alpha_cam")
     assert scheduler.events[0][0].source == "drop"
-    assert scheduler.events[0][1] is True
+    assert scheduler.events[0][1] is None
+    assert scheduler.events[0][2] is True
 
 
 @pytest.mark.asyncio
@@ -95,4 +140,3 @@ async def test_layout_update_roster_adds_and_retires_simulated_paths():
     ]
     assert retired_item_ids
     assert ("FM Hundo - All Streamers", retired_item_ids[0], False) in obs.enabled
-

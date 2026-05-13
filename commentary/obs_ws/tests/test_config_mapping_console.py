@@ -5,7 +5,7 @@ import json
 from fm_hundo_obs.config import load_config
 from fm_hundo_obs.console import CommandType, parse_command, parse_on_off
 from fm_hundo_obs.mapping import NameResolver, load_duelist_names
-from fm_hundo_obs.models import ALERT_LABELS, MessageType, Player
+from fm_hundo_obs.models import ALERT_LABELS, MessageType, Player, Team
 
 
 def test_load_config_and_env_override(tmp_path, monkeypatch):
@@ -54,10 +54,17 @@ def test_name_resolver_and_duelist_file(tmp_path):
     resolver = NameResolver(
         [Player(id=10, twitch_id="tw", name="Runner", alt_account=None, team_id=1)],
         load_duelist_names(path),
+        [Team(1, "Alpha")],
     )
 
     assert resolver.player_name(10) == "Runner"
     assert resolver.player_name(99) == "Player 99"
+    assert resolver.team_name(1) == "Alpha"
+    assert resolver.team_name(99) is None
+    assert resolver.player_team_id(10) == 1
+    assert resolver.player_team_id(99) is None
+    assert resolver.intro_player_name(10, 1) == "Alpha - Runner"
+    assert resolver.intro_player_name(10, 99) == "Runner"
     assert resolver.opponent_name(5) == "Villager2"
     assert resolver.opponent_name(42) == "Opponent 42"
 

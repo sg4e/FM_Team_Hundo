@@ -177,6 +177,35 @@ async def test_team_offline_message_toggles_with_active_team_streams():
 
 
 @pytest.mark.asyncio
+async def test_team_scene_label_is_centered_and_only_on_team_scenes():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry(set()))
+
+    await manager.setup()
+
+    source = "FM Hundo Team Label - Alpha"
+    assert obs.inputs_settings[source]["text"] == "Alpha"
+    assert obs.inputs_settings[source]["font"]["size"] == 34
+    assert ("FM Hundo - Team - Alpha", source) in obs.scene_items
+    assert ("FM Hundo - All Streamers", source) not in obs.scene_items
+    assert ("FM Hundo - Player - Runner Ten", source) not in obs.scene_items
+    assert latest_enabled(obs, "FM Hundo - Team - Alpha", source) is True
+    assert latest_enabled(obs, "FM Hundo - Team - Alpha", "FM Hundo Offline Message - Team - Alpha") is True
+    transform = latest_transform(obs, "FM Hundo - Team - Alpha", source)
+    assert transform.bounds_type == ""
+    assert transform.alignment == 4
+    assert transform.x == 960
+    assert transform.y == 12
+    label_id = obs.scene_items[("FM Hundo - Team - Alpha", source)]
+    overlay_id = obs.scene_items[("FM Hundo - Team - Alpha", "FM Hundo Overlay")]
+    assert ("FM Hundo - Team - Alpha", label_id) in obs.top_moves
+    assert ("FM Hundo - Team - Alpha", overlay_id) in obs.top_moves
+    label_raise = max(index for index, move in enumerate(obs.top_moves) if move == ("FM Hundo - Team - Alpha", label_id))
+    overlay_raise = max(index for index, move in enumerate(obs.top_moves) if move == ("FM Hundo - Team - Alpha", overlay_id))
+    assert label_raise < overlay_raise
+
+
+@pytest.mark.asyncio
 async def test_master_scenes_are_nested_into_configured_managed_scenes():
     obs = FakeObs()
     manager = ObsLayoutManager(

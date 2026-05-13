@@ -61,7 +61,7 @@ class Application:
                 teams = await api.get_teams()
                 self.streams = StreamRegistry(players, mediamtx)
                 await self.streams.refresh()
-            names = NameResolver(players, duelists)
+            names = NameResolver(players, duelists, teams)
             self.names = names
 
             startup_complete = False
@@ -164,6 +164,7 @@ class Application:
                 self.streams.update_players(self.simulation_roster.players)
                 if self.names is not None:
                     self.names.update_players(self.simulation_roster.players)
+                    self.names.update_teams(self.simulation_roster.teams)
                 await self.layout_manager.update_roster(self.simulation_roster.players, self.simulation_roster.teams)
             await asyncio.sleep(self.config.mediamtx.poll_seconds)
 
