@@ -12,6 +12,8 @@ You can also start the application from the command line by running:
 To build the application in production mode, run:
 
 ```bash
+# Check CI build file for current protocol version
+$env:FM_HUNDO_PROTOCOL_VERSION = "1"
 ./mvnw -Pproduction package
 ```
 
