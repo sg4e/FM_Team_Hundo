@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 env: 
   CARGO_TERM_COLOR: always
+  FM_HUNDO_PROTOCOL_VERSION: "1"
 
 jobs:
   build-bizhawk:

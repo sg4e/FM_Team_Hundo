@@ -40,17 +40,20 @@ public class ApiController {
     private final PlayerUpdateRepository playerUpdateRepository;
     private final GameStateService gameStateService;
     private final HundoConstants hundoConstants;
+    private final ProtocolVersion protocolVersion;
     private final Set<Integer> unobtainableCards;
 
     @Autowired
     public ApiController(ApiKeyService apiKeyService, UserRepository userRepository, TeamRepository teamRepository,
-            PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService,  HundoConstants hundoConstants) {
+            PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService, HundoConstants hundoConstants,
+            ProtocolVersion protocolVersion) {
         this.apiKeyService = apiKeyService;
         this.userRepository = userRepository;
         this.teamRepository = teamRepository;
         this.playerUpdateRepository = playerUpdateRepository;
         this.gameStateService = gameStateService;
         this.hundoConstants = hundoConstants;
+        this.protocolVersion = protocolVersion;
         this.unobtainableCards = hundoConstants.getUnobtainableCards();
     }
 
@@ -84,6 +87,9 @@ public class ApiController {
         Validation validation = new Validation(apiKeyService, apiKey);
         HashMap<String, String> response = validation.getResponse();
         validation.getUser().ifPresent(user -> response.put("message", user.getName()));
+        if (validation.isValid()) {
+            protocolVersion.getValue().ifPresent(version -> response.put("protocol_version", version));
+        }
         
         if (validation.isValid()) {
             return ResponseEntity.ok(response);

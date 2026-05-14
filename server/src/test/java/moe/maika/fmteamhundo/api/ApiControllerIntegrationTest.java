@@ -143,7 +143,8 @@ class ApiControllerIntegrationTest {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.result").value("ok"))
-                .andExpect(jsonPath("$.message").value("TestUser"));
+                .andExpect(jsonPath("$.message").value("TestUser"))
+                .andExpect(jsonPath("$.protocol_version").value("1"));
     }
 
     @Test

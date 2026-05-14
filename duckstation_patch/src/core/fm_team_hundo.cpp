@@ -89,6 +89,7 @@ struct State
 };
 
 constexpr std::string_view SERVER_IP = "127.0.0.1";
+constexpr std::string_view PROTOCOL_VERSION = "1";
 constexpr u16 SERVER_PORT = 51155;
 constexpr u32 RECONNECT_INTERVAL_FRAMES = 300;
 
@@ -216,13 +217,23 @@ bool EnsureConnected()
   return s_state.client->IsConnected();
 }
 
+void WriteJsonMessage(ClientSocket& client, const std::string_view message)
+{
+  if (const size_t written = client.Write(message.data(), message.size()); written != message.size())
+    WARNING_LOG("Short write sending FM Team Hundo payload ({} of {} bytes).", written, message.size());
+}
+
 void SendJsonMessage(const std::string_view message)
 {
   if (!EnsureConnected())
     return;
 
-  if (const size_t written = s_state.client->Write(message.data(), message.size()); written != message.size())
-    WARNING_LOG("Short write sending FM Team Hundo payload ({} of {} bytes).", written, message.size());
+  WriteJsonMessage(*s_state.client, message);
+}
+
+void SendProtocolHello(ClientSocket& client)
+{
+  WriteJsonMessage(client, fmt::format("{{\"type\":\"hello\",\"protocol_version\":\"{}\"}}\n", PROTOCOL_VERSION));
 }
 
 void SendCard(const JsonType type, const u32 id)
@@ -276,6 +287,7 @@ void ClientSocket::OnConnected()
 
   INFO_LOG("Connected to {}.", GetRemoteAddress().ToString());
   s_state.warned_about_connection = false;
+  SendProtocolHello(*this);
 }
 
 void ClientSocket::OnDisconnected(const Error& error)

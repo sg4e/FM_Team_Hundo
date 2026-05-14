@@ -21,6 +21,12 @@ For tests:
 ./mvnw clean verify -Pintegration-test
 ```
 
+## Protocol Compatibility Version
+
+GitHub Actions stamps server, FM_Sentinel, and YGOFMPlugin artifacts with `FM_HUNDO_PROTOCOL_VERSION` from `.github/workflows/build.yml`. Bump that opaque value only when the wire protocol between those components becomes incompatible.
+
+Local builds without `FM_HUNDO_PROTOCOL_VERSION` are unstamped. Unstamped components skip protocol-version enforcement so development builds continue to work together.
+
 ## Getting Started
 
 The [Getting Started](https://vaadin.com/docs/latest/getting-started) guide will quickly familiarize you with your new

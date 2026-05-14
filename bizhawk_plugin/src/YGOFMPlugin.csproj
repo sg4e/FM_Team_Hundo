@@ -4,6 +4,10 @@
 		<Nullable>enable</Nullable>
 		<TargetFramework>net48</TargetFramework>
 	</PropertyGroup>
+	<PropertyGroup>
+		<ProtocolVersionLiteral Condition=" '$(FM_HUNDO_PROTOCOL_VERSION)' == '' ">null</ProtocolVersionLiteral>
+		<ProtocolVersionLiteral Condition=" '$(FM_HUNDO_PROTOCOL_VERSION)' != '' ">&quot;$(FM_HUNDO_PROTOCOL_VERSION)&quot;</ProtocolVersionLiteral>
+	</PropertyGroup>
 	<PropertyGroup Condition=" '$(BIZHAWK_HOME)' == '' ">
 		<BIZHAWK_HOME>$(ProjectDir)../BizHawk/</BIZHAWK_HOME><!-- if building EmuHawk from source, point to e.g. `$(ProjectDir)../BizHawk/output/` -->
 	</PropertyGroup>
@@ -19,6 +23,21 @@
 		<Reference Include="BizHawk.Emulation.Common" HintPath="$(BIZHAWK_HOME)dll/BizHawk.Emulation.Common.dll" />
 		<Reference Include="BizHawk.WinForms.Controls" HintPath="$(BIZHAWK_HOME)dll/BizHawk.WinForms.Controls.dll" />
 	</ItemGroup>
+	<Target Name="GenerateProtocolVersion" BeforeTargets="BeforeCompile">
+		<ItemGroup>
+			<ProtocolVersionSourceLine Include="namespace YGOFMPlugin.DataSource" />
+			<ProtocolVersionSourceLine Include="{" />
+			<ProtocolVersionSourceLine Include="    internal static class BuildProtocolVersion" />
+			<ProtocolVersionSourceLine Include="    {" />
+			<ProtocolVersionSourceLine Include="        public const string Value = $(ProtocolVersionLiteral)%3B" />
+			<ProtocolVersionSourceLine Include="    }" />
+			<ProtocolVersionSourceLine Include="}" />
+		</ItemGroup>
+		<WriteLinesToFile File="$(IntermediateOutputPath)BuildProtocolVersion.g.cs" Lines="@(ProtocolVersionSourceLine)" Overwrite="true" />
+		<ItemGroup>
+			<Compile Include="$(IntermediateOutputPath)BuildProtocolVersion.g.cs" />
+		</ItemGroup>
+	</Target>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Copy SourceFiles="$(OutputPath)$(MSBuildProjectName).dll" DestinationFolder="$(BIZHAWK_DATA_HOME)ExternalTools" />
 	</Target>

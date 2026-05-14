@@ -10,7 +10,6 @@ from pathlib import Path
 
 
 PREVIOUS_COMMIT = "9b0a4ec559ae83bfdb14685932b036ad7c1701be"
-LATEST_COMMIT = "e663b72326bc6008db4797f0ea7ba9e6e25ede10"
 SCRIPT_ROOT = Path(__file__).resolve().parent
 
 CHECKSUMS = {
@@ -120,8 +119,8 @@ def copy_added_file(root: Path, relative_path: str) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Replicate git commit "
-            f"{LATEST_COMMIT} onto a fresh checkout of {PREVIOUS_COMMIT}."
+            "Apply the FM Team Hundo DuckStation patch onto a fresh checkout of "
+            f"{PREVIOUS_COMMIT}."
         )
     )
     parser.add_argument("codebase_root", type=Path, help="Path to the DuckStation checkout to patch.")
@@ -144,7 +143,7 @@ def main() -> int:
     for relative_path in COPIED_FILES:
         copy_added_file(root, relative_path)
 
-    print(f"Applied {LATEST_COMMIT} on top of {PREVIOUS_COMMIT} in {root}")
+    print(f"Applied FM Team Hundo patch on top of {PREVIOUS_COMMIT} in {root}")
     return 0
 
 

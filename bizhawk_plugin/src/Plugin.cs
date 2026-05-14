@@ -87,6 +87,7 @@ public sealed class FMTeamHundoForm : ToolFormBase, IExternalToolForm
         PerformLayout();
 
         client = new TcpClient(ServerIp, ServerPort);
+        SendProtocolHello();
     }
 
     private bool IsRitualMonster(int id)
@@ -189,6 +190,20 @@ public sealed class FMTeamHundoForm : ToolFormBase, IExternalToolForm
         byte[] messageBytes = Encoding.UTF8.GetBytes(message);
         var stream = client.GetStream();
         stream.Write(messageBytes, 0, messageBytes.Length);
+    }
+
+    private void SendProtocolHello()
+    {
+        StringBuilder s = new();
+        s.Append("{\"type\":\"hello\"");
+        if (!string.IsNullOrWhiteSpace(BuildProtocolVersion.Value))
+        {
+            s.Append(",\"protocol_version\":\"");
+            s.Append(BuildProtocolVersion.Value);
+            s.Append("\"");
+        }
+        s.Append("}\n");
+        SendJsonMessage(s.ToString());
     }
 
     protected override void UpdateAfter()
