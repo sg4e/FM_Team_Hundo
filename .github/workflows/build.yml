@@ -1,6 +1,15 @@
 name: Build
 
-on: [push, pull_request]
+'on':
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
+  pull_request:
+
+permissions:
+  contents: read
 
 env: 
   CARGO_TERM_COLOR: always
@@ -201,3 +210,51 @@ jobs:
       with:
         name: duckstation_patch
         path: duckstation_patch/
+
+  release:
+    name: Create GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - build-bizhawk
+      - create-rust-artifacts
+      - build-java
+      - build-livestats
+      - package-duckstation-patch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v7
+      with:
+        path: downloaded-artifacts
+
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+
+        cp downloaded-artifacts/YGOFMPlugin/YGOFMPlugin.dll release-assets/YGOFMPlugin.dll
+        cp downloaded-artifacts/server/server.jar release-assets/server.jar
+        cp downloaded-artifacts/LiveStats.jar/LiveStats.jar release-assets/LiveStats.jar
+
+        (cd downloaded-artifacts/FM_Sentinel-Windows && zip -r "$GITHUB_WORKSPACE/release-assets/FM_Sentinel-Windows.zip" .)
+        (cd downloaded-artifacts/FM_Sentinel-Linux && zip -r "$GITHUB_WORKSPACE/release-assets/FM_Sentinel-Linux.zip" .)
+        (cd downloaded-artifacts/duckstation_patch && zip -r "$GITHUB_WORKSPACE/release-assets/duckstation_patch.zip" .)
+
+        ls -la release-assets
+
+    - name: Generate artifact attestations
+      uses: actions/attest@v4
+      with:
+        subject-path: release-assets/*
+
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        gh release create "$GITHUB_REF_NAME" release-assets/* --verify-tag --generate-notes \
+          --notes "Release assets are provenance-attested by this repository's GitHub Actions workflow. See https://github.com/sg4e/FM_Team_Hundo/attestations"
