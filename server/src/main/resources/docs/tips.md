@@ -1,6 +1,6 @@
 # Helpful Tips
 
-1. Click `Download Team's Library` on your team's page to get a text file containing the list of all card IDs in your team's Library. This list can be copy-pasted into the "Librarian" tab of Schaafy's FM 100% Spreadsheet to keep your spreadsheet synced with your team's progress.
+1. Click `Download Team's Library` on your team's page to get a text file containing the list of all card IDs in your team's Library. This list can be copy-pasted into the "Librarian" tab of [Schaafy's FM 100% Spreadsheet](https://docs.google.com/spreadsheets/d/1itRIuMimb5V8MvUvhijNrmo-gVGR58UTeTZN0KXwPno/copy) to keep your spreadsheet synced with your team's progress.
    
    - It's an explicit non-goal of this website to reinvent the amazing tools that already exist for tracking and routing FM 100%. Use those tools to help plan your farming route and rely on this website to keep them in sync.
 
