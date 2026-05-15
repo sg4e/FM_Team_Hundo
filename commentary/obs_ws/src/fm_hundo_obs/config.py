@@ -29,11 +29,21 @@ class ObsConfig:
     browser_source_kind: str = "browser_source"
     all_managed_master_scene: str | None = None
     stream_layout_master_scene: str | None = None
+    credits_scene: str | None = None
+    credits_source: str | None = None
     dry_run: bool = False
 
     @property
     def websocket_url(self) -> str:
         return f"ws://{self.host}:{self.port}"
+
+    @property
+    def credits_scene_name(self) -> str:
+        return self.credits_scene or f"{self.managed_scene_prefix} - Credits"
+
+    @property
+    def credits_source_name(self) -> str:
+        return self.credits_source or f"{self.managed_scene_prefix} Credits Browser"
 
 
 @dataclass(frozen=True)
@@ -47,6 +57,10 @@ class OverlayConfig:
     @property
     def url(self) -> str:
         return f"http://{self.host}:{self.port}/overlay"
+
+    @property
+    def credits_url(self) -> str:
+        return f"http://{self.host}:{self.port}/credits"
 
 
 @dataclass(frozen=True)
@@ -81,12 +95,18 @@ class GroupSceneConfig:
 
 
 @dataclass(frozen=True)
+class CreditsConfig:
+    config_path: str | None = None
+
+
+@dataclass(frozen=True)
 class AppConfig:
     api: ApiConfig = field(default_factory=ApiConfig)
     obs: ObsConfig = field(default_factory=ObsConfig)
     overlay: OverlayConfig = field(default_factory=OverlayConfig)
     mediamtx: MediaMtxConfig = field(default_factory=MediaMtxConfig)
     timing: TimingConfig = field(default_factory=TimingConfig)
+    credits: CreditsConfig = field(default_factory=CreditsConfig)
     features: FeatureFlags = field(default_factory=FeatureFlags)
     player_scenes: dict[int, str] = field(default_factory=dict)
     group_scenes: tuple[GroupSceneConfig, ...] = ()
@@ -112,6 +132,7 @@ def load_config(path: Path | str) -> AppConfig:
         overlay=OverlayConfig(**dict(data.get("overlay") or {})),
         mediamtx=MediaMtxConfig(**dict(data.get("mediamtx") or {})),
         timing=TimingConfig(**dict(data.get("timing") or {})),
+        credits=CreditsConfig(**dict(data.get("credits") or {})),
         features=FeatureFlags(**dict(data.get("features") or {})),
         player_scenes={int(key): str(value) for key, value in (data.get("player_scenes") or {}).items()},
         group_scenes=tuple(_group_scene(item) for item in data.get("group_scenes") or ()),

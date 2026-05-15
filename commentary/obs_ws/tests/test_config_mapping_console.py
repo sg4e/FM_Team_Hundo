@@ -78,6 +78,7 @@ def test_alert_labels():
 def test_parse_commands():
     assert parse_command("status").type == CommandType.STATUS
     assert parse_command("quit").type == CommandType.QUIT
+    assert parse_command("credits").type == CommandType.CREDITS
     assert parse_command("test 10 drop 5 --force").force is True
     assert parse_command("test 10 drop 5 --force").args == ("10", "drop", "5")
     assert parse_on_off(("on",)) is True

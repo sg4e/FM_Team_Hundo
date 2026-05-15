@@ -9,6 +9,7 @@ cd commentary\obs_ws
 py -3.12 -m venv .venv
 .\.venv\Scripts\pip install -e .[dev]
 Copy-Item config.example.yml config.yml
+Copy-Item credits_scene.example.yml credits_scene.yml
 $env:OBS_WS_PASSWORD = "your OBS websocket password"
 fm-hundo-obs --config config.yml
 ```
@@ -30,6 +31,13 @@ Add that overlay scene as a source on every scene where alerts should be visible
 The controller manages scenes prefixed by `FM Hundo` and leaves manually
 created production scenes alone.
 
+The controller also creates a managed credits scene with a Browser Source pointed
+at:
+
+```text
+http://127.0.0.1:8765/credits
+```
+
 ## Console Commands
 
 - `status`
@@ -39,6 +47,7 @@ created production scenes alone.
 - `intro on|off`
 - `banner on|off`
 - `audio on|off|next`
+- `credits`
 - `reconcile`
 - production: `test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]`
 - simulation: `test <mediamtx_path> <drop|fusion|fuse|ritual> <opponent_id> [--force]`
@@ -49,11 +58,16 @@ created production scenes alone.
 - `FM Hundo - All Streamers`
 - `FM Hundo - Team - {team name}`
 - `FM Hundo - Player - {player name}`
+- `FM Hundo - Credits`
 
 Media Sources are stable per player and use MediaMTX RTSP URLs. Inactive streams
 are hidden and configured to close when inactive where OBS supports that Media
 Source setting. Acquisition alerts cut to a player scene; inactive players show a
 managed placeholder rather than a dead RTSP source.
+
+The `credits` command reloads `credits_scene.yml`, fetches `/api/credits`, cuts
+to `FM Hundo - Credits`, and starts the roll from the beginning. While that
+scene is active, acquisition alerts do not take scene control.
 
 Optional production-owned master scenes can be configured in `config.yml`:
 

@@ -137,6 +137,18 @@ class ApiControllerIntegrationTest {
     }
 
     @Test
+    void testCreditsEndpointIsPublicAndReturnsRosterStatsShape() throws Exception {
+        mockMvc.perform(get("/api/credits")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teams").isArray())
+                .andExpect(jsonPath("$.teams[?(@.id == %s && @.name == 'Test Team')]",
+                        testTeam.getTeamId()).exists())
+                .andExpect(jsonPath("$.allTeams.totalDrops").value(0))
+                .andExpect(jsonPath("$.teamStats").isArray());
+    }
+
+    @Test
     void testValidateEndpointWithValidApiKey() throws Exception {
         mockMvc.perform(get("/api/validate")
                 .header("X-API-Key", validApiKey)

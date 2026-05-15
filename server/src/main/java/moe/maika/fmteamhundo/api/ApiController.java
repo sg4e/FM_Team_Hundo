@@ -27,6 +27,7 @@ import moe.maika.fmteamhundo.data.repos.PlayerUpdateRepository;
 import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
+import moe.maika.fmteamhundo.service.CreditsService;
 import moe.maika.fmteamhundo.state.GameStateService;
 import moe.maika.fmteamhundo.state.HundoConstants;
 
@@ -39,6 +40,7 @@ public class ApiController {
     private final TeamRepository teamRepository;
     private final PlayerUpdateRepository playerUpdateRepository;
     private final GameStateService gameStateService;
+    private final CreditsService creditsService;
     private final HundoConstants hundoConstants;
     private final ProtocolVersion protocolVersion;
     private final Set<Integer> unobtainableCards;
@@ -46,12 +48,13 @@ public class ApiController {
     @Autowired
     public ApiController(ApiKeyService apiKeyService, UserRepository userRepository, TeamRepository teamRepository,
             PlayerUpdateRepository playerUpdateRepository, GameStateService gameStateService, HundoConstants hundoConstants,
-            ProtocolVersion protocolVersion) {
+            ProtocolVersion protocolVersion, CreditsService creditsService) {
         this.apiKeyService = apiKeyService;
         this.userRepository = userRepository;
         this.teamRepository = teamRepository;
         this.playerUpdateRepository = playerUpdateRepository;
         this.gameStateService = gameStateService;
+        this.creditsService = creditsService;
         this.hundoConstants = hundoConstants;
         this.protocolVersion = protocolVersion;
         this.unobtainableCards = hundoConstants.getUnobtainableCards();
@@ -79,6 +82,11 @@ public class ApiController {
     @GetMapping("/library/{teamId}")
     public ResponseEntity<LibraryUpdate> getLibrary(@PathVariable int teamId) {
         return ResponseEntity.ok(gameStateService.getLatestLibraryUpdate(teamId));
+    }
+
+    @GetMapping("/credits")
+    public ResponseEntity<CreditsResponse> getCredits() {
+        return ResponseEntity.ok(creditsService.getCredits());
     }
 
     @GetMapping("/validate")

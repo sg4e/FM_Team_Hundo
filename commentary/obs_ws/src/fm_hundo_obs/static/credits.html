@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FM Hundo Credits</title>
+  <style>
+    :root {
+      --canvas-width: __CANVAS_WIDTH__;
+      --canvas-height: __CANVAS_HEIGHT__;
+      --main-title-size: 72px;
+      --section-size: 48px;
+      --label-size: 34px;
+      --body-size: 32px;
+      --billing-size: 44px;
+      --gold: #f5c542;
+      --soft: #d9dde6;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+      font-family: "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .roll {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: min(1180px, 88vw);
+      transform: translate(-50%, 100vh);
+      text-align: center;
+      will-change: transform;
+    }
+
+    .block {
+      overflow-wrap: anywhere;
+      text-wrap: balance;
+    }
+
+    .main-title {
+      font-size: var(--main-title-size);
+      font-weight: 900;
+      line-height: 1.08;
+      color: var(--gold);
+    }
+
+    .section {
+      font-size: var(--section-size);
+      font-weight: 900;
+      line-height: 1.12;
+      color: var(--gold);
+    }
+
+    .team-roster .heading,
+    .credit .heading,
+    .stat-group .heading {
+      font-size: var(--label-size);
+      font-weight: 800;
+      line-height: 1.16;
+      color: #fff;
+    }
+
+    .line {
+      font-size: var(--body-size);
+      font-weight: 500;
+      line-height: 1.28;
+      color: var(--soft);
+      margin-top: 8px;
+    }
+
+    .stat-lines .line {
+      color: #fff;
+    }
+
+    .billing {
+      font-size: var(--billing-size);
+      font-weight: 800;
+      line-height: 1.18;
+      color: #fff;
+    }
+
+    .billing .line {
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+      color: inherit;
+      margin-top: 12px;
+    }
+
+    .pinned-final {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: min(1180px, 88vw);
+      margin-top: 0 !important;
+      text-align: center;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="roll" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const roll = document.querySelector(".roll");
+    let animationFrame = 0;
+
+    function resetPinnedFinal() {
+      document.querySelectorAll(".pinned-final").forEach(element => element.remove());
+      roll.querySelectorAll(".final-stop").forEach(element => {
+        element.style.visibility = "";
+      });
+    }
+
+    function applySettings(settings = {}) {
+      const root = document.documentElement;
+      const pairs = [
+        ["--main-title-size", settings.mainTitleFontPx],
+        ["--section-size", settings.sectionFontPx],
+        ["--label-size", settings.labelFontPx],
+        ["--body-size", settings.bodyFontPx],
+        ["--billing-size", settings.billingFontPx],
+      ];
+      pairs.forEach(([property, value]) => {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric) && numeric > 0) {
+          root.style.setProperty(property, `${numeric}px`);
+        }
+      });
+    }
+
+    function addText(parent, className, text) {
+      const element = document.createElement("div");
+      element.className = className;
+      element.textContent = text;
+      parent.append(element);
+    }
+
+    function renderBlock(block) {
+      const element = document.createElement("section");
+      element.className = `block ${block.type || "line-block"}`;
+      if (block.final) element.classList.add("final-stop");
+      const gap = Number(block.gapBeforePx || 0);
+      if (Number.isFinite(gap) && gap > 0) {
+        element.style.marginTop = `${gap}px`;
+      }
+      if (block.text) addText(element, "heading", block.text);
+      (block.lines || []).forEach(line => addText(element, "line", line));
+      return element;
+    }
+
+    function renderCredits(payload) {
+      cancelAnimationFrame(animationFrame);
+      resetPinnedFinal();
+      applySettings(payload.settings || {});
+      roll.replaceChildren();
+      (payload.blocks || []).forEach(block => roll.append(renderBlock(block)));
+      startRoll(Number(payload.settings?.scrollPixelsPerSecond || 70));
+    }
+
+    function pinFinalBlock(final) {
+      const pinned = final.cloneNode(true);
+      pinned.classList.add("pinned-final");
+      pinned.setAttribute("aria-hidden", "true");
+      final.style.visibility = "hidden";
+      document.body.append(pinned);
+    }
+
+    function startRoll(speed) {
+      const pixelsPerSecond = Number.isFinite(speed) && speed > 0 ? speed : 70;
+      roll.style.transform = `translate(-50%, ${window.innerHeight}px)`;
+      animationFrame = requestAnimationFrame(() => {
+        const final = roll.querySelector(".final-stop") || roll.lastElementChild;
+        if (!final) return;
+        const finalCenter = final.offsetTop + final.offsetHeight / 2;
+        const startY = window.innerHeight;
+        const endY = window.innerHeight / 2 - finalCenter;
+        const distance = Math.max(1, startY - endY);
+        const durationMs = distance / pixelsPerSecond * 1000;
+        const startedAt = performance.now();
+
+        function tick(now) {
+          const progress = Math.min(1, (now - startedAt) / durationMs);
+          const y = startY + (endY - startY) * progress;
+          roll.style.transform = `translate(-50%, ${y}px)`;
+          if (progress < 1) {
+            animationFrame = requestAnimationFrame(tick);
+          } else {
+            pinFinalBlock(final);
+            continueRollPastFinal(endY, pixelsPerSecond, final.offsetTop);
+          }
+        }
+
+        animationFrame = requestAnimationFrame(tick);
+      });
+    }
+
+    function continueRollPastFinal(startY, pixelsPerSecond, finalTop) {
+      const endY = -finalTop;
+      const distance = Math.max(0, startY - endY);
+      if (distance <= 0) return;
+      const durationMs = distance / pixelsPerSecond * 1000;
+      const startedAt = performance.now();
+
+      function tick(now) {
+        const progress = Math.min(1, (now - startedAt) / durationMs);
+        const y = startY + (endY - startY) * progress;
+        roll.style.transform = `translate(-50%, ${y}px)`;
+        if (progress < 1) {
+          animationFrame = requestAnimationFrame(tick);
+        }
+      }
+
+      animationFrame = requestAnimationFrame(tick);
+    }
+
+    function connect() {
+      const scheme = location.protocol === "https:" ? "wss" : "ws";
+      const ws = new WebSocket(`${scheme}://${location.host}/credits/events`);
+      ws.onmessage = event => {
+        const message = JSON.parse(event.data);
+        if (message.type === "credits") renderCredits(message.payload || {});
+      };
+      ws.onclose = () => setTimeout(connect, 1000);
+    }
+
+    connect();
+  </script>
+</body>
+</html>

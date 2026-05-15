@@ -12,9 +12,10 @@ from rich.table import Table
 from .api import HundoApiClient, TeamFirehose
 from .config import AppConfig, load_config
 from .console import CommandType, HELP_TEXT, parse_command, parse_on_off
+from .credits import CreditsConfigError, build_credits_payload, load_credits_scene_config, resolve_credits_config_path
 from .logging_setup import setup_logging
 from .managed_layout import ObsLayoutManager
-from .mapping import NameResolver, load_duelist_names
+from .mapping import NameResolver, load_card_names, load_duelist_names
 from .mediamtx import MediaMtxClient, StreamRegistry
 from .models import CardAcquisition
 from .obs import DryRunObsController, ObsError, SimpleObsController
@@ -35,19 +36,24 @@ class Application:
         real_obs = SimpleObsController(config.obs)
         self.obs = DryRunObsController(real_obs) if config.obs.dry_run else real_obs
         self.overlay_server = OverlayServer(config.overlay, PROJECT_DIR / "src" / "fm_hundo_obs" / "static")
+        self.api: HundoApiClient | None = None
         self.firehose: TeamFirehose | None = None
         self.scheduler: AcquisitionScheduler | None = None
         self.layout_manager: ObsLayoutManager | None = None
         self.streams: StreamRegistry | None = None
         self.simulation_roster: SimulationRoster | None = None
         self.names: NameResolver | None = None
+        self.duelist_names: dict[int, str] = {}
         self.firehose_connected = False
+        self._credits_started = False
         self._stop = asyncio.Event()
 
     async def run(self) -> None:
         async with ClientSession() as session:
             api = HundoApiClient(self.config.api.base_url, session)
+            self.api = api
             duelists = load_duelist_names(PROJECT_DIR / "duelistinfo.json")
+            self.duelist_names = duelists
             mediamtx = MediaMtxClient(self.config.mediamtx, session)
             if self.simulate_mediamtx:
                 self.streams = StreamRegistry([], mediamtx)
@@ -69,10 +75,12 @@ class Application:
                 await self.overlay_server.start()
                 await self.obs.connect()
                 await self._ensure_overlay_obs_setup()
+                await self._ensure_credits_obs_setup()
                 await self._validate_obs()
                 self.layout_manager = ObsLayoutManager(self.obs, self.config, players, teams, self.streams)
                 await self.layout_manager.setup()
                 await self.overlay_server.wait_for_client(self.config.overlay.connect_timeout_seconds)
+                await self.overlay_server.wait_for_credits_client(self.config.overlay.connect_timeout_seconds)
                 startup_complete = True
             finally:
                 if not startup_complete:
@@ -87,6 +95,7 @@ class Application:
                 self.layout_manager,
                 self.config.features,
                 self.config.timing,
+                scene_lock=self._credits_scene_active,
             )
             if not self.simulate_mediamtx:
                 self.firehose = TeamFirehose(
@@ -137,6 +146,22 @@ class Application:
             self.config.obs.browser_source_kind,
             {
                 "url": self.config.overlay.url,
+                "width": self.config.overlay.canvas_width,
+                "height": self.config.overlay.canvas_height,
+                "reroute_audio": False,
+                "shutdown": False,
+            },
+            enabled=True,
+        )
+
+    async def _ensure_credits_obs_setup(self) -> None:
+        await self.obs.ensure_scene(self.config.obs.credits_scene_name)
+        await self.obs.ensure_input(
+            self.config.obs.credits_scene_name,
+            self.config.obs.credits_source_name,
+            self.config.obs.browser_source_kind,
+            {
+                "url": self.config.overlay.credits_url,
                 "width": self.config.overlay.canvas_width,
                 "height": self.config.overlay.canvas_height,
                 "reroute_audio": False,
@@ -217,6 +242,8 @@ class Application:
             self.console.print(f"{command.type.value}: {'on' if value else 'off'}")
         elif command.type == CommandType.AUDIO:
             await self._handle_audio(command.args)
+        elif command.type == CommandType.CREDITS:
+            await self._handle_credits()
         elif command.type == CommandType.RECONCILE:
             await self._handle_reconcile()
         elif command.type == CommandType.TEST:
@@ -241,6 +268,38 @@ class Application:
             return
         self.config.features.audio_rotation = value
         self.console.print(f"audio: {'on' if value else 'off'}")
+
+    async def _handle_credits(self) -> None:
+        if self.api is None:
+            self.console.print("Credits unavailable: API client is not ready")
+            return
+        credits_config_path = resolve_credits_config_path(self.config, self.config_path)
+        try:
+            scene_config = load_credits_scene_config(credits_config_path)
+            credits_data = await self.api.get_credits()
+            card_names = load_card_names(PROJECT_DIR / "cardinfo.json")
+            payload = build_credits_payload(credits_data, scene_config, card_names, self.duelist_names)
+        except CreditsConfigError as ex:
+            self.console.print(f"Credits config error: {ex}")
+            return
+        except Exception as ex:
+            LOGGER.exception("Unable to prepare credits")
+            self.console.print(f"Credits failed: {ex}")
+            return
+
+        if self.overlay_server.credits_connected_clients <= 0:
+            self.console.print("Credits browser is not connected; leaving current scene unchanged")
+            return
+        if self.scheduler is not None:
+            self.scheduler.cancel_active_window()
+        await self.obs.set_current_program_scene(self.config.obs.credits_scene_name)
+        self._credits_started = True
+        sent = await self.overlay_server.send_credits(payload)
+        await self.obs.refresh_browser_source(self.config.obs.credits_source_name)
+        if sent:
+            self.console.print("Credits started")
+        else:
+            self.console.print("Credits scene is active, but the credits browser did not receive the payload")
 
     async def _handle_reconcile(self) -> None:
         if not self.layout_manager:
@@ -281,6 +340,9 @@ class Application:
         if self.simulation_roster is not None:
             table.add_row("Simulated players", str(len(self.simulation_roster.players)))
         table.add_row("Active acquisition", "yes" if self.scheduler.acquisition_active() else "no")
+        table.add_row("Credits scene", self.config.obs.credits_scene_name)
+        table.add_row("Credits browser clients", str(self.overlay_server.credits_connected_clients))
+        table.add_row("Credits active", "yes" if await self._credits_scene_active() else "no")
         table.add_row("Paused", str(self.config.features.paused))
         table.add_row("Scene switching", str(self.config.features.scene_switching))
         table.add_row("Intro overlay", str(self.config.features.intro_overlay))
@@ -291,6 +353,15 @@ class Application:
 
     def _set_firehose_connected(self, connected: bool) -> None:
         self.firehose_connected = connected
+
+    async def _credits_scene_active(self) -> bool:
+        if not self._credits_started or not self.obs.connected:
+            return False
+        try:
+            return await self.obs.get_current_program_scene() == self.config.obs.credits_scene_name
+        except Exception:
+            LOGGER.exception("Unable to check credits scene state")
+            return False
 
     def _test_player_id(self, raw: str) -> int:
         if not self.simulate_mediamtx:

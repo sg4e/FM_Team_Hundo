@@ -26,6 +26,7 @@ class FakeObs(ObsController):
         self.scene_items: dict[tuple[str, str], int] = {}
         self.enabled: list[tuple[str, int, bool]] = []
         self.transforms: list[tuple[str, int, SceneItemTransform]] = []
+        self.refreshed_browser_sources: list[str] = []
         self.indices: list[tuple[str, int, int]] = []
         self.top_moves: list[tuple[str, int]] = []
         self.bottom_moves: list[tuple[str, int]] = []
@@ -99,6 +100,9 @@ class FakeObs(ObsController):
 
     async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
         self.inputs_settings[input_name] = {**self.inputs_settings.get(input_name, {}), **settings}
+
+    async def refresh_browser_source(self, input_name: str) -> None:
+        self.refreshed_browser_sources.append(input_name)
 
     async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
         self.indices.append((scene_name, item_id, index))

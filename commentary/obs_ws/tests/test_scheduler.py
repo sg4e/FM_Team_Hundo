@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from fm_hundo_obs.config import FeatureFlags, TimingConfig
@@ -233,6 +235,16 @@ async def test_obs_disconnected_skips():
 
     assert result.accepted is False
     assert result.reason == "OBS disconnected"
+
+
+async def test_credits_scene_lock_skips_acquisitions():
+    subject = scheduler()
+    subject.scene_lock = lambda: asyncio.sleep(0, result=True)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5), force=True)
+
+    assert result.accepted is False
+    assert result.reason == "credits scene active"
 
 
 @pytest.mark.asyncio

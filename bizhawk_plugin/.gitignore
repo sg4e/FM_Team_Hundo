@@ -1,3 +1,4 @@
 /BizHawk
 /src/bin
 /src/obj
+*.lscache

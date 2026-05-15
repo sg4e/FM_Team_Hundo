@@ -20,6 +20,7 @@ class FakeOverlayServer:
     def __init__(self) -> None:
         self.started = False
         self.stopped = False
+        self.credits_connected_clients = 1
 
     async def start(self) -> None:
         self.started = True
@@ -29,6 +30,12 @@ class FakeOverlayServer:
 
     async def wait_for_client(self, timeout_seconds: float) -> None:
         pass
+
+    async def wait_for_credits_client(self, timeout_seconds: float) -> None:
+        pass
+
+    async def send_credits(self, payload: dict) -> bool:
+        return True
 
 
 class FailingObs:
@@ -180,6 +187,32 @@ async def test_ensure_overlay_obs_setup_creates_browser_source():
 
 
 @pytest.mark.asyncio
+async def test_ensure_credits_obs_setup_creates_browser_source():
+    obs = SetupObs()
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    app.obs = obs  # type: ignore[assignment]
+
+    await app._ensure_credits_obs_setup()
+
+    assert "FM Hundo - Credits" in obs.scenes
+    assert obs.inputs == [
+        (
+            "FM Hundo - Credits",
+            "FM Hundo Credits Browser",
+            "browser_source",
+            {
+                "url": "http://127.0.0.1:8765/credits",
+                "width": 1920,
+                "height": 1080,
+                "reroute_audio": False,
+                "shutdown": False,
+            },
+            True,
+        )
+    ]
+
+
+@pytest.mark.asyncio
 async def test_overlay_wait_timeout_message_is_operator_friendly(tmp_path):
     server = OverlayServer(AppConfig().overlay, tmp_path)
 
@@ -189,3 +222,15 @@ async def test_overlay_wait_timeout_message_is_operator_friendly(tmp_path):
     message = str(error.value)
     assert "http://127.0.0.1:8765/overlay" in message
     assert "Browser Source" in message
+
+
+@pytest.mark.asyncio
+async def test_credits_wait_timeout_message_is_operator_friendly(tmp_path):
+    server = OverlayServer(AppConfig().overlay, tmp_path)
+
+    with pytest.raises(OverlayClientTimeout) as error:
+        await server.wait_for_credits_client(0.01)
+
+    message = str(error.value)
+    assert "http://127.0.0.1:8765/credits" in message
+    assert "Credits Browser Source" in message

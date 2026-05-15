@@ -19,17 +19,26 @@ class OverlayServer:
         self.config = config
         self.static_dir = static_dir
         self._clients: set[web.WebSocketResponse] = set()
+        self._credits_clients: set[web.WebSocketResponse] = set()
         self._connected_event = asyncio.Event()
+        self._credits_connected_event = asyncio.Event()
         self._runner: web.AppRunner | None = None
+        self._latest_credits_payload: dict[str, Any] | None = None
 
     @property
     def connected_clients(self) -> int:
         return len(self._clients)
 
+    @property
+    def credits_connected_clients(self) -> int:
+        return len(self._credits_clients)
+
     async def start(self) -> None:
         app = web.Application()
         app.router.add_get("/overlay", self._overlay)
         app.router.add_get("/events", self._events)
+        app.router.add_get("/credits", self._credits)
+        app.router.add_get("/credits/events", self._credits_events)
         self._runner = web.AppRunner(app)
         await self._runner.setup()
         site = web.TCPSite(self._runner, self.config.host, self.config.port)
@@ -40,6 +49,9 @@ class OverlayServer:
         for client in tuple(self._clients):
             await client.close()
         self._clients.clear()
+        for client in tuple(self._credits_clients):
+            await client.close()
+        self._credits_clients.clear()
         if self._runner is not None:
             await self._runner.cleanup()
 
@@ -55,26 +67,58 @@ class OverlayServer:
                 "the source cache if OBS shows a blank browser."
             ) from ex
 
+    async def wait_for_credits_client(self, timeout_seconds: float) -> None:
+        if self._credits_clients:
+            return
+        try:
+            await asyncio.wait_for(self._credits_connected_event.wait(), timeout=timeout_seconds)
+        except TimeoutError as ex:
+            raise OverlayClientTimeout(
+                f"Credits Browser Source did not connect to {self.config.credits_url} within {timeout_seconds:g} seconds. "
+                "Check that OBS has loaded the generated Credits Browser Source, that its URL is correct, and try refreshing "
+                "the source cache if OBS shows a blank browser."
+            ) from ex
+
     async def send(self, event_type: str, payload: dict[str, Any]) -> bool:
-        if not self._clients:
+        return await self._send(self._clients, event_type, payload)
+
+    async def send_credits(self, payload: dict[str, Any]) -> bool:
+        self._latest_credits_payload = payload
+        return await self._send(self._credits_clients, "credits", payload)
+
+    async def _send(self, clients: set[web.WebSocketResponse], event_type: str, payload: dict[str, Any]) -> bool:
+        if not clients:
             LOGGER.warning("No overlay clients connected; dropped overlay event %s", event_type)
             return False
         message = json.dumps({"type": event_type, "payload": payload})
         stale: list[web.WebSocketResponse] = []
-        for client in self._clients:
+        for client in clients:
             if client.closed:
                 stale.append(client)
                 continue
             await client.send_str(message)
         for client in stale:
-            self._clients.discard(client)
-        return bool(self._clients)
+            clients.discard(client)
+        return bool(clients)
 
     async def _overlay(self, _: web.Request) -> web.Response:
         html = (self.static_dir / "overlay.html").read_text(encoding="utf-8")
         html = html.replace("__CANVAS_WIDTH__", str(self.config.canvas_width))
         html = html.replace("__CANVAS_HEIGHT__", str(self.config.canvas_height))
         return web.Response(text=html, content_type="text/html")
+
+    async def _credits(self, _: web.Request) -> web.Response:
+        html = (self.static_dir / "credits.html").read_text(encoding="utf-8")
+        html = html.replace("__CANVAS_WIDTH__", str(self.config.canvas_width))
+        html = html.replace("__CANVAS_HEIGHT__", str(self.config.canvas_height))
+        return web.Response(
+            text=html,
+            content_type="text/html",
+            headers={
+                "Cache-Control": "no-store, max-age=0",
+                "Pragma": "no-cache",
+            },
+        )
 
     async def _events(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(heartbeat=10)
@@ -90,6 +134,24 @@ class OverlayServer:
             if not self._clients:
                 self._connected_event.clear()
             LOGGER.info("Overlay browser disconnected")
+        return ws
+
+    async def _credits_events(self, request: web.Request) -> web.WebSocketResponse:
+        ws = web.WebSocketResponse(heartbeat=10)
+        await ws.prepare(request)
+        self._credits_clients.add(ws)
+        self._credits_connected_event.set()
+        if self._latest_credits_payload is not None:
+            await ws.send_str(json.dumps({"type": "credits", "payload": self._latest_credits_payload}))
+        LOGGER.info("Credits browser connected")
+        try:
+            async for _ in ws:
+                pass
+        finally:
+            self._credits_clients.discard(ws)
+            if not self._credits_clients:
+                self._credits_connected_event.clear()
+            LOGGER.info("Credits browser disconnected")
         return ws
 
 

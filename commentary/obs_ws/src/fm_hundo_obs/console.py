@@ -14,6 +14,7 @@ class CommandType(StrEnum):
     INTRO = "intro"
     BANNER = "banner"
     AUDIO = "audio"
+    CREDITS = "credits"
     RECONCILE = "reconcile"
     TEST = "test"
     UNKNOWN = "unknown"
@@ -33,6 +34,7 @@ HELP_TEXT = """Commands:
   intro on|off
   banner on|off
   audio on|off|next
+  credits
   reconcile
   production test:  test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]
   simulation test: test <mediamtx_path> <drop|fusion|fuse|ritual> <opponent_id> [--force]

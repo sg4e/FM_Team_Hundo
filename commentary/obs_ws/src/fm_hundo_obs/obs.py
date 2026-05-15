@@ -82,6 +82,9 @@ class ObsController:
     async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
         raise NotImplementedError
 
+    async def refresh_browser_source(self, input_name: str) -> None:
+        raise NotImplementedError
+
     async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
         raise NotImplementedError
 
@@ -247,6 +250,15 @@ class SimpleObsController(ObsController):
             {"inputName": input_name, "inputSettings": settings, "overlay": overlay},
         )
 
+    async def refresh_browser_source(self, input_name: str) -> None:
+        try:
+            await self._call(
+                "PressInputPropertiesButton",
+                {"inputName": input_name, "propertyName": "refreshnocache"},
+            )
+        except ObsError:
+            LOGGER.warning("Unable to refresh OBS browser source %s", input_name, exc_info=True)
+
     async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
         await self._call(
             "SetSceneItemIndex",
@@ -350,6 +362,9 @@ class DryRunObsController(ObsController):
 
     async def set_input_settings(self, input_name: str, settings: dict, *, overlay: bool = True) -> None:
         self.actions.append(f"set input settings {input_name} overlay={overlay} -> {settings}")
+
+    async def refresh_browser_source(self, input_name: str) -> None:
+        self.actions.append(f"refresh browser source {input_name}")
 
     async def set_scene_item_index(self, scene_name: str, item_id: int, index: int) -> None:
         self.actions.append(f"set item {item_id} index in {scene_name} -> {index}")

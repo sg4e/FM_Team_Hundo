@@ -15,6 +15,8 @@ obs:
   # configured, nests them into generated scenes, and never edits their contents.
   all_managed_master_scene: null
   stream_layout_master_scene: null
+  credits_scene: null
+  credits_source: null
   dry_run: false
 
 overlay:
@@ -34,6 +36,10 @@ timing:
   intro_seconds: 3
   all_streamers_audio_seconds: 180
   team_showcase_seconds: 180
+
+credits:
+  # Defaults to credits_scene.yml beside this config file.
+  config_path: null
 
 features:
   paused: false

@@ -12,6 +12,12 @@ def load_duelist_names(path: Path) -> dict[int, str]:
     return {int(item["duelistId"]): str(item["duelist"]) for item in data}
 
 
+def load_card_names(path: Path) -> dict[int, str]:
+    with path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    return {int(item["cardId"]): str(item["cardName"]) for item in data}
+
+
 class NameResolver:
     def __init__(self, players: list[Player], duelists: dict[int, str], teams: list[Team] | None = None) -> None:
         self._players: dict[int, Player] = {}

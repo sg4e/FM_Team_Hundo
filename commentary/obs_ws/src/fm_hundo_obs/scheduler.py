@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import logging
 from typing import Protocol, runtime_checkable
@@ -53,6 +54,7 @@ class AcquisitionScheduler:
         player_scenes: dict[int, str] | PlayerSceneResolver,
         features: FeatureFlags,
         timing: TimingConfig,
+        scene_lock: Callable[[], Awaitable[bool]] | None = None,
     ) -> None:
         self.obs = obs
         self.overlay = overlay
@@ -60,10 +62,16 @@ class AcquisitionScheduler:
         self.player_scenes = player_scenes
         self.features = features
         self.timing = timing
+        self.scene_lock = scene_lock
         self._active_task: asyncio.Task[None] | None = None
 
     def acquisition_active(self) -> bool:
         return self._active_task is not None and not self._active_task.done()
+
+    def cancel_active_window(self) -> None:
+        if self._active_task is not None and not self._active_task.done():
+            self._active_task.cancel()
+        self._active_task = None
 
     async def handle_update(self, update: LibraryUpdate) -> AcquisitionResult:
         if not update.new_acquisitions:
@@ -77,6 +85,8 @@ class AcquisitionScheduler:
         *,
         force: bool = False,
     ) -> AcquisitionResult:
+        if self.scene_lock is not None and await self.scene_lock():
+            return AcquisitionResult(False, "credits scene active")
         if self.features.paused and not force:
             return AcquisitionResult(False, "paused")
         if self.acquisition_active() and not force:

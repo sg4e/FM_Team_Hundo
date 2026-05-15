@@ -6,7 +6,7 @@ import logging
 
 from aiohttp import ClientSession, WSMsgType
 
-from .models import LibraryUpdate, Player, Team
+from .models import CreditsData, LibraryUpdate, Player, Team
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +27,12 @@ class HundoApiClient:
             response.raise_for_status()
             data = await response.json()
         return [Team.from_json(item) for item in data]
+
+    async def get_credits(self) -> CreditsData:
+        async with self.session.get(f"{self.base_url}/api/credits", headers={"Accept": "application/json"}) as response:
+            response.raise_for_status()
+            data = await response.json()
+        return CreditsData.from_json(data)
 
     def team_firehose_url(self) -> str:
         if self.base_url.startswith("https://"):
