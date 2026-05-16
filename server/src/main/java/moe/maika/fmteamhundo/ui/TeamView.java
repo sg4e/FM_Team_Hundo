@@ -193,7 +193,15 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     }
 
     private Component createDownloadLink() {
-        DownloadHandler downloadHandler = DownloadHandler.fromInputStream(event -> {
+        Anchor downloadLink = new Anchor();
+        downloadLink.setText("Download Team's Library");
+        downloadLink.setDownload(true);
+        downloadLink.addAttachListener(event -> downloadLink.setHref(createTeamLibraryDownloadHandler()));
+        return downloadLink;
+    }
+
+    private DownloadHandler createTeamLibraryDownloadHandler() {
+        return DownloadHandler.fromInputStream(event -> {
             List<Integer> cardIds = gameStateService.getLibrary(teamId).getAcquiredCardIds();
             String content = cardIds.stream()
                 .map(String::valueOf)
@@ -202,10 +210,6 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
             String fileName = teamName.replaceAll("[^a-zA-Z0-9._-]", "_") + "_cards.txt";
             return new DownloadResponse(new ByteArrayInputStream(bytes), fileName, "text/plain", bytes.length);
         });
-
-        Anchor downloadLink = new Anchor(downloadHandler, "Download Team's Library");
-        downloadLink.setDownload(true);
-        return downloadLink;
     }
 
     private void buildTeamShell(LibraryUpdate snapshot) {
