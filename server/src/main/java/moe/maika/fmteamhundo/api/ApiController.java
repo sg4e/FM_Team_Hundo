@@ -131,21 +131,21 @@ public class ApiController {
             }
 
             // Make sure no unobtainable cards are included in the update
-            if(emuMessages.stream().filter(msg -> msg.getType() != MessageType.STARCHIPS).map(EmuMessage::getValue)
+            if(emuMessages.stream().filter(msg -> msg.type() != MessageType.STARCHIPS).map(EmuMessage::value)
                 .anyMatch(cardId -> unobtainableCards.contains(cardId))) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("result", "error", "message", "Update contains unobtainable cards"));
             }
 
             //Make sure no card id is non-positive or greater than 722
-            if(emuMessages.stream().filter(msg -> msg.getType() != MessageType.STARCHIPS).map(EmuMessage::getValue)
+            if(emuMessages.stream().filter(msg -> msg.type() != MessageType.STARCHIPS).map(EmuMessage::value)
                 .anyMatch(cardId -> cardId <= 0 || cardId > 722)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("result", "error", "message", "Invalid card id"));
             }
 
             //Make sure starchips total is not at or above 1000000
-            if(emuMessages.stream().filter(msg -> msg.getType() == MessageType.STARCHIPS).mapToInt(EmuMessage::getValue)
+            if(emuMessages.stream().filter(msg -> msg.type() == MessageType.STARCHIPS).mapToInt(EmuMessage::value)
                 .anyMatch(starchips -> starchips >= 1_000_000)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("result", "error", "message", "Total starchips cannot be equal to or exceed 1000000"));

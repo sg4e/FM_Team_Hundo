@@ -770,12 +770,7 @@ class GameStateServiceIntegrationTest {
     }
 
     private EmuMessage createEmuMessage(MessageType type, int value, int lastRng, int nowRng) {
-        EmuMessage message = new EmuMessage();
-        message.setType(type);
-        message.setValue(value);
-        message.setLastRng(lastRng);
-        message.setNowRng(nowRng);
-        return message;
+        return new EmuMessage(type, value, lastRng, nowRng, 0);
     }
 
     private PlayerUpdate createPlayerUpdate(User user, MessageType messageType, int value, Instant time) {

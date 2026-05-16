@@ -2,20 +2,16 @@ package moe.maika.fmteamhundo.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+public record EmuMessage(
+        MessageType type,
+        int value,
+        @JsonProperty("last_rng") Integer lastRng,
+        @JsonProperty("now_rng") Integer nowRng,
+        @JsonProperty("opp_id") Integer opponentId) {
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class EmuMessage {
-    private MessageType type;
-    private int value;
-    @JsonProperty("last_rng")
-    private int lastRng;
-    @JsonProperty("now_rng")
-    private int nowRng;
-    @JsonProperty("opp_id")
-    private int opponentId;
+    public EmuMessage {
+        lastRng = lastRng == null ? 0 : lastRng;
+        nowRng = nowRng == null ? 0 : nowRng;
+        opponentId = opponentId == null ? 0 : opponentId;
+    }
 }

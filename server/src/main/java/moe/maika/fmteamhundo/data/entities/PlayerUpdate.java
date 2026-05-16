@@ -34,13 +34,13 @@ public class PlayerUpdate implements Comparable<PlayerUpdate> {
     private int opponentId;
 
     public PlayerUpdate(User user, EmuMessage message, Instant time) {
-        this.value = message.getValue();
-        this.source = message.getType();
+        this.value = message.value();
+        this.source = message.type();
         this.participantId = user.getDatabaseId();
         this.time = time;
-        this.lastRng = message.getLastRng();
-        this.nowRng = message.getNowRng();
-        this.opponentId = message.getOpponentId();
+        this.lastRng = message.lastRng();
+        this.nowRng = message.nowRng();
+        this.opponentId = message.opponentId();
     }
 
     @Override
