@@ -16,7 +16,8 @@
  */
 
 use clap::{crate_name, crate_version};
-use reqwest::Client;
+use reqwest::header::HeaderMap;
+use reqwest::{Client, StatusCode, Url};
 use serde::Deserialize;
 use std::error::Error;
 use std::fs::File;
@@ -60,6 +61,24 @@ struct StartupContext {
     credentials: Credentials,
     http_client: Client,
     server_protocol_version: Option<String>,
+}
+
+#[derive(Debug, PartialEq)]
+enum ApiResponseProblem {
+    Redirect {
+        status: StatusCode,
+        location: Option<String>,
+    },
+    NonJson {
+        status: StatusCode,
+        content_type: Option<String>,
+        body_preview: String,
+    },
+    InvalidJson {
+        status: StatusCode,
+        message: String,
+        body_preview: String,
+    },
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -177,6 +196,97 @@ fn parse_plugin_hello(raw_message: &str) -> Result<Option<PluginHello>, serde_js
     }
 }
 
+fn api_endpoint(base_url: &str, path: &str) -> Result<Url, Box<dyn Error + Send + Sync>> {
+    let normalized_base = if base_url.ends_with('/') {
+        base_url.to_string()
+    } else {
+        format!("{base_url}/")
+    };
+    Ok(Url::parse(&normalized_base)?.join(path)?)
+}
+
+fn content_type_is_json(headers: &HeaderMap) -> bool {
+    headers
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.to_ascii_lowercase().contains("application/json"))
+        .unwrap_or(false)
+}
+
+fn header_value(headers: &HeaderMap, name: reqwest::header::HeaderName) -> Option<String> {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string)
+}
+
+fn body_preview(body: &str) -> String {
+    const PREVIEW_LENGTH: usize = 500;
+    let mut preview: String = body.chars().take(PREVIEW_LENGTH).collect();
+    if body.chars().count() > PREVIEW_LENGTH {
+        preview.push_str("...");
+    }
+    preview
+}
+
+fn parse_api_response(
+    status: StatusCode,
+    headers: &HeaderMap,
+    body: &str,
+) -> Result<ApiResponse, ApiResponseProblem> {
+    if status.is_redirection() {
+        return Err(ApiResponseProblem::Redirect {
+            status,
+            location: header_value(headers, reqwest::header::LOCATION),
+        });
+    }
+    if !content_type_is_json(headers) {
+        return Err(ApiResponseProblem::NonJson {
+            status,
+            content_type: header_value(headers, reqwest::header::CONTENT_TYPE),
+            body_preview: body_preview(body),
+        });
+    }
+    serde_json::from_str(body).map_err(|e| ApiResponseProblem::InvalidJson {
+        status,
+        message: e.to_string(),
+        body_preview: body_preview(body),
+    })
+}
+
+fn log_api_response_problem(endpoint: &Url, problem: &ApiResponseProblem) {
+    match problem {
+        ApiResponseProblem::Redirect { status, location } => {
+            eprintln!("Collection server redirected API request to {endpoint}");
+            eprintln!("HTTP code was: {status}");
+            if let Some(location) = location {
+                eprintln!("Redirect location was: {location}");
+            }
+        }
+        ApiResponseProblem::NonJson {
+            status,
+            content_type,
+            body_preview,
+        } => {
+            eprintln!("Collection server returned a non-JSON response for {endpoint}");
+            eprintln!("HTTP code was: {status}");
+            if let Some(content_type) = content_type {
+                eprintln!("Content-Type was: {content_type}");
+            }
+            eprintln!("Response preview was: {body_preview}");
+        }
+        ApiResponseProblem::InvalidJson {
+            status,
+            message,
+            body_preview,
+        } => {
+            eprintln!("Error parsing API response from {endpoint}: {message}");
+            eprintln!("HTTP code was: {status}");
+            eprintln!("Response preview was: {body_preview}");
+        }
+    }
+}
+
 async fn handle_connection(
     mut stream: TcpStream,
     sender: &mpsc::Sender<String>,
@@ -217,7 +327,10 @@ async fn handle_connection(
             }
         }
 
-        sender.send(line.clone()).await.unwrap();
+        if sender.send(line.clone()).await.is_err() {
+            eprintln!("Cannot forward emulator message because the collection sender has closed");
+            break;
+        }
     }
 
     Ok(())
@@ -239,9 +352,28 @@ async fn validate_startup() -> StartupContext {
                 process::exit(1);
             }
         };
-    let http_client = Client::new();
+    let http_client = match Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+    {
+        Ok(client) => client,
+        Err(e) => {
+            eprintln!("Error creating HTTP client: {}", e);
+            process::exit(1);
+        }
+    };
+    let validate_endpoint = match api_endpoint(&credentials.url, "validate") {
+        Ok(endpoint) => endpoint,
+        Err(e) => {
+            eprintln!(
+                "Error building validation endpoint from credentials URL: {}",
+                e
+            );
+            process::exit(1);
+        }
+    };
     let send_request = match http_client
-        .get(format!("{}{}", credentials.url, "/validate"))
+        .get(validate_endpoint.clone())
         .header("X-API-Key", &credentials.key)
         .send()
         .await
@@ -252,6 +384,8 @@ async fn validate_startup() -> StartupContext {
             process::exit(1);
         }
     };
+    let validation_status = send_request.status();
+    let validation_headers = send_request.headers().clone();
     let validation_response = match send_request.text().await {
         Ok(text) => text,
         Err(e) => {
@@ -259,14 +393,14 @@ async fn validate_startup() -> StartupContext {
             process::exit(1);
         }
     };
-    let validation_parsed: ApiResponse = match serde_json::from_str(&validation_response) {
-        Ok(res) => res,
-        Err(e) => {
-            eprintln!("Error parsing validation response from server: {}", e);
-            eprintln!("Response was: {}", validation_response);
-            process::exit(1);
-        }
-    };
+    let validation_parsed: ApiResponse =
+        match parse_api_response(validation_status, &validation_headers, &validation_response) {
+            Ok(response) => response,
+            Err(problem) => {
+                log_api_response_problem(&validate_endpoint, &problem);
+                process::exit(1);
+            }
+        };
     match validation_parsed.result.as_str() {
         "ok" => {
             println!("Successfully connected to FM Hundo website");
@@ -342,8 +476,16 @@ async fn consume_cards(
         // Forward emu messages to collection server
         if !buffer.is_empty() {
             let messages = format!("[{}]", buffer.join(","));
+            let update_endpoint = match api_endpoint(&credentials.url, "update") {
+                Ok(endpoint) => endpoint,
+                Err(e) => {
+                    eprintln!("Error building update endpoint from credentials URL: {}", e);
+                    sleep(Duration::from_secs(RETRY_INTERVAL_SECONDS)).await;
+                    continue;
+                }
+            };
             let server_response = http_client
-                .post(format!("{}{}", credentials.url, "/update"))
+                .post(update_endpoint.clone())
                 .header("X-API-Key", &credentials.key)
                 .header("Content-Type", "application/json")
                 .body(messages)
@@ -352,17 +494,22 @@ async fn consume_cards(
             match server_response {
                 Ok(resp) => {
                     let status = resp.status();
+                    let headers = resp.headers().clone();
                     match resp.text().await {
                         Ok(text) => {
-                            let api_response: ApiResponse = match serde_json::from_str(&text) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    eprintln!("Error parsing API response: {}", e);
-                                    eprintln!("HTTP code was: {}", status);
-                                    eprintln!("Response was: {}", text);
-                                    return Ok(());
-                                }
-                            };
+                            let api_response: ApiResponse =
+                                match parse_api_response(status, &headers, &text) {
+                                    Ok(res) => res,
+                                    Err(problem) => {
+                                        log_api_response_problem(&update_endpoint, &problem);
+                                        eprintln!(
+                                            "Waiting {} seconds and then trying again...",
+                                            RETRY_INTERVAL_SECONDS
+                                        );
+                                        sleep(Duration::from_secs(RETRY_INTERVAL_SECONDS)).await;
+                                        continue;
+                                    }
+                                };
                             match api_response.result.as_str() {
                                 "ok" => (),
                                 "error" => eprintln!(
@@ -378,7 +525,15 @@ async fn consume_cards(
                                 ),
                             }
                         }
-                        Err(e) => eprintln!("Error reading API response text: {}", e),
+                        Err(e) => {
+                            eprintln!("Error reading API response text: {}", e);
+                            eprintln!(
+                                "Waiting {} seconds and then trying again...",
+                                RETRY_INTERVAL_SECONDS
+                            );
+                            sleep(Duration::from_secs(RETRY_INTERVAL_SECONDS)).await;
+                            continue;
+                        }
                     }
                     buffer.clear();
                 }
@@ -466,6 +621,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use reqwest::header::HeaderValue;
 
     #[test]
     fn parse_plugin_hello_with_protocol_version() {
@@ -491,6 +647,102 @@ mod tests {
         let hello = parse_plugin_hello("{\"type\":\"drop\",\"value\":122}\n").unwrap();
 
         assert_eq!(hello, None);
+    }
+
+    #[test]
+    fn api_endpoint_joins_base_without_trailing_slash() {
+        let endpoint = api_endpoint("https://hundo.maika.moe/api", "update").unwrap();
+
+        assert_eq!(endpoint.as_str(), "https://hundo.maika.moe/api/update");
+    }
+
+    #[test]
+    fn api_endpoint_joins_base_with_trailing_slash() {
+        let endpoint = api_endpoint("https://hundo.maika.moe/api/", "validate").unwrap();
+
+        assert_eq!(endpoint.as_str(), "https://hundo.maika.moe/api/validate");
+    }
+
+    #[test]
+    fn parse_api_response_accepts_json() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json"),
+        );
+
+        let response = parse_api_response(
+            StatusCode::OK,
+            &headers,
+            r#"{"result":"ok","message":"mai"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(response.result, "ok");
+        assert_eq!(response.message.as_deref(), Some("mai"));
+    }
+
+    #[test]
+    fn parse_api_response_reports_redirect() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            reqwest::header::LOCATION,
+            HeaderValue::from_static("https://www.twitch.tv/"),
+        );
+
+        let problem = parse_api_response(StatusCode::FOUND, &headers, "").unwrap_err();
+
+        assert_eq!(
+            problem,
+            ApiResponseProblem::Redirect {
+                status: StatusCode::FOUND,
+                location: Some("https://www.twitch.tv/".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn parse_api_response_reports_non_json() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            HeaderValue::from_static("text/html"),
+        );
+
+        let problem = parse_api_response(
+            StatusCode::OK,
+            &headers,
+            "<!DOCTYPE html><title>Twitch</title>",
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            problem,
+            ApiResponseProblem::NonJson {
+                status: StatusCode::OK,
+                content_type: Some("text/html".to_string()),
+                body_preview: "<!DOCTYPE html><title>Twitch</title>".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn parse_api_response_reports_invalid_json() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json"),
+        );
+
+        let problem = parse_api_response(StatusCode::OK, &headers, "nope").unwrap_err();
+
+        assert!(matches!(
+            problem,
+            ApiResponseProblem::InvalidJson {
+                status: StatusCode::OK,
+                ..
+            }
+        ));
     }
 
     #[test]

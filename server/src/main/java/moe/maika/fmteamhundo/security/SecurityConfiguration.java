@@ -31,6 +31,7 @@ public class SecurityConfiguration {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/firehose/**").permitAll()
                 .requestMatchers("/widgets/**").permitAll()
             )

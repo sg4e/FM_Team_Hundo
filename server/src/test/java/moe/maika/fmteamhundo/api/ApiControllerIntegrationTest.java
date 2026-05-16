@@ -260,6 +260,119 @@ class ApiControllerIntegrationTest {
     }
 
     @Test
+    void testUpdateEndpointAcceptsRawMiddlewareDropPayload() throws Exception {
+        String payload = """
+                [{ "type": "drop", "value": 122, "last_rng": 0, "now_rng": 1, "opp_id": 1 }]
+                """;
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("ok"));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).hasSize(1);
+        assertThat(updates.get(0).getSource()).isEqualTo(MessageType.DROP);
+    }
+
+    @Test
+    void testUpdateEndpointAcceptsRawMiddlewareFusePayload() throws Exception {
+        String payload = """
+                [{ "type": "fuse", "value": 30, "opp_id": 1 }]
+                """;
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("ok"));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).hasSize(1);
+        assertThat(updates.get(0).getSource()).isEqualTo(MessageType.FUSE);
+    }
+
+    @Test
+    void testUpdateEndpointAcceptsRawMiddlewareRitualPayload() throws Exception {
+        String payload = """
+                [{ "type": "ritual", "value": 667, "opp_id": 1 }]
+                """;
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("ok"));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).hasSize(1);
+        assertThat(updates.get(0).getSource()).isEqualTo(MessageType.RITUAL);
+    }
+
+    @Test
+    void testUpdateEndpointAcceptsRawMiddlewareStarchipsPayload() throws Exception {
+        String payload = """
+                [{ "type": "starchips", "value": 10 }]
+                """;
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("ok"));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).hasSize(1);
+        assertThat(updates.get(0).getSource()).isEqualTo(MessageType.STARCHIPS);
+    }
+
+    @Test
+    void testUpdateEndpointReturnsJsonForMalformedPayload() throws Exception {
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("[{type:drop,value:122}]"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid update payload"));
+    }
+
+    @Test
+    void testUpdateEndpointReturnsJsonForUnknownRawMessageType() throws Exception {
+        String payload = """
+                [{ "type": "unknown", "value": 122, "last_rng": 0, "now_rng": 1, "opp_id": 1 }]
+                """;
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid update payload"));
+    }
+
+    @Test
+    void testUpdateEndpointReturnsJsonForInvalidApiKeyWithRawPayload() throws Exception {
+        String payload = """
+                [{ "type": "drop", "value": 122, "last_rng": 0, "now_rng": 1, "opp_id": 1 }]
+                """;
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", "invalid")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid API key"));
+    }
+
+    @Test
     void testUpdateEndpointWithMultipleMessages() throws Exception {
         List<EmuMessage> messages = Arrays.asList(
                 new EmuMessage(MessageType.DROP, 100, 5, 6, 1),
