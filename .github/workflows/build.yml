@@ -139,6 +139,16 @@ jobs:
         cd server
         ./mvnw -Pproduction package -DskipTests
         mv target/server-1.0-SNAPSHOT.jar target/server.jar
+
+    - name: Verify server protocol version stamp
+      run: |
+        cd server
+        unzip -p target/server.jar BOOT-INF/classes/fm-hundo-build.properties | tee /tmp/fm-hundo-build.properties
+        grep -Fx "protocol.version=${FM_HUNDO_PROTOCOL_VERSION}" /tmp/fm-hundo-build.properties
+        if grep -Eq 'protocol\.version=$|[@$][{A-Za-z0-9_.-]+' /tmp/fm-hundo-build.properties; then
+          echo "server.jar contains a blank or unresolved protocol.version stamp" >&2
+          exit 1
+        fi
     
     - name: Upload JAR as artifact
       uses: actions/upload-artifact@v7
