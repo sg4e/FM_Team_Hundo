@@ -89,6 +89,14 @@ public class ApiController {
         return ResponseEntity.ok(creditsService.getCredits());
     }
 
+    @GetMapping("/protocol_version")
+    public ResponseEntity<Map<String, String>> getProtocolVersion() {
+        Map<String, String> response = protocolVersion.getValue()
+            .map(version -> Map.of("protocol_version", version))
+            .orElseGet(Map::of);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/validate")
     public ResponseEntity<Map<String, String>> validateCredential(
             @RequestHeader(value = "X-API-Key", required = false) String apiKey) {

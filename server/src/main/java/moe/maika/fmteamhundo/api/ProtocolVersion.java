@@ -34,8 +34,12 @@ public class ProtocolVersion {
             return Optional.empty();
         }
 
-        String rawValue = properties.getProperty(PROPERTY_NAME, "").trim();
-        if (rawValue.isEmpty() || rawValue.startsWith("${")) {
+        return parseValue(properties.getProperty(PROPERTY_NAME, ""));
+    }
+
+    static Optional<String> parseValue(String value) {
+        String rawValue = value == null ? "" : value.trim();
+        if (rawValue.isEmpty() || rawValue.startsWith("${") || rawValue.matches("@[^@]+@")) {
             return Optional.empty();
         }
         return Optional.of(rawValue);

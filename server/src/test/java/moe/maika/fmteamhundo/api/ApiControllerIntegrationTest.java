@@ -149,6 +149,14 @@ class ApiControllerIntegrationTest {
     }
 
     @Test
+    void testProtocolVersionEndpointIsPublic() throws Exception {
+        mockMvc.perform(get("/api/protocol_version")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.protocol_version").value("1"));
+    }
+
+    @Test
     void testValidateEndpointWithValidApiKey() throws Exception {
         mockMvc.perform(get("/api/validate")
                 .header("X-API-Key", validApiKey)
