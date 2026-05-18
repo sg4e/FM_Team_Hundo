@@ -34,7 +34,7 @@ The FM Team Hundo Python patch specifies in its readme the exact git commit it w
 
 ## Register at [hundo.maika.moe](/)
 
-1. Click the login button at the top-right corner of the [hundo.maika.moe](/) page. Authorize FM Team Hundo with your primary Twitch account. You'll be redirected to your FM Team Hundo profile page.
+1. Click the login button at the top-right corner of the [hundo.maika.moe](/) page. Authorize FM Team Hundo with your primary Twitch account. After being redirected to the FM Team Hundo homepage, click on your username at the top-right corner, then "Profile" to access your [profile page](/profile).
 
 2. Optionally set an alt account on your profile. FM Team Hundo requires you to livestream on Twitch whenever you're playing, either on the primary account you used as your login, or on the alt Twitch account set here. **Double-check the spelling of your alt account** since there's no verification step. Other livestreaming platforms aren't currently supported.
 
