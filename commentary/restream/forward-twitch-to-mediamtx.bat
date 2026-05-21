@@ -8,6 +8,7 @@ REM
 REM Usage:
 REM   forward-twitch-to-mediamtx.bat MAIN_CHANNEL
 REM   forward-twitch-to-mediamtx.bat MAIN_CHANNEL ALT_CHANNEL
+REM   MAIN_CHANNEL and ALT_CHANNEL may also be Twitch URLs.
 REM
 REM Behavior:
 REM   - MediaMTX path always uses MAIN_CHANNEL.
@@ -70,8 +71,8 @@ if not "%~3"=="" (
     exit /b 1
 )
 
-set "MAIN_CHANNEL=%~1"
-set "ALT_CHANNEL=%~2"
+call :NormalizeTwitchChannel "%~1" MAIN_CHANNEL
+if not "%~2"=="" call :NormalizeTwitchChannel "%~2" ALT_CHANNEL
 set "MEDIAMTX_RTMP_URL=%MEDIAMTX_RTMP_BASE_URL%/%MAIN_CHANNEL%"
 
 echo Main channel: %MAIN_CHANNEL%
@@ -119,3 +120,17 @@ set "RUN_EXIT_CODE=%ERRORLEVEL%"
 echo.
 echo Source channel %SOURCE_CHANNEL% ended or failed. Exit code: %RUN_EXIT_CODE%
 exit /b %RUN_EXIT_CODE%
+
+
+:NormalizeTwitchChannel
+setlocal EnableDelayedExpansion
+set "NORMALIZED_CHANNEL=%~1"
+set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:https://www.twitch.tv/=!"
+set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:http://www.twitch.tv/=!"
+set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:https://twitch.tv/=!"
+set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:http://twitch.tv/=!"
+set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:www.twitch.tv/=!"
+set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:twitch.tv/=!"
+for /f "tokens=1 delims=/?" %%A in ("!NORMALIZED_CHANNEL!") do set "NORMALIZED_CHANNEL=%%A"
+endlocal & set "%~2=%NORMALIZED_CHANNEL%"
+exit /b 0
