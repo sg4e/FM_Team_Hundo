@@ -79,6 +79,8 @@ class Application:
                 await self._validate_obs()
                 self.layout_manager = ObsLayoutManager(self.obs, self.config, players, teams, self.streams)
                 await self.layout_manager.setup()
+                await self.obs.register_current_program_scene_callback(self._handle_obs_scene_changed)
+                await self._reconcile_current_scene_audio(force=True)
                 await self.overlay_server.wait_for_client(self.config.overlay.connect_timeout_seconds)
                 await self.overlay_server.wait_for_credits_client(self.config.overlay.connect_timeout_seconds)
                 startup_complete = True
@@ -174,10 +176,23 @@ class Application:
         assert self.layout_manager is not None
         assert self.scheduler is not None
         while True:
+            await self._reconcile_current_scene_audio()
             if self.config.features.audio_rotation and not self.scheduler.acquisition_active():
                 await self.layout_manager.tick_all_streamers_audio()
                 await self.layout_manager.tick_team_showcases()
             await asyncio.sleep(1)
+
+    async def _handle_obs_scene_changed(self, scene_name: str) -> None:
+        await self._reconcile_current_scene_audio(scene_name, force=True)
+
+    async def _reconcile_current_scene_audio(self, scene_name: str | None = None, *, force: bool = False) -> bool:
+        if self.layout_manager is None:
+            return False
+        try:
+            return await self.layout_manager.reconcile_current_scene_audio(scene_name, force=force)
+        except Exception:
+            LOGGER.exception("Unable to reconcile managed scene audio focus")
+            return False
 
     async def _simulation_layout_loop(self) -> None:
         assert self.streams is not None

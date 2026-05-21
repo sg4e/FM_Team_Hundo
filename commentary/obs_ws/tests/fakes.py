@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 
 from fm_hundo_obs.models import MessageType
 from fm_hundo_obs.obs import ObsController, ObsError, SceneItemTransform, stable_item_id
@@ -30,6 +30,7 @@ class FakeObs(ObsController):
         self.indices: list[tuple[str, int, int]] = []
         self.top_moves: list[tuple[str, int]] = []
         self.bottom_moves: list[tuple[str, int]] = []
+        self.current_program_scene_callbacks: list[Callable[[str], Awaitable[None]]] = []
 
     async def connect(self) -> None:
         self.connected_value = True
@@ -65,6 +66,14 @@ class FakeObs(ObsController):
     async def set_current_program_scene(self, scene_name: str) -> None:
         self.current_scene = scene_name
         self.scene_changes.append(scene_name)
+
+    async def register_current_program_scene_callback(self, callback: Callable[[str], Awaitable[None]]) -> None:
+        self.current_program_scene_callbacks.append(callback)
+
+    async def trigger_current_program_scene_changed(self, scene_name: str) -> None:
+        self.current_scene = scene_name
+        for callback in self.current_program_scene_callbacks:
+            await callback(scene_name)
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         self.mutes.append((input_name, muted))

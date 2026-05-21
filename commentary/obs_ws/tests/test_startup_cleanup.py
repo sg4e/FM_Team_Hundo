@@ -58,6 +58,9 @@ class SetupObs:
         self.scenes: list[str] = []
         self.inputs: list[tuple[str, str, str, dict, bool]] = []
         self.scene_items: list[tuple[str, str, bool]] = []
+        self.mutes: list[tuple[str, bool]] = []
+        self.current_scene = "Main"
+        self.current_program_scene_callbacks = []
         self.disconnected = False
 
     async def connect(self) -> None:
@@ -97,6 +100,27 @@ class SetupObs:
 
     async def validate(self, *_, **__) -> None:
         pass
+
+    async def get_current_program_scene(self) -> str:
+        return self.current_scene
+
+    async def set_current_program_scene(self, scene_name: str) -> None:
+        self.current_scene = scene_name
+
+    async def register_current_program_scene_callback(self, callback) -> None:
+        self.current_program_scene_callbacks.append(callback)
+
+    async def set_input_mute(self, input_name: str, muted: bool) -> None:
+        self.mutes.append((input_name, muted))
+
+
+class CapturingLayoutManager:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str | None, bool]] = []
+
+    async def reconcile_current_scene_audio(self, scene_name: str | None = None, *, force: bool = False) -> bool:
+        self.calls.append((scene_name, force))
+        return True
 
 
 @pytest.mark.asyncio
@@ -234,3 +258,25 @@ async def test_credits_wait_timeout_message_is_operator_friendly(tmp_path):
     message = str(error.value)
     assert "http://127.0.0.1:8765/credits" in message
     assert "Credits Browser Source" in message
+
+
+@pytest.mark.asyncio
+async def test_scene_change_event_reconciles_layout_audio_focus():
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    layout = CapturingLayoutManager()
+    app.layout_manager = layout  # type: ignore[assignment]
+
+    await app._handle_obs_scene_changed("FM Hundo - Player - Runner Ten")
+
+    assert layout.calls == [("FM Hundo - Player - Runner Ten", True)]
+
+
+@pytest.mark.asyncio
+async def test_managed_cycle_fallback_reconcile_uses_current_scene_lookup():
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    layout = CapturingLayoutManager()
+    app.layout_manager = layout  # type: ignore[assignment]
+
+    assert await app._reconcile_current_scene_audio() is True
+
+    assert layout.calls == [(None, False)]

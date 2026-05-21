@@ -367,3 +367,91 @@ async def test_focus_player_for_scene_ignores_inactive_player():
 
     assert len(obs.mutes) == mute_count
     assert manager._all_audio_player_id is None
+
+
+@pytest.mark.asyncio
+async def test_manual_player_scene_focus_unmutes_selected_player_only():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
+    await manager.setup()
+
+    focused = await manager.reconcile_current_scene_audio("FM Hundo - Player - Runner Eleven", force=True)
+
+    assert focused is True
+    assert obs.mutes[-3:] == [
+        ("FM Hundo Media - Runner Eleven", False),
+        ("FM Hundo Media - Runner Ten", True),
+        ("FM Hundo Media - Runner Twenty", True),
+    ]
+    assert manager._recent_scene_player_id == 11
+
+
+@pytest.mark.asyncio
+async def test_manual_player_scene_focus_unmutes_offline_selected_player():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry(set()))
+    await manager.setup()
+
+    focused = await manager.reconcile_current_scene_audio("FM Hundo - Player - Runner Ten", force=True)
+
+    assert focused is True
+    assert obs.mutes[-3:] == [
+        ("FM Hundo Media - Runner Eleven", True),
+        ("FM Hundo Media - Runner Ten", False),
+        ("FM Hundo Media - Runner Twenty", True),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_return_to_all_streamers_keeps_recent_manual_player_audio():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
+    await manager.setup()
+
+    await manager.reconcile_current_scene_audio("FM Hundo - Player - Runner Ten", force=True)
+    focused = await manager.reconcile_current_scene_audio("FM Hundo - All Streamers", force=True)
+
+    assert focused is True
+    assert obs.mutes[-3:] == [
+        ("FM Hundo Media - Runner Eleven", True),
+        ("FM Hundo Media - Runner Ten", False),
+        ("FM Hundo Media - Runner Twenty", True),
+    ]
+    assert latest_enabled(obs, "FM Hundo - All Streamers", "FM Hundo Audio Note - Runner Ten") is True
+    assert manager._all_audio_player_id == 10
+
+
+@pytest.mark.asyncio
+async def test_return_to_team_scene_keeps_recent_manual_player_showcased():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha"), Team(2, "Beta")], registry({"runner10", "runner11", "runner20"}))
+    await manager.setup()
+
+    await manager.reconcile_current_scene_audio("FM Hundo - Player - Runner Ten", force=True)
+    focused = await manager.reconcile_current_scene_audio("FM Hundo - Team - Alpha", force=True)
+
+    state = manager.team_rotations[1]
+    ten_media = latest_transform(obs, "FM Hundo - Team - Alpha", "FM Hundo Media - Runner Ten")
+    eleven_media = latest_transform(obs, "FM Hundo - Team - Alpha", "FM Hundo Media - Runner Eleven")
+    assert focused is True
+    assert state.showcased_player_id == 10
+    assert ten_media.width > eleven_media.width
+    assert obs.mutes[-3:] == [
+        ("FM Hundo Media - Runner Eleven", True),
+        ("FM Hundo Media - Runner Ten", False),
+        ("FM Hundo Media - Runner Twenty", True),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_non_managed_scene_does_not_change_managed_audio_focus():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
+    await manager.setup()
+    await manager.reconcile_current_scene_audio("FM Hundo - Player - Runner Ten", force=True)
+    mute_count = len(obs.mutes)
+
+    focused = await manager.reconcile_current_scene_audio("Production Scene", force=True)
+
+    assert focused is False
+    assert len(obs.mutes) == mute_count

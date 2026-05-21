@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 import logging
 
@@ -51,6 +51,9 @@ class ObsController:
         raise NotImplementedError
 
     async def set_current_program_scene(self, scene_name: str) -> None:
+        raise NotImplementedError
+
+    async def register_current_program_scene_callback(self, callback: Callable[[str], Awaitable[None]]) -> None:
         raise NotImplementedError
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
@@ -179,6 +182,22 @@ class SimpleObsController(ObsController):
 
     async def set_current_program_scene(self, scene_name: str) -> None:
         await self._call("SetCurrentProgramScene", {"sceneName": scene_name})
+
+    async def register_current_program_scene_callback(self, callback: Callable[[str], Awaitable[None]]) -> None:
+        if self._client is None:
+            raise ObsError("OBS is not connected")
+
+        async def _handle_current_program_scene_changed(event_data: dict | None) -> None:
+            if event_data is None:
+                return
+            scene_name = event_data.get("sceneName")
+            if scene_name is not None:
+                await callback(str(scene_name))
+
+        self._client.register_event_callback(
+            _handle_current_program_scene_changed,
+            "CurrentProgramSceneChanged",
+        )
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         await self._call("SetInputMute", {"inputName": input_name, "inputMuted": muted})
@@ -331,6 +350,9 @@ class DryRunObsController(ObsController):
 
     async def set_current_program_scene(self, scene_name: str) -> None:
         self.actions.append(f"set current scene -> {scene_name}")
+
+    async def register_current_program_scene_callback(self, callback: Callable[[str], Awaitable[None]]) -> None:
+        await self.wrapped.register_current_program_scene_callback(callback)
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         self.actions.append(f"set mute {input_name} -> {muted}")

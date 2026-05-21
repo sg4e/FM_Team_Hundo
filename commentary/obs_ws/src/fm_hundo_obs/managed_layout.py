@@ -89,6 +89,8 @@ class ObsLayoutManager:
         self._all_audio_next_index = 0
         self._all_audio_last_rotation = 0.0
         self._all_audio_player_id: int | None = None
+        self._recent_scene_player_id: int | None = None
+        self._last_reconciled_scene: str | None = None
         self._closed = False
         self._validate_master_scene_names()
 
@@ -101,6 +103,12 @@ class ObsLayoutManager:
 
     def player_scene_names(self) -> tuple[str, ...]:
         return tuple(source.player_scene for source in self.sources.values())
+
+    def player_id_for_scene(self, scene_name: str) -> int | None:
+        for player_id, sources in self.sources.items():
+            if sources.player_scene == scene_name:
+                return player_id
+        return None
 
     def generated_scene_names(self) -> tuple[str, ...]:
         return (self.all_scene, *self.team_scenes.values(), *self.player_scene_names())
@@ -130,6 +138,8 @@ class ObsLayoutManager:
             team_id: self._updated_team_rotation(team_id)
             for team_id in self.team_scenes
         }
+        if self._recent_scene_player_id not in next_player_ids:
+            self._recent_scene_player_id = None
         await self.setup()
 
     async def setup(self) -> None:
@@ -168,6 +178,32 @@ class ObsLayoutManager:
         team_scene = self.team_scenes.get(player.team_id)
         if scene_name == team_scene:
             await self._focus_team_showcase(player.team_id, player_id)
+
+    async def reconcile_current_scene_audio(self, scene_name: str | None = None, *, force: bool = False) -> bool:
+        if not self.obs.connected:
+            return False
+        if scene_name is None:
+            scene_name = await self.obs.get_current_program_scene()
+        if not force and scene_name == self._last_reconciled_scene:
+            return False
+        self._last_reconciled_scene = scene_name
+
+        player_id = self.player_id_for_scene(scene_name)
+        if player_id is not None:
+            self._recent_scene_player_id = player_id
+            await self._set_only_player_audio(player_id)
+            LOGGER.info("Focused managed player-scene audio for %s", self.players_by_id[player_id].name)
+            return True
+
+        if self._recent_scene_player_id is None:
+            return False
+        if scene_name == self.all_scene:
+            return await self._focus_recent_player_on_all_streamers()
+
+        team_id = next((team_id for team_id, team_scene in self.team_scenes.items() if team_scene == scene_name), None)
+        if team_id is not None:
+            return await self._focus_recent_player_on_team_scene(team_id)
+        return False
 
     async def run(self) -> None:
         while not self._closed:
@@ -210,7 +246,7 @@ class ObsLayoutManager:
         state.next_index = (state.next_index + 1) % len(active)
         state.showcased_player_id = next_player
         state.last_rotation = now
-        await self._layout_team_scene(team_id, showcased_player_id=next_player)
+        await self._layout_team_scene(team_id, showcased_player_id=next_player, apply_audio=True)
         return True
 
     async def tick_all_streamers_audio(self, *, force: bool = False) -> bool:
@@ -248,6 +284,10 @@ class ObsLayoutManager:
             active = player.id == active_player_id
             await self.obs.set_input_mute(sources.media_input, not active)
 
+    async def _mute_all_player_audio(self) -> None:
+        for player in self.players:
+            await self.obs.set_input_mute(self.sources[player.id].media_input, True)
+
     async def _focus_all_streamers_audio(self, player_id: int) -> None:
         active = [player.id for player in self.players if self.streams.is_player_active(player.id)]
         if player_id not in active:
@@ -256,6 +296,13 @@ class ObsLayoutManager:
         self._all_audio_player_id = player_id
         self._all_audio_last_rotation = monotonic()
         self._all_audio_next_index = (active.index(player_id) + 1) % len(active)
+
+    async def _focus_recent_player_on_all_streamers(self) -> bool:
+        assert self._recent_scene_player_id is not None
+        if not self.streams.is_player_active(self._recent_scene_player_id):
+            return False
+        await self._focus_all_streamers_audio(self._recent_scene_player_id)
+        return True
 
     async def _focus_team_showcase(self, team_id: int, player_id: int) -> None:
         state = self.team_rotations.get(team_id)
@@ -267,7 +314,15 @@ class ObsLayoutManager:
         state.showcased_player_id = player_id
         state.last_rotation = monotonic()
         state.next_index = (active.index(player_id) + 1) % len(active)
-        await self._layout_team_scene(team_id, showcased_player_id=player_id)
+        await self._layout_team_scene(team_id, showcased_player_id=player_id, apply_audio=True)
+
+    async def _focus_recent_player_on_team_scene(self, team_id: int) -> bool:
+        assert self._recent_scene_player_id is not None
+        player = self.players_by_id.get(self._recent_scene_player_id)
+        if player is None or player.team_id != team_id or not self.streams.is_player_active(player.id):
+            return False
+        await self._focus_team_showcase(team_id, player.id)
+        return True
 
     async def _retire_player(self, player_id: int) -> None:
         sources = self.sources.get(player_id)
@@ -400,7 +455,13 @@ class ObsLayoutManager:
         for team_id in self.team_scenes:
             await self._layout_team_scene(team_id)
 
-    async def _layout_team_scene(self, team_id: int, showcased_player_id: int | None = None) -> None:
+    async def _layout_team_scene(
+        self,
+        team_id: int,
+        showcased_player_id: int | None = None,
+        *,
+        apply_audio: bool = False,
+    ) -> None:
         scene = self.team_scenes[team_id]
         team_player_ids = self.team_rotations[team_id].player_ids
         active_ids = [player_id for player_id in team_player_ids if self.streams.is_player_active(player_id)]
@@ -409,6 +470,10 @@ class ObsLayoutManager:
         if showcased_player_id is None and active_ids:
             showcased_player_id = active_ids[0]
             self.team_rotations[team_id].showcased_player_id = showcased_player_id
+        if apply_audio and showcased_player_id is None:
+            await self._mute_all_player_audio()
+        elif apply_audio:
+            await self._set_only_player_audio(showcased_player_id)
         ordered_ids = ([showcased_player_id] if showcased_player_id else []) + [player_id for player_id in active_ids if player_id != showcased_player_id]
         rects = team_showcase_layout(len(ordered_ids), self.config.overlay.canvas_width, self.config.overlay.canvas_height)
         offline_id = await self.obs.ensure_scene_item(scene, self.team_offline_inputs[team_id], enabled=not active_ids)
@@ -423,7 +488,6 @@ class ObsLayoutManager:
             media_id = await self.obs.ensure_scene_item(scene, sources.media_input, enabled=enabled)
             label_id = await self.obs.ensure_scene_item(scene, sources.label_input, enabled=enabled)
             note_id = await self.obs.ensure_scene_item(scene, sources.note_input, enabled=False)
-            await self.obs.set_input_mute(sources.media_input, player.id != showcased_player_id)
             if enabled:
                 rect = rects[ordered_ids.index(player.id)]
                 media_fit = fit_inside(STREAM_WIDTH, STREAM_HEIGHT, rect)
