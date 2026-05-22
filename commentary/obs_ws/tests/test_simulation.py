@@ -124,6 +124,7 @@ async def test_layout_update_roster_adds_and_retires_simulated_paths():
     await manager.setup()
 
     assert manager.player_scene_name(simulated_player_id("alpha_cam")) == "FM Hundo - Player - alpha_cam"
+    assert obs.inputs_settings["FM Hundo Label - alpha_cam"]["text"] == "alpha_cam - Simulation"
 
     next_roster = build_simulation_roster({"beta_cam"})
     streams.set_active_paths_for_tests({"beta_cam"})
@@ -131,6 +132,7 @@ async def test_layout_update_roster_adds_and_retires_simulated_paths():
     await manager.update_roster(next_roster.players, next_roster.teams)
 
     assert manager.player_scene_name(simulated_player_id("beta_cam")) == "FM Hundo - Player - beta_cam"
+    assert obs.inputs_settings["FM Hundo Label - beta_cam"]["text"] == "beta_cam - Simulation"
     assert manager.player_scene_name(simulated_player_id("alpha_cam")) is not None
     retired_media = "FM Hundo Media - alpha_cam"
     retired_item_ids = [

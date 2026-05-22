@@ -10,7 +10,7 @@ from .config import AppConfig
 from .layout import Rect, fit_inside, grid_layout, team_showcase_layout
 from .mediamtx import StreamRegistry
 from .models import Player, Team
-from .obs import ObsController, ObsError, positioned_transform, transform_from_fit
+from .obs import ObsController, ObsError, max_only_positioned_transform, positioned_transform, transform_from_fit
 
 LOGGER = logging.getLogger(__name__)
 
@@ -358,7 +358,7 @@ class ObsLayoutManager:
             sources.player_scene,
             sources.label_input,
             self.config.obs.text_source_kind,
-            _text_settings(player.name),
+            _text_settings(self._player_label_text(player)),
             enabled=True,
         )
         await self.obs.ensure_input(
@@ -431,7 +431,10 @@ class ObsLayoutManager:
         await self._ensure_overlay_on_top(scene)
 
     async def _layout_all_streamers(self) -> None:
-        active_players = [player for player in self.players if self.streams.is_player_active(player.id)]
+        active_players = sorted(
+            (player for player in self.players if self.streams.is_player_active(player.id)),
+            key=lambda player: (player.team_id, player.name.lower()),
+        )
         rects = grid_layout(len(active_players), self.config.overlay.canvas_width, self.config.overlay.canvas_height)
         active_ids = {player.id for player in active_players}
         offline_id = await self.obs.ensure_scene_item(self.all_scene, self.all_offline_input, enabled=not active_players)
@@ -446,7 +449,7 @@ class ObsLayoutManager:
                 rect = rects[active_players.index(player)]
                 media_fit = fit_inside(STREAM_WIDTH, STREAM_HEIGHT, rect)
                 await self.obs.set_scene_item_transform(self.all_scene, media_id, transform_from_fit(media_fit))
-                await self.obs.set_scene_item_transform(self.all_scene, label_id, positioned_transform(rect.x + 10, rect.y + 10))
+                await self.obs.set_scene_item_transform(self.all_scene, label_id, self._stream_tile_label_transform(rect))
                 await self.obs.set_scene_item_transform(self.all_scene, note_id, positioned_transform(rect.x + rect.width - 10, rect.y + 10, alignment=6))
         await self._ensure_master_scenes_for_scene(self.all_scene)
         await self._ensure_overlay_on_top(self.all_scene)
@@ -492,7 +495,7 @@ class ObsLayoutManager:
                 rect = rects[ordered_ids.index(player.id)]
                 media_fit = fit_inside(STREAM_WIDTH, STREAM_HEIGHT, rect)
                 await self.obs.set_scene_item_transform(scene, media_id, transform_from_fit(media_fit))
-                await self.obs.set_scene_item_transform(scene, label_id, positioned_transform(rect.x + 10, rect.y + 10))
+                await self.obs.set_scene_item_transform(scene, label_id, self._stream_tile_label_transform(rect))
         await self._ensure_master_scenes_for_scene(scene)
         await self._ensure_team_label_on_top(team_id)
         await self._ensure_overlay_on_top(scene)
@@ -558,6 +561,21 @@ class ObsLayoutManager:
 
     def _team_label_transform(self):
         return positioned_transform(self.config.overlay.canvas_width / 2, 12, alignment=4)
+
+    def _stream_tile_label_transform(self, rect: Rect):
+        padding = 10
+        audio_note_space = 48
+        return max_only_positioned_transform(
+            rect.x + padding,
+            rect.y + padding,
+            max(0, rect.width - padding * 2 - audio_note_space),
+            LABEL_FONT_SIZE * 1.6,
+        )
+
+    def _player_label_text(self, player: Player) -> str:
+        team = self.teams_by_id.get(player.team_id)
+        team_name = team.name if team else f"Team {player.team_id}"
+        return f"{player.name} - {team_name}"
 
     def _sources_for(self, player: Player) -> PlayerSources:
         slug = _slug(player.name or str(player.id))

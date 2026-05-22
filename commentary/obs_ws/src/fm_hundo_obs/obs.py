@@ -411,3 +411,20 @@ def transform_from_fit(fit: Fit | Rect) -> SceneItemTransform:
 
 def positioned_transform(x: float, y: float, alignment: int = 5) -> SceneItemTransform:
     return SceneItemTransform(x=x, y=y, width=0, height=0, bounds_type="", alignment=alignment)
+
+
+def max_only_positioned_transform(
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    alignment: int = 5,
+) -> SceneItemTransform:
+    return SceneItemTransform(
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+        bounds_type="OBS_BOUNDS_MAX_ONLY",
+        alignment=alignment,
+    )

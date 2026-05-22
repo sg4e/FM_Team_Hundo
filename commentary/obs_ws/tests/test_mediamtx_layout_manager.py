@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from fm_hundo_obs.config import AppConfig, MediaMtxConfig, ObsConfig
@@ -27,8 +29,8 @@ def players() -> list[Player]:
     ]
 
 
-def registry(active: set[str]) -> StreamRegistry:
-    streams = StreamRegistry(players(), FakeMediaMtx())  # type: ignore[arg-type]
+def registry(active: set[str], roster: list[Player] | None = None) -> StreamRegistry:
+    streams = StreamRegistry(roster or players(), FakeMediaMtx())  # type: ignore[arg-type]
     streams.set_active_paths_for_tests(active)
     return streams
 
@@ -118,6 +120,7 @@ async def test_layout_manager_creates_managed_scenes_and_hides_inactive_streams(
     assert manager.is_player_active(11) is False
     assert obs.inputs_settings["FM Hundo Media - Runner Ten"]["input"] == "rtsp://127.0.0.1:8554/runner10"
     assert obs.inputs_settings["FM Hundo Media - Runner Ten"]["close_when_inactive"] is True
+    assert obs.inputs_settings["FM Hundo Label - Runner Ten"]["text"] == "Runner Ten - Alpha"
     assert obs.inputs_settings["FM Hundo Label - Runner Ten"]["font"]["size"] == 26
     assert obs.inputs_settings["FM Hundo Audio Note - Runner Ten"]["font"]["size"] == 30
 
@@ -282,7 +285,7 @@ async def test_all_streamers_and_team_audio_rotation():
 
 
 @pytest.mark.asyncio
-async def test_layout_manager_keeps_text_natural_size_and_media_bounded():
+async def test_layout_manager_bounds_stream_tile_labels_without_changing_player_scene_label():
     obs = FakeObs()
     manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha")], registry({"runner10", "runner11"}))
 
@@ -295,12 +298,60 @@ async def test_layout_manager_keeps_text_natural_size_and_media_bounded():
     player_label = latest_transform(obs, "FM Hundo - Player - Runner Ten", "FM Hundo Label - Runner Ten")
 
     assert media.bounds_type == "OBS_BOUNDS_STRETCH"
-    assert all_label.bounds_type == ""
-    assert team_label.bounds_type == ""
+    assert all_label.bounds_type == "OBS_BOUNDS_MAX_ONLY"
+    assert team_label.bounds_type == "OBS_BOUNDS_MAX_ONLY"
     assert player_label.bounds_type == ""
     assert all_label.alignment == 5
     assert all_note.bounds_type == ""
     assert all_note.alignment == 6
+
+
+@pytest.mark.asyncio
+async def test_all_streamers_orders_active_players_by_team_id_then_player_name():
+    roster = [
+        Player(1, "zeta", "Zeta", None, 2),
+        Player(2, "bravo", "Bravo", None, 1),
+        Player(3, "alpha", "Alpha", None, 2),
+    ]
+    obs = FakeObs()
+    manager = ObsLayoutManager(
+        obs,
+        AppConfig(),
+        roster,
+        [Team(1, "One"), Team(2, "Two")],
+        registry({"alpha", "bravo", "zeta"}, roster),
+    )
+
+    await manager.setup()
+
+    bravo_media = latest_transform(obs, "FM Hundo - All Streamers", "FM Hundo Media - Bravo")
+    alpha_media = latest_transform(obs, "FM Hundo - All Streamers", "FM Hundo Media - Alpha")
+    zeta_media = latest_transform(obs, "FM Hundo - All Streamers", "FM Hundo Media - Zeta")
+
+    assert (bravo_media.y, bravo_media.x) < (alpha_media.y, alpha_media.x)
+    assert (alpha_media.y, alpha_media.x) < (zeta_media.y, zeta_media.x)
+
+
+@pytest.mark.asyncio
+async def test_missing_team_label_falls_back_to_team_id():
+    roster = [Player(30, "runner30", "Runner Thirty", None, 30)]
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), roster, [], registry({"runner30"}, roster))
+
+    await manager.setup()
+
+    assert obs.inputs_settings["FM Hundo Label - Runner Thirty"]["text"] == "Runner Thirty - Team 30"
+
+
+def test_decisions_file_records_durable_obs_layout_decisions():
+    decisions = Path(__file__).parents[1] / "DECISIONS.md"
+
+    assert decisions.exists()
+    text = decisions.read_text(encoding="utf-8")
+    assert "Player Name - Team Name" in text
+    assert "OBS_BOUNDS_MAX_ONLY" in text
+    assert "Simulation" in text
+    assert "confirming a revised decision" in text
 
 
 @pytest.mark.asyncio
