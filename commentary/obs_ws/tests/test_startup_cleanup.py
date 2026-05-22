@@ -21,6 +21,8 @@ class FakeOverlayServer:
         self.started = False
         self.stopped = False
         self.credits_connected_clients = 1
+        self.overlay_waits = 0
+        self.credits_waits = 0
 
     async def start(self) -> None:
         self.started = True
@@ -29,10 +31,10 @@ class FakeOverlayServer:
         self.stopped = True
 
     async def wait_for_client(self, timeout_seconds: float) -> None:
-        pass
+        self.overlay_waits += 1
 
     async def wait_for_credits_client(self, timeout_seconds: float) -> None:
-        pass
+        self.credits_waits += 1
 
     async def send_credits(self, payload: dict) -> bool:
         return True
@@ -62,6 +64,7 @@ class SetupObs:
         self.current_scene = "Main"
         self.current_program_scene_callbacks = []
         self.disconnected = False
+        self.refreshed_browser_sources: list[str] = []
 
     async def connect(self) -> None:
         pass
@@ -112,6 +115,9 @@ class SetupObs:
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         self.mutes.append((input_name, muted))
+
+    async def refresh_browser_source(self, input_name: str) -> None:
+        self.refreshed_browser_sources.append(input_name)
 
 
 class CapturingLayoutManager:
@@ -182,6 +188,69 @@ async def test_overlay_timeout_stops_overlay_and_disconnects_obs(monkeypatch):
 
     assert overlay.stopped is True
     assert obs.disconnected is True
+
+
+@pytest.mark.asyncio
+async def test_startup_refreshes_overlay_browser_source_after_first_connection_timeout():
+    class TimeoutThenSuccessOverlay(FakeOverlayServer):
+        async def wait_for_client(self, timeout_seconds: float) -> None:
+            self.overlay_waits += 1
+            if self.overlay_waits == 1:
+                raise OverlayClientTimeout("overlay did not connect")
+
+    overlay = TimeoutThenSuccessOverlay()
+    obs = SetupObs()
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    app.overlay_server = overlay  # type: ignore[assignment]
+    app.obs = obs  # type: ignore[assignment]
+
+    await app._wait_for_managed_browser_sources()
+
+    assert overlay.overlay_waits == 2
+    assert overlay.credits_waits == 1
+    assert obs.refreshed_browser_sources == ["FM Hundo Overlay Browser"]
+
+
+@pytest.mark.asyncio
+async def test_startup_refreshes_credits_browser_source_after_first_connection_timeout():
+    class TimeoutThenSuccessCredits(FakeOverlayServer):
+        async def wait_for_credits_client(self, timeout_seconds: float) -> None:
+            self.credits_waits += 1
+            if self.credits_waits == 1:
+                raise OverlayClientTimeout("credits did not connect")
+
+    overlay = TimeoutThenSuccessCredits()
+    obs = SetupObs()
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    app.overlay_server = overlay  # type: ignore[assignment]
+    app.obs = obs  # type: ignore[assignment]
+
+    await app._wait_for_managed_browser_sources()
+
+    assert overlay.overlay_waits == 1
+    assert overlay.credits_waits == 2
+    assert obs.refreshed_browser_sources == ["FM Hundo Credits Browser"]
+
+
+@pytest.mark.asyncio
+async def test_startup_browser_source_timeout_still_fails_after_refresh():
+    class AlwaysTimeoutOverlay(FakeOverlayServer):
+        async def wait_for_client(self, timeout_seconds: float) -> None:
+            self.overlay_waits += 1
+            raise OverlayClientTimeout("overlay did not connect")
+
+    overlay = AlwaysTimeoutOverlay()
+    obs = SetupObs()
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    app.overlay_server = overlay  # type: ignore[assignment]
+    app.obs = obs  # type: ignore[assignment]
+
+    with pytest.raises(OverlayClientTimeout):
+        await app._wait_for_managed_browser_sources()
+
+    assert overlay.overlay_waits == 2
+    assert overlay.credits_waits == 0
+    assert obs.refreshed_browser_sources == ["FM Hundo Overlay Browser"]
 
 
 @pytest.mark.asyncio

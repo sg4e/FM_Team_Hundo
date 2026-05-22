@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from collections.abc import Awaitable, Callable
 import logging
 from pathlib import Path
 
@@ -81,8 +82,7 @@ class Application:
                 await self.layout_manager.setup()
                 await self.obs.register_current_program_scene_callback(self._handle_obs_scene_changed)
                 await self._reconcile_current_scene_audio(force=True)
-                await self.overlay_server.wait_for_client(self.config.overlay.connect_timeout_seconds)
-                await self.overlay_server.wait_for_credits_client(self.config.overlay.connect_timeout_seconds)
+                await self._wait_for_managed_browser_sources()
                 startup_complete = True
             finally:
                 if not startup_complete:
@@ -171,6 +171,35 @@ class Application:
             },
             enabled=True,
         )
+
+    async def _wait_for_managed_browser_sources(self) -> None:
+        await self._wait_for_browser_source(
+            "Overlay Browser Source",
+            self.config.obs.overlay_source,
+            self.overlay_server.wait_for_client,
+        )
+        await self._wait_for_browser_source(
+            "Credits Browser Source",
+            self.config.obs.credits_source_name,
+            self.overlay_server.wait_for_credits_client,
+        )
+
+    async def _wait_for_browser_source(
+        self,
+        label: str,
+        input_name: str,
+        wait_for_client: Callable[[float], Awaitable[None]],
+    ) -> None:
+        timeout_seconds = self.config.overlay.connect_timeout_seconds
+        try:
+            await wait_for_client(timeout_seconds)
+            return
+        except OverlayClientTimeout:
+            LOGGER.warning("%s did not connect; refreshing OBS browser source %s", label, input_name)
+            self.console.print(f"{label} did not connect; refreshing OBS browser source {input_name}...")
+
+        await self.obs.refresh_browser_source(input_name)
+        await wait_for_client(timeout_seconds)
 
     async def _managed_cycle_loop(self) -> None:
         assert self.layout_manager is not None
