@@ -1,16 +1,26 @@
 package moe.maika.fmteamhundo.ui;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datetimepicker.DateTimePicker;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -19,10 +29,15 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 
+import moe.maika.fmteamhundo.api.MessageType;
 import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.service.ManualPlayerUpdateService;
+import moe.maika.fmteamhundo.service.ManualPlayerUpdateService.ManualPlayerUpdateRequest;
+import moe.maika.ygofm.gamedata.Duelist;
+import moe.maika.ygofm.gamedata.FMDB;
 
 @Route("admin")
 @AnonymousAllowed
@@ -32,13 +47,18 @@ public class AdminView extends VerticalLayout {
     private static final String ADMIN_TWITCH_ID = "73758417";
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
+    private final ManualPlayerUpdateService manualPlayerUpdateService;
     private final VerticalLayout content;
+    private final FMDB fmdb;
 
     @Autowired
-    public AdminView(UserRepository userRepository, TeamRepository teamRepository) {
+    public AdminView(UserRepository userRepository, TeamRepository teamRepository,
+            ManualPlayerUpdateService manualPlayerUpdateService) {
         this.userRepository = userRepository;
         this.teamRepository = teamRepository;
+        this.manualPlayerUpdateService = manualPlayerUpdateService;
         this.content = new VerticalLayout();
+        this.fmdb = FMDB.getInstance();
 
         setSizeFull();
         setPadding(false);
@@ -142,6 +162,211 @@ public class AdminView extends VerticalLayout {
         }
 
         content.add(assignmentSection);
+        content.add(createManualPlayerUpdateSection());
+    }
+
+    private VerticalLayout createManualPlayerUpdateSection() {
+        VerticalLayout section = createSection("Manual Player Update");
+        Span statusMessage = new Span();
+        statusMessage.addClassName("profile-view__save-message");
+        statusMessage.setVisible(false);
+
+        ComboBox<AdminPlayerOption> playerSelector = new ComboBox<>("Player");
+        playerSelector.setItems(getAssignedPlayerOptions());
+        playerSelector.setItemLabelGenerator(AdminPlayerOption::label);
+        playerSelector.setPlaceholder("Select player");
+        playerSelector.setWidthFull();
+
+        ComboBox<MessageType> sourceSelector = new ComboBox<>("Source");
+        sourceSelector.setItems(MessageType.values());
+        sourceSelector.setItemLabelGenerator(MessageType::toString);
+        sourceSelector.setPlaceholder("Select source");
+
+        TextField valueField = new TextField("Value");
+        valueField.setPlaceholder("Card ID or starchips total");
+        valueField.setClearButtonVisible(true);
+
+        ComboBox<DuelistOption> opponentSelector = new ComboBox<>("Opponent");
+        opponentSelector.setItems(getDuelistOptions());
+        opponentSelector.setItemLabelGenerator(DuelistOption::name);
+        opponentSelector.setPlaceholder("Select opponent");
+        opponentSelector.setWidthFull();
+
+        DateTimePicker timePicker = new DateTimePicker("Retroactive Time");
+        timePicker.setHelperText("Leave empty to use current time");
+
+        sourceSelector.addValueChangeListener(event -> {
+            boolean starchips = event.getValue() == MessageType.STARCHIPS;
+            opponentSelector.setEnabled(!starchips);
+            if(starchips) {
+                opponentSelector.clear();
+            }
+        });
+
+        Button submitButton = new Button("Create Manual Update", event -> {
+            statusMessage.setVisible(false);
+            try {
+                ManualPlayerUpdateRequest request = buildManualUpdateRequest(
+                    playerSelector,
+                    sourceSelector,
+                    valueField,
+                    opponentSelector,
+                    timePicker
+                );
+                manualPlayerUpdateService.validateManualUpdate(request);
+                openManualUpdateConfirmation(
+                    request,
+                    statusMessage,
+                    playerSelector,
+                    sourceSelector,
+                    valueField,
+                    opponentSelector,
+                    timePicker
+                );
+            } catch(IllegalArgumentException ex) {
+                showManualUpdateStatus(statusMessage, ex.getMessage(), false);
+            }
+        });
+
+        HorizontalLayout firstRow = new HorizontalLayout(playerSelector, sourceSelector);
+        firstRow.setWidthFull();
+        firstRow.setFlexGrow(1, playerSelector);
+        firstRow.setFlexGrow(1, sourceSelector);
+
+        HorizontalLayout secondRow = new HorizontalLayout(valueField, opponentSelector, timePicker);
+        secondRow.setWidthFull();
+        secondRow.setFlexGrow(1, valueField);
+        secondRow.setFlexGrow(1, opponentSelector);
+        secondRow.setFlexGrow(1, timePicker);
+
+        section.add(firstRow, secondRow, submitButton, statusMessage);
+        return section;
+    }
+
+    private List<AdminPlayerOption> getAssignedPlayerOptions() {
+        Map<Integer, Team> teamsById = teamRepository.findAll().stream()
+            .collect(Collectors.toMap(Team::getTeamId, Function.identity()));
+        return userRepository.findAll().stream()
+            .filter(user -> user.getTeamId() != 0)
+            .map(user -> new AdminPlayerOption(user, teamsById.get(user.getTeamId())))
+            .sorted(Comparator.comparing(
+                option -> option.user().getName(),
+                String.CASE_INSENSITIVE_ORDER
+            ))
+            .toList();
+    }
+
+    private List<DuelistOption> getDuelistOptions() {
+        return fmdb.getAllDuelists().stream()
+            .sorted(Comparator.comparingInt(Duelist::getId))
+            .map(duelist -> new DuelistOption(duelist.getId(), duelist.toString()))
+            .toList();
+    }
+
+    private ManualPlayerUpdateRequest buildManualUpdateRequest(
+            ComboBox<AdminPlayerOption> playerSelector,
+            ComboBox<MessageType> sourceSelector,
+            TextField valueField,
+            ComboBox<DuelistOption> opponentSelector,
+            DateTimePicker timePicker) {
+        AdminPlayerOption selectedPlayer = playerSelector.getValue();
+        if(selectedPlayer == null) {
+            throw new IllegalArgumentException("Player is required");
+        }
+        MessageType source = sourceSelector.getValue();
+        if(source == null) {
+            throw new IllegalArgumentException("Source is required");
+        }
+        int value;
+        try {
+            value = Integer.parseInt(valueField.getValue().trim());
+        } catch(Exception ex) {
+            throw new IllegalArgumentException("Value must be an integer");
+        }
+
+        Integer opponentId = null;
+        if(source != MessageType.STARCHIPS) {
+            DuelistOption selectedOpponent = opponentSelector.getValue();
+            if(selectedOpponent == null) {
+                throw new IllegalArgumentException("Opponent is required for card updates");
+            }
+            opponentId = selectedOpponent.id();
+        }
+
+        Instant timestamp = null;
+        LocalDateTime selectedTime = timePicker.getValue();
+        if(selectedTime != null) {
+            timestamp = selectedTime.atZone(ZoneId.systemDefault()).toInstant();
+        }
+
+        return new ManualPlayerUpdateRequest(selectedPlayer.user().getDatabaseId(), source, value, opponentId, timestamp);
+    }
+
+    private void openManualUpdateConfirmation(
+            ManualPlayerUpdateRequest request,
+            Span statusMessage,
+            ComboBox<AdminPlayerOption> playerSelector,
+            ComboBox<MessageType> sourceSelector,
+            TextField valueField,
+            ComboBox<DuelistOption> opponentSelector,
+            DateTimePicker timePicker) {
+        Dialog confirmDialog = new Dialog();
+        confirmDialog.setCloseOnEsc(true);
+        confirmDialog.setCloseOnOutsideClick(true);
+
+        AdminPlayerOption player = playerSelector.getValue();
+        DuelistOption opponent = opponentSelector.getValue();
+
+        VerticalLayout summary = new VerticalLayout();
+        summary.setPadding(false);
+        summary.setSpacing(false);
+        summary.add(new H2("Confirm Manual Update"));
+        summary.add(new Paragraph("Player: " + player.label()));
+        summary.add(new Paragraph("Source: " + request.source()));
+        summary.add(new Paragraph("Value: " + manualPlayerUpdateService.describeValue(request)));
+        summary.add(new Paragraph("Opponent: " + (request.source() == MessageType.STARCHIPS ? "None" : opponent.name())));
+        summary.add(new Paragraph("Time: " + (request.time() == null ? "Current time on submit" : ViewSupport.formatInstant(request.time()))));
+
+        Button confirmButton = new Button("Create Update", event -> {
+            try {
+                manualPlayerUpdateService.createManualUpdate(request);
+                resetManualUpdateForm(playerSelector, sourceSelector, valueField, opponentSelector, timePicker);
+                showManualUpdateStatus(statusMessage, "Manual player update created", true);
+                confirmDialog.close();
+            } catch(IllegalArgumentException ex) {
+                showManualUpdateStatus(statusMessage, ex.getMessage(), false);
+                confirmDialog.close();
+            }
+        });
+        Button cancelButton = new Button("Cancel", event -> confirmDialog.close());
+        HorizontalLayout buttonRow = new HorizontalLayout(confirmButton, cancelButton);
+        buttonRow.setSpacing(true);
+        buttonRow.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
+        buttonRow.addClassName("profile-view__dialog-actions");
+
+        confirmDialog.add(summary, buttonRow);
+        confirmDialog.open();
+    }
+
+    private void resetManualUpdateForm(
+            ComboBox<AdminPlayerOption> playerSelector,
+            ComboBox<MessageType> sourceSelector,
+            TextField valueField,
+            ComboBox<DuelistOption> opponentSelector,
+            DateTimePicker timePicker) {
+        playerSelector.clear();
+        sourceSelector.clear();
+        valueField.clear();
+        opponentSelector.clear();
+        opponentSelector.setEnabled(true);
+        timePicker.clear();
+    }
+
+    private void showManualUpdateStatus(Span statusMessage, String message, boolean success) {
+        statusMessage.setText(message);
+        statusMessage.removeClassName(success ? "profile-view__save-status--error" : "profile-view__save-status--success");
+        statusMessage.addClassName(success ? "profile-view__save-status--success" : "profile-view__save-status--error");
+        statusMessage.setVisible(true);
     }
 
     private void renderUnauthorized() {
@@ -160,5 +385,15 @@ public class AdminView extends VerticalLayout {
         section.addClassNames("content-section", "admin-section");
         section.add(new H2(title));
         return section;
+    }
+
+    private record AdminPlayerOption(User user, Team team) {
+        String label() {
+            String teamName = team == null ? "No Team" : team.getName();
+            return user.getName() + " - " + teamName + " (#" + user.getDatabaseId() + ")";
+        }
+    }
+
+    private record DuelistOption(int id, String name) {
     }
 }
