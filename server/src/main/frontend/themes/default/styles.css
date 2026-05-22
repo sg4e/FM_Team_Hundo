@@ -16,6 +16,7 @@
   --color-border: #d7dfeb;
   --color-accent: #2563eb;
   --color-accent-strong: #1d4ed8;
+  --color-accent-contrast: #ffffff;
   --color-success: #2f9e61;
   --color-danger: #d34b5f;
   --color-muted: #6b7280;
@@ -81,6 +82,7 @@ body.dark-mode,
   --color-border: #2b3a55;
   --color-accent: #60a5fa;
   --color-accent-strong: #93c5fd;
+  --color-accent-contrast: #0b1220;
   --color-success: #4cc37b;
   --color-danger: #ff6b7b;
   --color-muted: #7f8aa3;
@@ -93,6 +95,57 @@ body.dark-mode,
   --shadow-card: 0 18px 36px rgba(0, 0, 0, 0.28);
   --shadow-popover: 0 22px 48px rgba(0, 0, 0, 0.42);
   --shadow-topbar: 0 10px 22px rgba(0, 0, 0, 0.25);
+}
+
+/* Vaadin/Lumo Theme Bridge */
+:root,
+:root[theme] {
+  --lumo-font-family: var(--font-family-base);
+  --lumo-base-color: var(--color-bg);
+  --lumo-body-text-color: var(--color-text-primary);
+  --lumo-secondary-text-color: var(--color-text-secondary);
+  --lumo-tertiary-text-color: var(--color-muted);
+  --lumo-disabled-text-color: color-mix(in srgb, var(--color-muted) 62%, transparent);
+  --lumo-primary-color: var(--color-accent);
+  --lumo-primary-color-50pct: color-mix(in srgb, var(--color-accent) 50%, transparent);
+  --lumo-primary-color-10pct: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --lumo-primary-text-color: var(--color-accent-strong);
+  --lumo-primary-contrast-color: var(--color-accent-contrast);
+  --lumo-error-color: var(--color-danger);
+  --lumo-error-color-50pct: color-mix(in srgb, var(--color-danger) 50%, transparent);
+  --lumo-error-color-10pct: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  --lumo-error-text-color: var(--color-danger);
+  --lumo-success-color: var(--color-success);
+  --lumo-success-color-50pct: color-mix(in srgb, var(--color-success) 50%, transparent);
+  --lumo-success-color-10pct: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --lumo-success-text-color: var(--color-success);
+  --lumo-contrast-5pct: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  --lumo-contrast-10pct: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+  --lumo-contrast-20pct: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
+  --lumo-contrast-30pct: color-mix(in srgb, var(--color-text-primary) 30%, transparent);
+  --lumo-contrast-50pct: color-mix(in srgb, var(--color-text-primary) 50%, transparent);
+  --lumo-contrast-60pct: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
+
+  --vaadin-background-color: var(--color-bg);
+  --vaadin-background-container: var(--color-surface);
+  --vaadin-background-container-strong: var(--color-surface-elevated);
+  --vaadin-border-color: var(--color-border);
+  --vaadin-selection-color: var(--color-accent);
+  --vaadin-selection-color-text: var(--color-accent-strong);
+  --vaadin-text-color: var(--color-text-primary);
+  --vaadin-text-color-secondary: var(--color-text-secondary);
+  --vaadin-text-color-disabled: var(--lumo-disabled-text-color);
+  --vaadin-focus-ring-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  --vaadin-input-field-label-color: var(--color-text-secondary);
+  --vaadin-input-field-hovered-label-color: var(--color-text-primary);
+  --vaadin-input-field-focused-label-color: var(--color-accent-strong);
+  --vaadin-input-field-value-color: var(--color-text-primary);
+  --vaadin-input-field-input-color: var(--color-text-primary);
+  --vaadin-input-field-placeholder-color: var(--color-muted);
+  --vaadin-input-field-background: color-mix(in srgb, var(--color-surface-elevated) 86%, var(--color-text-primary) 8%);
+  --vaadin-input-field-border-color: var(--color-border);
+  --vaadin-input-field-hover-highlight: color-mix(in srgb, var(--color-accent) 42%, transparent);
+  --vaadin-input-field-invalid-hover-highlight: color-mix(in srgb, var(--color-danger) 45%, transparent);
 }
 
 a {
@@ -414,10 +467,6 @@ div {
 
 .profile-view__alt-account-field {
   min-width: 0;
-  --vaadin-input-field-label-color: var(--color-text-secondary);
-  --vaadin-input-field-value-color: var(--color-text-primary);
-  --vaadin-input-field-input-color: var(--color-text-primary);
-  --vaadin-input-field-placeholder-color: var(--color-muted);
 }
 
 .profile-view__save-status {
@@ -460,14 +509,6 @@ div {
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   overflow: hidden;
-}
-
-.admin-view vaadin-text-field,
-.admin-view vaadin-combo-box {
-  --vaadin-input-field-label-color: var(--color-text-secondary);
-  --vaadin-input-field-value-color: var(--color-text-primary);
-  --vaadin-input-field-input-color: var(--color-text-primary);
-  --vaadin-input-field-placeholder-color: var(--color-muted);
 }
 
 /* Dark Mode Overrides */
