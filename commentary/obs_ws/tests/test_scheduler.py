@@ -9,7 +9,7 @@ from fm_hundo_obs.mapping import NameResolver
 from fm_hundo_obs.models import CardAcquisition, LibraryUpdate, MessageType, Player, Team
 from fm_hundo_obs.scheduler import AcquisitionScheduler
 
-from .fakes import FakeObs, FakeOverlay
+from .fakes import FakeObs, FakeOverlay, IntroCall
 
 
 class FakeResolver:
@@ -76,7 +76,7 @@ async def test_uses_first_acquisition_only_and_switches_then_restores():
     assert result.accepted is True
     assert obs.scene_changes == ["Player Ten"]
     assert overlay.banners == [("Big Drop Alert", MessageType.DROP, 0.01)]
-    assert overlay.intros == [("Alpha - Runner Ten", "Villager2", 3)]
+    assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5)]
     await subject._active_task
     assert obs.scene_changes == ["Player Ten", "Main"]
 
@@ -156,7 +156,7 @@ async def test_intro_falls_back_to_player_name_when_team_unknown():
     result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5), team_id=99)
 
     assert result.accepted is True
-    assert overlay.intros == [("Runner Ten", "Villager2", 3)]
+    assert overlay.intros == [IntroCall("Runner Ten", "Villager2", 3, player_id=10, opponent_id=5)]
 
 
 @pytest.mark.asyncio
@@ -168,7 +168,7 @@ async def test_manual_acquisition_infers_team_from_player_when_team_id_omitted()
     result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
 
     assert result.accepted is True
-    assert overlay.intros == [("Alpha - Runner Ten", "Villager2", 3)]
+    assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5)]
 
 
 @pytest.mark.asyncio
@@ -331,3 +331,98 @@ async def test_manual_scene_change_prevents_restore_focus():
 
     assert obs.scene_changes == ["Player Ten"]
     assert resolver.scene_focuses == []
+
+
+@pytest.mark.asyncio
+async def test_intro_uses_twitch_profile_in_production():
+    """In production mode (default), intro uses use_twitch_profile=True."""
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    subject = scheduler(obs=obs, overlay=overlay)
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5, use_twitch_profile=True)]
+
+
+@pytest.mark.asyncio
+async def test_intro_disables_twitch_profile_in_simulation():
+    """In simulation mode, intro sends use_twitch_profile=False."""
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
+    subject = AcquisitionScheduler(
+        obs,
+        overlay,
+        names,
+        {10: "Player Ten"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
+        simulate_mediamtx=True,
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5, use_twitch_profile=False)]
+
+
+@pytest.mark.asyncio
+async def test_intro_respects_delay_when_configured():
+    """Intro delay > 0 should delay the intro message, not the scene switch."""
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
+    subject = AcquisitionScheduler(
+        obs,
+        overlay,
+        names,
+        {10: "Player Ten"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.5, intro_seconds=3, intro_delay_seconds=0.05),
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    assert obs.scene_changes == ["Player Ten"], "Scene switch should happen immediately"
+    assert overlay.banners == [("Big Drop Alert", MessageType.DROP, 0.5)], "Banner should happen immediately"
+    assert len(overlay.intros) == 1
+    assert overlay.intros[0].player_name == "Alpha - Runner Ten"
+    assert overlay.intros[0].use_twitch_profile is True
+    # Window should have been started BEFORE the delay, so it's already active.
+    assert subject.acquisition_active(), "Window should lock before intro delay"
+    await subject._active_task
+
+
+@pytest.mark.asyncio
+async def test_second_acquisition_blocked_during_intro_delay():
+    """A second acquisition arriving during the intro delay is rejected because
+    the window is locked before the delay begins."""
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1), Player(11, "eleven", "Runner Eleven", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
+    subject = AcquisitionScheduler(
+        obs,
+        overlay,
+        names,
+        {10: "Player Ten", 11: "Player Eleven"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.5, intro_seconds=3, intro_delay_seconds=0.1),
+    )
+
+    # First acquisition starts the window immediately (before the 0.1s intro delay).
+    first = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+    assert first.accepted is True
+    assert subject.acquisition_active(), "Window should be active immediately"
+
+    # Second acquisition is rejected because the window was already locked.
+    second = await subject.handle_acquisition(CardAcquisition.test_event(11, "drop", 5))
+    assert second.accepted is False
+    assert second.reason == "active acquisition window"
+    # Intro for the first player was sent (handle_acquisition blocks through the delay).
+    assert len(overlay.intros) == 1
+    assert overlay.intros[0].player_name == "Alpha - Runner Ten"
+
+    await subject._active_task

@@ -34,6 +34,7 @@ mediamtx:
 timing:
   acquisition_window_seconds: 30
   intro_seconds: 3
+  intro_delay_seconds: 0
   all_streamers_audio_seconds: 180
   team_showcase_seconds: 180
 
@@ -47,6 +48,17 @@ features:
   intro_overlay: true
   banner_overlay: true
   audio_rotation: true
+
+portraits:
+  # Required. Path to extracted duelist portrait directory (e.g. ygofm_portraits/extracted_portraits).
+  # Directory must contain duelist_*.png files matching opponent IDs.
+  # Path is relative to this config file if not absolute.
+  directory: ""
+
+twitch:
+  # Required in production mode. Used to fetch player Twitch profile images for the cut-in popup.
+  client_id: ""
+  client_secret: ""
 
 # Player stream paths are derived from /api/players twitchId:
 # rtsp://127.0.0.1:8554/{twitchId}

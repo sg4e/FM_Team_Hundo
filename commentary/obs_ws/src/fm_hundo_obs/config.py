@@ -74,6 +74,7 @@ class MediaMtxConfig:
 class TimingConfig:
     acquisition_window_seconds: float = 30.0
     intro_seconds: float = 3.0
+    intro_delay_seconds: float = 0.0
     all_streamers_audio_seconds: float = 180.0
     team_showcase_seconds: float = 180.0
 
@@ -100,6 +101,17 @@ class CreditsConfig:
 
 
 @dataclass(frozen=True)
+class PortraitsConfig:
+    directory: str = ""
+
+
+@dataclass(frozen=True)
+class TwitchConfig:
+    client_id: str = ""
+    client_secret: str = ""
+
+
+@dataclass(frozen=True)
 class AppConfig:
     api: ApiConfig = field(default_factory=ApiConfig)
     obs: ObsConfig = field(default_factory=ObsConfig)
@@ -107,6 +119,8 @@ class AppConfig:
     mediamtx: MediaMtxConfig = field(default_factory=MediaMtxConfig)
     timing: TimingConfig = field(default_factory=TimingConfig)
     credits: CreditsConfig = field(default_factory=CreditsConfig)
+    portraits: PortraitsConfig = field(default_factory=PortraitsConfig)
+    twitch: TwitchConfig = field(default_factory=TwitchConfig)
     features: FeatureFlags = field(default_factory=FeatureFlags)
     player_scenes: dict[int, str] = field(default_factory=dict)
     group_scenes: tuple[GroupSceneConfig, ...] = ()
@@ -133,6 +147,8 @@ def load_config(path: Path | str) -> AppConfig:
         mediamtx=MediaMtxConfig(**dict(data.get("mediamtx") or {})),
         timing=TimingConfig(**dict(data.get("timing") or {})),
         credits=CreditsConfig(**dict(data.get("credits") or {})),
+        portraits=PortraitsConfig(**dict(data.get("portraits") or {})),
+        twitch=TwitchConfig(**dict(data.get("twitch") or {})),
         features=FeatureFlags(**dict(data.get("features") or {})),
         player_scenes={int(key): str(value) for key, value in (data.get("player_scenes") or {}).items()},
         group_scenes=tuple(_group_scene(item) for item in data.get("group_scenes") or ()),

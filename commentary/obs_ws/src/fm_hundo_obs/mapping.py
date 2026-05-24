@@ -46,6 +46,10 @@ class NameResolver:
         player = self._players.get(player_id)
         return player.team_id if player else None
 
+    def twitch_id_for(self, player_id: int) -> str | None:
+        player = self._players.get(player_id)
+        return player.twitch_id if player else None
+
     def intro_player_name(self, player_id: int, team_id: int | None) -> str:
         player_name = self.player_name(player_id)
         team_name = self.team_name(team_id)

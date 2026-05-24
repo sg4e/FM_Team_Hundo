@@ -55,6 +55,8 @@ class AcquisitionScheduler:
         features: FeatureFlags,
         timing: TimingConfig,
         scene_lock: Callable[[], Awaitable[bool]] | None = None,
+        *,
+        simulate_mediamtx: bool = False,
     ) -> None:
         self.obs = obs
         self.overlay = overlay
@@ -63,6 +65,7 @@ class AcquisitionScheduler:
         self.features = features
         self.timing = timing
         self.scene_lock = scene_lock
+        self.simulate_mediamtx = simulate_mediamtx
         self._active_task: asyncio.Task[None] | None = None
 
     def acquisition_active(self) -> bool:
@@ -143,17 +146,26 @@ class AcquisitionScheduler:
                 or visible_action
             )
 
+        # Lock the acquisition window immediately so new acquisitions
+        # are rejected during any intro delay that follows.
+        if visible_action:
+            self._start_window(previous_scene, automated_scene, acquisition.player_id)
+
         if switched_scene and self.features.intro_overlay:
+            if self.timing.intro_delay_seconds > 0:
+                await asyncio.sleep(self.timing.intro_delay_seconds)
             await self.overlay.intro(
                 self.names.intro_player_name(acquisition.player_id, resolved_team_id),
                 context.opponent_name,
                 self.timing.intro_seconds,
+                player_id=acquisition.player_id,
+                opponent_id=acquisition.opponent_id,
+                use_twitch_profile=not self.simulate_mediamtx,
             )
 
         if not visible_action:
             return AcquisitionResult(False, "no visible action", context)
 
-        self._start_window(previous_scene, automated_scene, acquisition.player_id)
         return AcquisitionResult(True, "accepted", context)
 
     def _scene_for_player(self, player_id: int) -> str | None:

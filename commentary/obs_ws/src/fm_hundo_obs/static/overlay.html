@@ -80,24 +80,42 @@
       to { transform: translateX(-50%); }
     }
 
-    .intro {
+    .intro-wrapper {
       position: absolute;
       left: 50%;
       bottom: 92px;
-      min-width: min(760px, 82vw);
+      display: flex;
+      align-items: center;
+      gap: 0;
       transform: translateX(-50%) translateY(28px);
       opacity: 0;
+      pointer-events: none;
+    }
+
+    .intro-wrapper.active {
+      animation: introIn 220ms ease-out forwards, introOut 260ms ease-in forwards;
+      animation-delay: 0ms, var(--intro-hide-delay);
+    }
+
+    .intro-img {
+      height: 100px;
+      width: auto;
+      flex-shrink: 0;
+      object-fit: contain;
+      display: block;
+    }
+
+    .intro-img.hidden {
+      display: none;
+    }
+
+    .intro {
+      min-width: min(760px, 82vw);
       color: white;
       background: rgba(17, 19, 24, 0.88);
       border-left: 8px solid var(--cyan);
       padding: 18px 24px 20px;
       box-shadow: 0 18px 55px rgba(0,0,0,0.5);
-      pointer-events: none;
-    }
-
-    .intro.active {
-      animation: introIn 220ms ease-out forwards, introOut 260ms ease-in forwards;
-      animation-delay: 0ms, var(--intro-hide-delay);
     }
 
     .player {
@@ -127,16 +145,22 @@
 <body>
   <div class="banner top"><div class="track"></div></div>
   <div class="banner bottom"><div class="track"></div></div>
-  <div class="intro">
-    <div class="player"></div>
-    <div class="opponent"></div>
+  <div class="intro-wrapper">
+    <img class="intro-img" id="player-profile" src="" alt="">
+    <div class="intro">
+      <div class="player"></div>
+      <div class="opponent"></div>
+    </div>
+    <img class="intro-img" id="opponent-portrait" src="" alt="">
   </div>
 
   <script>
     const topBanner = document.querySelector(".banner.top");
     const bottomBanner = document.querySelector(".banner.bottom");
     const tracks = document.querySelectorAll(".track");
-    const intro = document.querySelector(".intro");
+    const introWrapper = document.querySelector(".intro-wrapper");
+    const playerProfile = document.getElementById("player-profile");
+    const opponentPortrait = document.getElementById("opponent-portrait");
     const player = document.querySelector(".player");
     const opponent = document.querySelector(".opponent");
     let bannerTimer = null;
@@ -193,12 +217,22 @@
       clearTimeout(introTimer);
       player.textContent = payload.playerName || "Player";
       opponent.textContent = `vs ${payload.opponentName || "Opponent"}`;
-      intro.classList.remove("active");
-      void intro.offsetWidth;
+
+      // Set profile image (left).
+      const useTwitch = payload.useTwitchProfile !== false;
+      playerProfile.src = `/profile/${useTwitch ? (payload.playerId || 0) : 0}`;
+      playerProfile.classList.toggle("hidden", false);
+
+      // Set opponent portrait (right).
+      opponentPortrait.src = `/duelist/${payload.opponentId || 0}`;
+      opponentPortrait.classList.toggle("hidden", false);
+
+      introWrapper.classList.remove("active");
+      void introWrapper.offsetWidth;
       const duration = Math.max(0.5, Number(payload.durationSeconds || 3));
-      intro.style.setProperty("--intro-hide-delay", `${Math.max(0, duration - 0.26)}s`);
-      intro.classList.add("active");
-      introTimer = setTimeout(() => intro.classList.remove("active"), duration * 1000);
+      introWrapper.style.setProperty("--intro-hide-delay", `${Math.max(0, duration - 0.26)}s`);
+      introWrapper.classList.add("active");
+      introTimer = setTimeout(() => introWrapper.classList.remove("active"), duration * 1000);
     }
 
     function connect() {

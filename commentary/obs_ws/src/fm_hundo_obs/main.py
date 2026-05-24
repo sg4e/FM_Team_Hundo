@@ -23,6 +23,7 @@ from .obs import DryRunObsController, ObsError, SimpleObsController
 from .overlay import OverlayClientTimeout, OverlayEvents, OverlayServer
 from .scheduler import AcquisitionScheduler
 from .simulation import SimulationRoster, build_simulation_roster
+from .twitch_cache import TwitchProfileCache
 
 LOGGER = logging.getLogger(__name__)
 PROJECT_DIR = Path(__file__).resolve().parents[2]
@@ -36,7 +37,12 @@ class Application:
         self.console = Console()
         real_obs = SimpleObsController(config.obs)
         self.obs = DryRunObsController(real_obs) if config.obs.dry_run else real_obs
-        self.overlay_server = OverlayServer(config.overlay, PROJECT_DIR / "src" / "fm_hundo_obs" / "static")
+        self.overlay_server = OverlayServer(
+            config.overlay,
+            PROJECT_DIR / "src" / "fm_hundo_obs" / "static",
+            portraits_config=config.portraits if config.portraits.directory else None,
+        )
+        self.profile_cache: TwitchProfileCache | None = None
         self.api: HundoApiClient | None = None
         self.firehose: TeamFirehose | None = None
         self.scheduler: AcquisitionScheduler | None = None
@@ -71,6 +77,17 @@ class Application:
             names = NameResolver(players, duelists, teams)
             self.names = names
 
+            if not self.simulate_mediamtx and self.config.twitch.client_id and self.config.twitch.client_secret:
+                self.profile_cache = TwitchProfileCache(
+                    self.config.twitch.client_id,
+                    self.config.twitch.client_secret,
+                    session,
+                )
+                await self.profile_cache.start()
+                active_ids = self.streams.active_player_ids()
+                await self.profile_cache.sync_streaming_players(active_ids, names)
+                self.overlay_server.profile_cache = self.profile_cache
+
             startup_complete = False
             try:
                 await self.overlay_server.start()
@@ -98,6 +115,7 @@ class Application:
                 self.config.features,
                 self.config.timing,
                 scene_lock=self._credits_scene_active,
+                simulate_mediamtx=self.simulate_mediamtx,
             )
             if not self.simulate_mediamtx:
                 self.firehose = TeamFirehose(
@@ -111,6 +129,8 @@ class Application:
                 asyncio.create_task(self._managed_cycle_loop(), name="managed-cycles"),
                 asyncio.create_task(self._console_loop(), name="console"),
             ]
+            if self.profile_cache is not None:
+                tasks.append(asyncio.create_task(self._profile_cache_sync_loop(), name="profile-cache"))
             if self.firehose is not None:
                 tasks.append(asyncio.create_task(self._consume_firehose(), name="firehose"))
             try:
@@ -222,6 +242,19 @@ class Application:
         except Exception:
             LOGGER.exception("Unable to reconcile managed scene audio focus")
             return False
+
+    async def _profile_cache_sync_loop(self) -> None:
+        """Periodically sync the Twitch profile cache with active streaming players."""
+        assert self.profile_cache is not None
+        assert self.names is not None
+        assert self.streams is not None
+        while True:
+            try:
+                active_ids = self.streams.active_player_ids()
+                await self.profile_cache.sync_streaming_players(active_ids, self.names)
+            except Exception:
+                LOGGER.exception("Twitch profile cache sync failed; will retry")
+            await asyncio.sleep(10)
 
     async def _simulation_layout_loop(self) -> None:
         assert self.streams is not None
@@ -418,6 +451,40 @@ class Application:
         return player_id
 
 
+def _validate_config(config: AppConfig, simulate_mediamtx: bool) -> None:
+    """Validate config at startup before connecting to anything."""
+    portraits_dir = config.portraits.directory
+    if not portraits_dir:
+        raise ValueError(
+            "portraits.directory is not configured. Set it in config.yml to point to the extracted duelist "
+            "portraits directory (e.g. ygofm_portraits/extracted_portraits)."
+        )
+    portraits_path = Path(portraits_dir)
+    if not portraits_path.is_dir():
+        raise ValueError(
+            f"portraits.directory '{portraits_dir}' does not exist or is not a directory. "
+            "Check the path in config.yml."
+        )
+    duelist_files = list(portraits_path.glob("duelist_*.png"))
+    if not duelist_files:
+        raise ValueError(
+            f"portraits.directory '{portraits_dir}' contains no duelist_*.png files. "
+            "Ensure the extracted portrait images are in that directory."
+        )
+
+    if not simulate_mediamtx:
+        if not config.twitch.client_id:
+            raise ValueError(
+                "twitch.client_id is not configured. Set it in config.yml to enable "
+                "Twitch profile image fetching for the cut-in popup."
+            )
+        if not config.twitch.client_secret:
+            raise ValueError(
+                "twitch.client_secret is not configured. Set it in config.yml to enable "
+                "Twitch profile image fetching for the cut-in popup."
+            )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=PROJECT_DIR / "config.yml")
@@ -429,6 +496,7 @@ async def async_main() -> int:
     args = parse_args()
     setup_logging(PROJECT_DIR)
     config = load_config(args.config)
+    _validate_config(config, args.simulate_mediamtx)
     app = Application(config, args.config, simulate_mediamtx=args.simulate_mediamtx)
     try:
         await app.run()

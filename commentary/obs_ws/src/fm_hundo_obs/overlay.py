@@ -8,16 +8,29 @@ from typing import Any
 
 from aiohttp import web
 
-from .config import OverlayConfig
+from .config import OverlayConfig, PortraitsConfig
 from .models import MessageType
+
+try:
+    from .twitch_cache import TwitchProfileCache
+except ImportError:
+    TwitchProfileCache = None  # type: ignore[assignment, misc]
 
 LOGGER = logging.getLogger(__name__)
 
 
 class OverlayServer:
-    def __init__(self, config: OverlayConfig, static_dir: Path) -> None:
+    def __init__(
+        self,
+        config: OverlayConfig,
+        static_dir: Path,
+        portraits_config: PortraitsConfig | None = None,
+        profile_cache: TwitchProfileCache | None = None,
+    ) -> None:
         self.config = config
         self.static_dir = static_dir
+        self.portraits_config = portraits_config
+        self.profile_cache = profile_cache
         self._clients: set[web.WebSocketResponse] = set()
         self._credits_clients: set[web.WebSocketResponse] = set()
         self._connected_event = asyncio.Event()
@@ -39,6 +52,8 @@ class OverlayServer:
         app.router.add_get("/events", self._events)
         app.router.add_get("/credits", self._credits)
         app.router.add_get("/credits/events", self._credits_events)
+        app.router.add_get("/profile/{player_id}", self._profile_image)
+        app.router.add_get("/duelist/{opponent_id}", self._duelist_portrait)
         self._runner = web.AppRunner(app)
         await self._runner.setup()
         site = web.TCPSite(self._runner, self.config.host, self.config.port)
@@ -120,6 +135,46 @@ class OverlayServer:
             },
         )
 
+    async def _resolve_portraits_dir(self) -> Path | None:
+        if self.portraits_config is None or not self.portraits_config.directory:
+            return None
+        return Path(self.portraits_config.directory)
+
+    async def _profile_image(self, request: web.Request) -> web.Response:
+        player_id = int(request.match_info["player_id"])
+        portraits_dir = await self._resolve_portraits_dir()
+
+        # Prefer a cached Twitch profile image.
+        if self.profile_cache is not None:
+            cached = self.profile_cache.get_image(player_id)
+            if cached is not None:
+                return web.Response(body=cached, content_type="image/png")
+
+        # Fall back to duelist_000.png.
+        if portraits_dir is not None:
+            fallback = portraits_dir / "duelist_000.png"
+            if fallback.exists():
+                return web.Response(body=fallback.read_bytes(), content_type="image/png")
+
+        return web.Response(status=404)
+
+    async def _duelist_portrait(self, request: web.Request) -> web.Response:
+        opponent_id = int(request.match_info["opponent_id"])
+        portraits_dir = await self._resolve_portraits_dir()
+        if portraits_dir is None:
+            return web.Response(status=404)
+
+        candidate = portraits_dir / f"duelist_{opponent_id:03d}.png"
+        if candidate.exists():
+            return web.Response(body=candidate.read_bytes(), content_type="image/png")
+
+        # Fallback.
+        fallback = portraits_dir / "duelist_000.png"
+        if fallback.exists():
+            return web.Response(body=fallback.read_bytes(), content_type="image/png")
+
+        return web.Response(status=404)
+
     async def _events(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(heartbeat=10)
         await ws.prepare(request)
@@ -165,13 +220,25 @@ class OverlayEvents:
             {"label": label, "source": str(source), "durationSeconds": duration_seconds},
         )
 
-    async def intro(self, player_name: str, opponent_name: str, duration_seconds: float) -> bool:
+    async def intro(
+        self,
+        player_name: str,
+        opponent_name: str,
+        duration_seconds: float,
+        *,
+        player_id: int = 0,
+        opponent_id: int = 0,
+        use_twitch_profile: bool = True,
+    ) -> bool:
         return await self.server.send(
             "intro",
             {
                 "playerName": player_name,
                 "opponentName": opponent_name,
                 "durationSeconds": duration_seconds,
+                "playerId": player_id,
+                "opponentId": opponent_id,
+                "useTwitchProfile": use_twitch_profile,
             },
         )
 

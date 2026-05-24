@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 
-from fm_hundo_obs.config import load_config
+import pytest
+
+from fm_hundo_obs.config import AppConfig, PortraitsConfig, TwitchConfig, load_config
+from fm_hundo_obs.main import _validate_config
 from fm_hundo_obs.console import CommandType, parse_command, parse_on_off
 from fm_hundo_obs.mapping import NameResolver, load_duelist_names
 from fm_hundo_obs.models import ALERT_LABELS, MessageType, Player, Team
@@ -69,6 +72,16 @@ def test_name_resolver_and_duelist_file(tmp_path):
     assert resolver.opponent_name(42) == "Opponent 42"
 
 
+def test_twitch_id_for():
+    resolver = NameResolver(
+        [Player(id=10, twitch_id="twitch_name", name="Runner", alt_account=None, team_id=1)],
+        {},
+        [Team(1, "Alpha")],
+    )
+    assert resolver.twitch_id_for(10) == "twitch_name"
+    assert resolver.twitch_id_for(999) is None
+
+
 def test_alert_labels():
     assert ALERT_LABELS[MessageType.DROP] == "Big Drop Alert"
     assert ALERT_LABELS[MessageType.RITUAL] == "New Ritual Alert"
@@ -84,3 +97,103 @@ def test_parse_commands():
     assert parse_on_off(("on",)) is True
     assert parse_on_off(("off",)) is False
     assert parse_on_off(("maybe",)) is None
+
+
+def test_timing_config_includes_intro_delay(tmp_path):
+    """TimingConfig loads intro_delay_seconds from YAML."""
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "timing:\n  intro_delay_seconds: 1.5\n",
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    assert config.timing.intro_delay_seconds == 1.5
+
+
+def test_timing_config_defaults_intro_delay_to_zero(tmp_path):
+    """Default intro_delay_seconds is 0 (no delay)."""
+    config_path = tmp_path / "config.yml"
+    config_path.write_text("obs:\n  password: secret\n", encoding="utf-8")
+    config = load_config(config_path)
+    assert config.timing.intro_delay_seconds == 0.0
+
+
+def test_portraits_config_loads_from_yaml(tmp_path):
+    """PortraitsConfig loads directory path from YAML."""
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "portraits:\n  directory: 'some/path'\n",
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    assert config.portraits.directory == "some/path"
+
+
+def test_portraits_config_defaults_to_empty(tmp_path):
+    """Default portraits.directory is empty string (no default path)."""
+    config_path = tmp_path / "config.yml"
+    config_path.write_text("obs:\n  password: secret\n", encoding="utf-8")
+    config = load_config(config_path)
+    assert config.portraits.directory == ""
+
+
+def test_twitch_config_loads_from_yaml(tmp_path):
+    """TwitchConfig loads client_id and client_secret from YAML."""
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "twitch:\n  client_id: 'my_id'\n  client_secret: 'my_secret'\n",
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    assert config.twitch.client_id == "my_id"
+    assert config.twitch.client_secret == "my_secret"
+
+
+def test_validate_config_raises_on_missing_portraits_dir(tmp_path):
+    """_validate_config raises ValueError when portraits directory is missing."""
+    config = AppConfig(portraits=PortraitsConfig(directory=str(tmp_path / "nonexistent")))
+    with pytest.raises(ValueError, match="does not exist"):
+        _validate_config(config, simulate_mediamtx=False)
+
+
+def test_validate_config_raises_on_empty_portraits_dir(tmp_path):
+    """_validate_config raises ValueError when portraits directory has no duelist_*.png."""
+    empty_dir = tmp_path / "empty_portraits"
+    empty_dir.mkdir()
+    config = AppConfig(portraits=PortraitsConfig(directory=str(empty_dir)))
+    with pytest.raises(ValueError, match="contains no duelist"):
+        _validate_config(config, simulate_mediamtx=False)
+
+
+def test_validate_config_passes_with_valid_portraits_dir(tmp_path):
+    """_validate_config passes when portraits directory has duelist_*.png."""
+    portraits_dir = tmp_path / "portraits"
+    portraits_dir.mkdir()
+    (portraits_dir / "duelist_001.png").write_bytes(b"fake")
+    config = AppConfig(portraits=PortraitsConfig(directory=str(portraits_dir)))
+    _validate_config(config, simulate_mediamtx=True)
+
+
+def test_validate_config_raises_on_missing_twitch_creds_in_production(tmp_path):
+    """_validate_config raises ValueError when Twitch creds are missing in production."""
+    portraits_dir = tmp_path / "portraits"
+    portraits_dir.mkdir()
+    (portraits_dir / "duelist_001.png").write_bytes(b"fake")
+    config = AppConfig(
+        portraits=PortraitsConfig(directory=str(portraits_dir)),
+        twitch=TwitchConfig(),
+    )
+    with pytest.raises(ValueError, match="twitch.client_id"):
+        _validate_config(config, simulate_mediamtx=False)
+
+
+def test_validate_config_skips_twitch_check_in_simulation(tmp_path):
+    """_validate_config does not check Twitch creds in simulation mode."""
+    portraits_dir = tmp_path / "portraits"
+    portraits_dir.mkdir()
+    (portraits_dir / "duelist_001.png").write_bytes(b"fake")
+    config = AppConfig(
+        portraits=PortraitsConfig(directory=str(portraits_dir)),
+        twitch=TwitchConfig(),
+    )
+    _validate_config(config, simulate_mediamtx=True)

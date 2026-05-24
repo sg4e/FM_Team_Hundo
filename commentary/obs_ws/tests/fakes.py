@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 
 from fm_hundo_obs.models import MessageType
 from fm_hundo_obs.obs import ObsController, ObsError, SceneItemTransform, stable_item_id
@@ -127,16 +128,42 @@ class FakeObs(ObsController):
         await self.set_scene_item_index(scene_name, item_id, 0)
 
 
+@dataclass
+class IntroCall:
+    player_name: str
+    opponent_name: str
+    duration_seconds: float
+    player_id: int = 0
+    opponent_id: int = 0
+    use_twitch_profile: bool = True
+
+
 class FakeOverlay:
     def __init__(self, banner_success: bool = True) -> None:
         self.banner_success = banner_success
         self.banners: list[tuple[str, MessageType, float]] = []
-        self.intros: list[tuple[str, str, float]] = []
+        self.intros: list[IntroCall] = []
 
     async def banner(self, label: str, source: MessageType, duration_seconds: float) -> bool:
         self.banners.append((label, source, duration_seconds))
         return self.banner_success
 
-    async def intro(self, player_name: str, opponent_name: str, duration_seconds: float) -> bool:
-        self.intros.append((player_name, opponent_name, duration_seconds))
+    async def intro(
+        self,
+        player_name: str,
+        opponent_name: str,
+        duration_seconds: float,
+        *,
+        player_id: int = 0,
+        opponent_id: int = 0,
+        use_twitch_profile: bool = True,
+    ) -> bool:
+        self.intros.append(IntroCall(
+            player_name=player_name,
+            opponent_name=opponent_name,
+            duration_seconds=duration_seconds,
+            player_id=player_id,
+            opponent_id=opponent_id,
+            use_twitch_profile=use_twitch_profile,
+        ))
         return True

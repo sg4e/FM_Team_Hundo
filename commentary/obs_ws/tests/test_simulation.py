@@ -11,7 +11,7 @@ from fm_hundo_obs.models import CardAcquisition, Player, Team
 from fm_hundo_obs.scheduler import AcquisitionScheduler
 from fm_hundo_obs.simulation import SIMULATION_TEAM, build_simulation_roster, simulated_player_id
 
-from .fakes import FakeObs, FakeOverlay
+from .fakes import FakeObs, FakeOverlay, IntroCall
 
 
 class FakeMediaMtx:
@@ -73,7 +73,7 @@ async def test_simulation_intro_includes_simulation_team_name():
     result = await subject.handle_acquisition(CardAcquisition.test_event(player.id, "drop", 5), team_id=SIMULATION_TEAM.id)
 
     assert result.accepted is True
-    assert overlay.intros == [("Simulation - alpha_cam", "Villager2", 3.0)]
+    assert overlay.intros == [IntroCall("Simulation - alpha_cam", "Villager2", 3.0, player_id=player.id, opponent_id=5)]
     await subject._active_task
 
 
@@ -94,7 +94,7 @@ async def test_simulation_intro_infers_team_for_manual_acquisition():
     result = await subject.handle_acquisition(CardAcquisition.test_event(player.id, "drop", 5))
 
     assert result.accepted is True
-    assert overlay.intros == [("Simulation - alpha_cam", "Villager2", 3)]
+    assert overlay.intros == [IntroCall("Simulation - alpha_cam", "Villager2", 3.0, player_id=player.id, opponent_id=5)]
     await subject._active_task
 
 
