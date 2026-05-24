@@ -53,6 +53,7 @@ class OverlayConfig:
     connect_timeout_seconds: float = 10.0
     canvas_width: int = 1920
     canvas_height: int = 1080
+    intro_bottom_px: int = 92
 
     @property
     def url(self) -> str:

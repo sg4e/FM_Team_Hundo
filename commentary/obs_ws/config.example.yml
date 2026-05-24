@@ -23,6 +23,7 @@ overlay:
   host: "127.0.0.1"
   port: 8765
   connect_timeout_seconds: 10
+  intro_bottom_px: 92
   canvas_width: 1920
   canvas_height: 1080
 

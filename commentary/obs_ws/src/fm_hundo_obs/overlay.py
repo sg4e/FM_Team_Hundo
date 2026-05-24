@@ -120,6 +120,7 @@ class OverlayServer:
         html = (self.static_dir / "overlay.html").read_text(encoding="utf-8")
         html = html.replace("__CANVAS_WIDTH__", str(self.config.canvas_width))
         html = html.replace("__CANVAS_HEIGHT__", str(self.config.canvas_height))
+        html = html.replace("__INTRO_BOTTOM__", str(self.config.intro_bottom_px) + "px")
         return web.Response(text=html, content_type="text/html")
 
     async def _credits(self, _: web.Request) -> web.Response:
