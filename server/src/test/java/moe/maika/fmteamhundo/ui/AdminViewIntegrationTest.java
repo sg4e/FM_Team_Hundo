@@ -1,6 +1,7 @@
 package moe.maika.fmteamhundo.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ import moe.maika.fmteamhundo.data.entities.Team;
 import moe.maika.fmteamhundo.data.entities.User;
 import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
+import moe.maika.fmteamhundo.service.TeamService;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -24,6 +26,9 @@ class AdminViewIntegrationTest {
 
     @Autowired
     private TeamRepository teamRepository;
+
+    @Autowired
+    private TeamService teamService;
 
     @BeforeEach
     void setUp() {
@@ -80,6 +85,71 @@ class AdminViewIntegrationTest {
         // Should only include the registered users
         assertThat(results).hasSize(3);
         assertThat(results).extracting(User::getName).containsExactlyInAnyOrder("user1", "user2", "user3");
+    }
+
+    @Test
+    void renameTeamPersistsToDB() {
+        Team team = new Team("Original Name");
+        teamRepository.save(team);
+
+        teamService.renameTeam(team.getTeamId(), "Renamed");
+
+        Team fromDb = teamRepository.findById(team.getTeamId()).orElseThrow();
+        assertThat(fromDb.getName()).isEqualTo("Renamed");
+    }
+
+    @Test
+    void renameTeamUpdatesCacheImmediately() {
+        Team team = new Team("Original");
+        teamRepository.save(team);
+
+        teamService.renameTeam(team.getTeamId(), "Renamed");
+
+        assertThat(teamService.getTeamById(team.getTeamId()).getName()).isEqualTo("Renamed");
+        assertThat(teamService.getTeams()).extracting(Team::getName).contains("Renamed");
+    }
+
+    @Test
+    void renameTeamRejectsBlankName() {
+        Team team = new Team("Original");
+        teamRepository.save(team);
+
+        assertThatThrownBy(() -> teamService.renameTeam(team.getTeamId(), "   "))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("blank");
+    }
+
+    @Test
+    void renameTeamRejectsDuplicateName() {
+        Team teamA = new Team("Team A");
+        teamRepository.save(teamA);
+        Team teamB = new Team("Team B");
+        teamRepository.save(teamB);
+
+        assertThatThrownBy(() -> teamService.renameTeam(teamA.getTeamId(), "Team B"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("already exists");
+    }
+
+    @Test
+    void renameTeamRejectsDuplicateNameCaseInsensitive() {
+        Team teamA = new Team("Team A");
+        teamRepository.save(teamA);
+        Team teamB = new Team("Team B");
+        teamRepository.save(teamB);
+
+        assertThatThrownBy(() -> teamService.renameTeam(teamA.getTeamId(), "team b"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("already exists");
+    }
+
+    @Test
+    void findByNameIgnoreCaseFindsMatch() {
+        Team team = new Team("My Team");
+        teamRepository.save(team);
+
+        Team found = teamRepository.findByNameIgnoreCase("MY TEAM").orElseThrow();
+        assertThat(found.getTeamId()).isEqualTo(team.getTeamId());
     }
 
     private User createUser(String name, int teamId, boolean registeredForNextHundo) {

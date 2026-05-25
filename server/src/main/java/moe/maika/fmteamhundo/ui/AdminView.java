@@ -36,6 +36,7 @@ import moe.maika.fmteamhundo.data.repos.TeamRepository;
 import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ManualPlayerUpdateService;
 import moe.maika.fmteamhundo.service.ManualPlayerUpdateService.ManualPlayerUpdateRequest;
+import moe.maika.fmteamhundo.service.TeamService;
 import moe.maika.ygofm.gamedata.Duelist;
 import moe.maika.ygofm.gamedata.FMDB;
 
@@ -47,15 +48,18 @@ public class AdminView extends VerticalLayout {
     private static final String ADMIN_TWITCH_ID = "73758417";
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
+    private final TeamService teamService;
     private final ManualPlayerUpdateService manualPlayerUpdateService;
     private final VerticalLayout content;
     private final FMDB fmdb;
 
     @Autowired
     public AdminView(UserRepository userRepository, TeamRepository teamRepository,
+            TeamService teamService,
             ManualPlayerUpdateService manualPlayerUpdateService) {
         this.userRepository = userRepository;
         this.teamRepository = teamRepository;
+        this.teamService = teamService;
         this.manualPlayerUpdateService = manualPlayerUpdateService;
         this.content = new VerticalLayout();
         this.fmdb = FMDB.getInstance();
@@ -107,6 +111,20 @@ public class AdminView extends VerticalLayout {
         alertActions.setSpacing(true);
         alertSection.add(alertField, alertActions);
         content.add(alertSection);
+
+        VerticalLayout teamsSection = createSection("Teams");
+        List<Team> teams = teamRepository.findAll().stream()
+            .filter(team -> !team.isNoTeam())
+            .toList();
+
+        if (teams.isEmpty()) {
+            teamsSection.add(new Paragraph("No teams exist yet."));
+        } else {
+            for (Team team : teams) {
+                teamsSection.add(createTeamRow(team));
+            }
+        }
+        content.add(teamsSection);
 
         VerticalLayout createTeamSection = createSection("Create Team");
 
@@ -163,6 +181,71 @@ public class AdminView extends VerticalLayout {
 
         content.add(assignmentSection);
         content.add(createManualPlayerUpdateSection());
+    }
+
+    private HorizontalLayout createTeamRow(Team team) {
+        Span nameSpan = new Span(team.getName());
+        nameSpan.addClassName("admin-team-name");
+
+        TextField nameField = new TextField();
+        nameField.setValue(team.getName());
+        nameField.setVisible(false);
+        nameField.addClassName("admin-team-name-field");
+
+        Span errorSpan = new Span();
+        errorSpan.addClassName("profile-view__save-status--error");
+        errorSpan.setVisible(false);
+
+        Button renameButton = new Button();
+        renameButton.setText("Rename");
+        Button saveButton = new Button();
+        saveButton.setText("Save");
+        saveButton.setVisible(false);
+        Button cancelButton = new Button();
+        cancelButton.setText("Cancel");
+        cancelButton.setVisible(false);
+
+        renameButton.addClickListener(event -> {
+            nameSpan.setVisible(false);
+            renameButton.setVisible(false);
+            nameField.setVisible(true);
+            saveButton.setVisible(true);
+            cancelButton.setVisible(true);
+            errorSpan.setVisible(false);
+        });
+
+        saveButton.addClickListener(event -> {
+            String newName = nameField.getValue();
+            if (newName == null || newName.trim().isEmpty()) {
+                errorSpan.setText("Team name cannot be blank");
+                errorSpan.setVisible(true);
+                return;
+            }
+            try {
+                teamService.renameTeam(team.getTeamId(), newName.trim());
+                renderAdminPanel();
+            } catch (IllegalArgumentException e) {
+                errorSpan.setText(e.getMessage());
+                errorSpan.setVisible(true);
+            }
+        });
+
+        cancelButton.addClickListener(event -> {
+            nameField.setValue(team.getName());
+            errorSpan.setVisible(false);
+            nameField.setVisible(false);
+            saveButton.setVisible(false);
+            cancelButton.setVisible(false);
+            nameSpan.setVisible(true);
+            renameButton.setVisible(true);
+        });
+
+        HorizontalLayout row = new HorizontalLayout(nameSpan, nameField, renameButton, saveButton, cancelButton, errorSpan);
+        row.setWidthFull();
+        row.setAlignItems(FlexComponent.Alignment.CENTER);
+        row.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
+        row.addClassName("admin-team-row");
+        return row;
     }
 
     private VerticalLayout createManualPlayerUpdateSection() {

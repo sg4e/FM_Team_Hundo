@@ -43,4 +43,36 @@ public class TeamService {
         teams = teamRepository.findAll();
         teamIdMap = teams.stream().collect(java.util.stream.Collectors.toMap(Team::getTeamId, Function.identity()));
     }
+
+    public void renameTeam(int teamId, String newName) {
+        if (newName == null || newName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Team name cannot be blank");
+        }
+
+        String trimmedName = newName.trim();
+
+        if (teamId == 0) {
+            throw new IllegalArgumentException("Cannot rename the no-team sentinel");
+        }
+
+        teamRepository.findByNameIgnoreCase(trimmedName).ifPresent(existing -> {
+            if (existing.getTeamId() != teamId) {
+                throw new IllegalArgumentException("A team with that name already exists");
+            }
+        });
+
+        Team team = teamRepository.findById(teamId)
+            .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+
+        team.setName(trimmedName);
+        teamRepository.save(team);
+
+        teams.stream()
+            .filter(t -> t.getTeamId() == teamId)
+            .findFirst()
+            .ifPresentOrElse(
+                t -> t.setName(trimmedName),
+                () -> teams.add(team));
+        teamIdMap.put(teamId, team);
+    }
 }
