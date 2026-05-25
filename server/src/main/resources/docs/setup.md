@@ -8,21 +8,21 @@ You need the following software to participate. If you've previously downloaded 
 
 1. A PS1 emulator supported by FM Team Hundo, either:
    
-   - Latest version of BizHawk (officially supported and tested)
+   - BizHawk, version 2.10 or 2.11 (officially supported and tested). Later versions may still work. Earlier versions will NOT work.
    
-   - DuckStation custom build (experimental)
+   - DuckStation custom build (experimental).
 
-2. The FM_Sentinel program: download for your OS from the [FM Team Hundo GitHub](https://github.com/sg4e/FM_Team_Hundo/releases/latest)
+2. The FM_Sentinel program: download for your OS from the [FM Team Hundo GitHub](https://github.com/sg4e/FM_Team_Hundo/releases/latest).
 
 The BizHawk project releases BizHawk builds for Windows and Linux. Therefore, these are currently the only operating systems supported for FM Team Hundo. Additional emulators may become supported in the future.
 
 ### Setting up BizHawk for FM Team Hundo
 
-1. Download the latest `YGOFMPlugin.dll` from the [FM Team Hundo GitHub](https://github.com/sg4e/FM_Team_Hundo/releases/latest)
+1. Download the latest `YGOFMPlugin.dll` from the [FM Team Hundo GitHub](https://github.com/sg4e/FM_Team_Hundo/releases/latest).
 
 2. Locate the `ExternalTools` folder inside your BizHawk folder.
 
-3. Move `YGOFMPlugin.dll` to inside of `ExternalTools`
+3. Move `YGOFMPlugin.dll` to inside of `ExternalTools`.
 
 **Warning: BizHawk is notorious for destroying save files.** You are recommended to use savestates in addition to in-game saves to prevent loss of progress. Consult the [Rules](/docs/rules) page for legal uses of savestates for the event. BizHawk also comes pre-configured with many hotkeys and settings you probably want to disable.
 
