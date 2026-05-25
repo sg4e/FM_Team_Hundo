@@ -49,6 +49,7 @@ public class User implements OAuth2User, Serializable {
     private String apiKeyHash;
     private String altAccount;
     private String altTwitchId;
+    private boolean registeredForNextHundo = false;
     private int teamId = 0;
     //These 2 fields are taken from the OAuth2 flow and not persisted in the DB
     //If these fields ever need to be persisted in the DB, the order of setting and save

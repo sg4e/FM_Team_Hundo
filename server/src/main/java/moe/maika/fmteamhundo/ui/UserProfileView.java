@@ -22,6 +22,7 @@ import com.vaadin.flow.server.streams.DownloadHandler;
 import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.component.textfield.TextField;
 import moe.maika.fmteamhundo.data.entities.User;
+import moe.maika.fmteamhundo.data.repos.UserRepository;
 import moe.maika.fmteamhundo.service.ApiKeyService;
 import moe.maika.fmteamhundo.service.TwitchAccountService;
 import moe.maika.fmteamhundo.state.HundoConstants;
@@ -45,6 +46,7 @@ public class UserProfileView extends VerticalLayout {
     private final UserMappings teamMapping;
     private final ApiKeyService apiKeyService;
     private final TwitchAccountService twitchAccountService;
+    private final UserRepository userRepository;
     private final HundoConstants hundoConstants;
     private final ObjectMapper objectMapper;
     private final Anchor downloadAnchor;
@@ -52,10 +54,12 @@ public class UserProfileView extends VerticalLayout {
 
     @Autowired
     public UserProfileView(UserMappings teamMapping, ApiKeyService apiKeyService, ObjectMapper objectMapper,
-                           HundoConstants hundoConstants, TwitchAccountService twitchAccountService) {
+                           HundoConstants hundoConstants, TwitchAccountService twitchAccountService,
+                           UserRepository userRepository) {
         this.teamMapping = teamMapping;
         this.apiKeyService = apiKeyService;
         this.twitchAccountService = twitchAccountService;
+        this.userRepository = userRepository;
         this.objectMapper = objectMapper;
         this.hundoConstants = hundoConstants;
         this.downloadAnchor = new Anchor();
@@ -85,6 +89,7 @@ public class UserProfileView extends VerticalLayout {
             detailsSection.add(createProfileField("Username: " + username));
             detailsSection.add(createProfileField("Team: " + teamMapping.getTeamNameForTeamId(user.getTeamId())));
             detailsSection.add(createAltAccountEditor(user));
+            detailsSection.add(createNextHundoRegistration(user));
             content.add(detailsSection);
 
             RouterLink playerLink = new RouterLink();
@@ -216,5 +221,61 @@ public class UserProfileView extends VerticalLayout {
 
         statusIcon.setVisible(true);
         statusMessage.setVisible(true);
+    }
+
+    private HorizontalLayout createNextHundoRegistration(User user) {
+        Button toggleButton = new Button();
+        updateNextHundoButtonState(user, toggleButton);
+        toggleButton.addClassName("profile-view__next-hundo-button");
+
+        Icon statusIcon = new Icon();
+        statusIcon.addClassName("profile-view__next-hundo-status");
+        Span statusLabel = new Span();
+        statusLabel.addClassName("profile-view__next-hundo-label");
+
+        updateNextHundoStatusDisplay(user, statusIcon, statusLabel);
+
+        toggleButton.addClickListener(event -> toggleNextHundoRegistration(user, toggleButton, statusIcon, statusLabel));
+
+        HorizontalLayout registrationRow = new HorizontalLayout(toggleButton, statusIcon, statusLabel);
+        registrationRow.setWidthFull();
+        registrationRow.setAlignItems(FlexComponent.Alignment.CENTER);
+        registrationRow.addClassName("profile-view__next-hundo-row");
+        registrationRow.setFlexGrow(0, toggleButton);
+        registrationRow.setFlexGrow(0, statusIcon);
+        registrationRow.setFlexGrow(0, statusLabel);
+
+        return registrationRow;
+    }
+
+    private void updateNextHundoButtonState(User user, Button button) {
+        if (user.isRegisteredForNextHundo()) {
+            button.setText("Withdraw From Next Hundo");
+            button.removeClassName("profile-view__next-hundo-button--register");
+            button.addClassName("profile-view__next-hundo-button--withdraw");
+        } else {
+            button.setText("Register for Next Hundo");
+            button.removeClassName("profile-view__next-hundo-button--withdraw");
+            button.addClassName("profile-view__next-hundo-button--register");
+        }
+    }
+
+    private void updateNextHundoStatusDisplay(User user, Icon statusIcon, Span statusLabel) {
+        if (user.isRegisteredForNextHundo()) {
+            statusIcon.setIcon(VaadinIcon.CHECK);
+            statusIcon.setColor("green");
+            statusLabel.setText("Registered for Next Hundo");
+        } else {
+            statusIcon.setIcon(VaadinIcon.CLOSE_SMALL);
+            statusIcon.setColor("red");
+            statusLabel.setText("Not Registered for Next Hundo");
+        }
+    }
+
+    private void toggleNextHundoRegistration(User user, Button button, Icon statusIcon, Span statusLabel) {
+        user.setRegisteredForNextHundo(!user.isRegisteredForNextHundo());
+        userRepository.save(user);
+        updateNextHundoButtonState(user, button);
+        updateNextHundoStatusDisplay(user, statusIcon, statusLabel);
     }
 }
