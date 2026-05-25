@@ -126,7 +126,7 @@ public class AdminView extends VerticalLayout {
 
         VerticalLayout assignmentSection = createSection("Assign Users to Teams");
         List<Team> allTeams = teamRepository.findAll();
-        List<User> unassignedUsers = userRepository.findByTeamId(0);
+        List<User> unassignedUsers = userRepository.findByTeamIdAndRegisteredForNextHundo(0, true);
 
         if (unassignedUsers.isEmpty()) {
             assignmentSection.add(new Paragraph("No unassigned users."));
