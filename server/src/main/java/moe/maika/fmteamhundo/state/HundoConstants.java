@@ -18,13 +18,15 @@ public class HundoConstants {
     private final int totalObtainableCards;
     private final Set<Integer> unobtainableCards;
     private final boolean teamAutoAssign;
+    private final String discordInviteUrl;
 
     @ConstructorBinding
     public HundoConstants(String apiUrl, int totalObtainableCards, List<Integer> unobtainableCards,
-            @DefaultValue("false") boolean teamAutoAssign) {
+            @DefaultValue("false") boolean teamAutoAssign, String discordInviteUrl) {
         this.apiUrl = apiUrl;
         this.totalObtainableCards = totalObtainableCards;
         this.unobtainableCards = Collections.unmodifiableSet(new HashSet<>(unobtainableCards));
         this.teamAutoAssign = teamAutoAssign;
+        this.discordInviteUrl = discordInviteUrl;
     }
 }

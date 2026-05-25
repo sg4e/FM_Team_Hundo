@@ -90,6 +90,7 @@ public class UserProfileView extends VerticalLayout {
             detailsSection.add(createProfileField("Team: " + teamMapping.getTeamNameForTeamId(user.getTeamId())));
             detailsSection.add(createAltAccountEditor(user));
             detailsSection.add(createNextHundoRegistration(user));
+            detailsSection.add(createDiscordLink());
             content.add(detailsSection);
 
             RouterLink playerLink = new RouterLink();
@@ -278,4 +279,16 @@ public class UserProfileView extends VerticalLayout {
         updateNextHundoButtonState(user, button);
         updateNextHundoStatusDisplay(user, statusIcon, statusLabel);
     }
+
+    private HorizontalLayout createDiscordLink() {
+        Span label = new Span("Join the FM Team Hundo discord: ");
+        String discordUrl = hundoConstants.getDiscordInviteUrl();
+        Anchor discordLink = new Anchor(discordUrl, discordUrl);
+        discordLink.setTarget("_blank");
+        HorizontalLayout row = new HorizontalLayout(label, discordLink);
+        row.setWidthFull();
+        row.setAlignItems(FlexComponent.Alignment.CENTER);
+        return row;
+    }
+
 }

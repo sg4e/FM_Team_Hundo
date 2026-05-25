@@ -35,7 +35,7 @@ class StatsWidgetViewTest {
 
     @Test
     void statKindsFormatValuesInWebsiteOrder() {
-        HundoConstants hundoConstants = new HundoConstants("http://localhost:8080/api", 689, List.of(), false);
+        HundoConstants hundoConstants = new HundoConstants("http://localhost:8080/api", 689, List.of(), false, "https://discord.gg/test");
         LibraryUpdate snapshot = new LibraryUpdate(null, 1, Instant.parse("2026-05-10T12:00:00Z"),
                 12345, 456, List.of(), 233, 12, 9876, true, false, null, 3);
 

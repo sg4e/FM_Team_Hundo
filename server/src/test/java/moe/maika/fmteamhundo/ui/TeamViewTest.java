@@ -71,7 +71,7 @@ class TeamViewTest {
         userMappings = mock(UserMappings.class);
         TeamService teamService = mock(TeamService.class);
         library = mock(Library.class);
-        HundoConstants hundoConstants = new HundoConstants("http://localhost:8080/api", 689, List.of(7), false);
+        HundoConstants hundoConstants = new HundoConstants("http://localhost:8080/api", 689, List.of(7), false, "https://discord.gg/test");
 
         Team team = new Team(1, "Alpha");
         player = new User();

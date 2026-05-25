@@ -27,6 +27,7 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
 ygo:
   apiUrl: http://localhost:8080/api
+  discordInviteUrl: https://discord.gg/cGRuVKB5uk
   totalObtainableCards: 689
   unobtainableCards:
     - 7
