@@ -117,6 +117,9 @@ class SetupObs:
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         self.mutes.append((input_name, muted))
 
+    async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
+        pass
+
     async def refresh_browser_source(self, input_name: str) -> None:
         self.refreshed_browser_sources.append(input_name)
 

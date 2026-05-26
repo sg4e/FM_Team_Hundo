@@ -59,6 +59,9 @@ class ObsController:
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         raise NotImplementedError
 
+    async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
+        raise NotImplementedError
+
     async def ensure_scene(self, scene_name: str) -> None:
         raise NotImplementedError
 
@@ -201,6 +204,9 @@ class SimpleObsController(ObsController):
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         await self._call("SetInputMute", {"inputName": input_name, "inputMuted": muted})
+
+    async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
+        await self._call("SetInputVolume", {"inputName": input_name, "inputVolumeMul": volume_mul})
 
     async def ensure_scene(self, scene_name: str) -> None:
         if scene_name not in set(await self._scene_names()):
@@ -356,6 +362,9 @@ class DryRunObsController(ObsController):
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         self.actions.append(f"set mute {input_name} -> {muted}")
+
+    async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
+        self.actions.append(f"set volume {input_name} -> {volume_mul}")
 
     async def ensure_scene(self, scene_name: str) -> None:
         self.actions.append(f"ensure scene {scene_name}")

@@ -176,10 +176,27 @@ def test_validate_config_passes_with_valid_portraits_dir(tmp_path):
     audio_file = tmp_path / "alert.wav"
     audio_file.write_bytes(b"fake")
     config = AppConfig(
-        obs=ObsConfig(alert_audio_path=str(audio_file)),
+        obs=ObsConfig(alert_audio_path=str(audio_file), stream_volume_mul=0.5),
         portraits=PortraitsConfig(directory=str(portraits_dir)),
     )
     _validate_config(config, config_path, simulate_mediamtx=True)
+
+
+def test_validate_config_raises_on_missing_stream_volume_mul(tmp_path):
+    """_validate_config raises ValueError when stream_volume_mul is <= 0."""
+    config_path = tmp_path / "config.yml"
+    portraits_dir = tmp_path / "portraits"
+    portraits_dir.mkdir()
+    (portraits_dir / "duelist_001.png").write_bytes(b"fake")
+    audio_file = tmp_path / "alert.wav"
+    audio_file.write_bytes(b"fake")
+
+    config = AppConfig(
+        obs=ObsConfig(alert_audio_path=str(audio_file), stream_volume_mul=0.0),
+        portraits=PortraitsConfig(directory=str(portraits_dir)),
+    )
+    with pytest.raises(ValueError, match="stream_volume_mul"):
+        _validate_config(config, config_path, simulate_mediamtx=True)
 
 
 def test_validate_config_raises_on_missing_alert_audio_path(tmp_path):
@@ -202,7 +219,7 @@ def test_validate_config_raises_on_missing_twitch_creds_in_production(tmp_path):
     audio_file = tmp_path / "alert.wav"
     audio_file.write_bytes(b"fake")
     config = AppConfig(
-        obs=ObsConfig(alert_audio_path=str(audio_file)),
+        obs=ObsConfig(alert_audio_path=str(audio_file), stream_volume_mul=0.5),
         portraits=PortraitsConfig(directory=str(portraits_dir)),
         twitch=TwitchConfig(),
     )
@@ -219,7 +236,7 @@ def test_validate_config_skips_twitch_check_in_simulation(tmp_path):
     audio_file = tmp_path / "alert.wav"
     audio_file.write_bytes(b"fake")
     config = AppConfig(
-        obs=ObsConfig(alert_audio_path=str(audio_file)),
+        obs=ObsConfig(alert_audio_path=str(audio_file), stream_volume_mul=0.5),
         portraits=PortraitsConfig(directory=str(portraits_dir)),
         twitch=TwitchConfig(),
     )

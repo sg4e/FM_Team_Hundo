@@ -11,6 +11,7 @@ obs:
   media_source_kind: "ffmpeg_source"
   text_source_kind: "text_gdiplus_v3"
   browser_source_kind: "browser_source"
+  stream_volume_mul: null   # Required. Linear volume multiplier for stream inputs (1.0 = 0 dB, 0.25 ≈ -12 dB).
   alert_audio_path: null   # Required. Absolute or relative path to alert sound file.
   alert_audio_source: null   # defaults to "{managed_scene_prefix} Alert Audio"
   # Optional production-owned master scenes. Python creates the empty scenes if

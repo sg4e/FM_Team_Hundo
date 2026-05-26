@@ -22,6 +22,7 @@ class FakeObs(ObsController):
         self.connected_value = True
         self.scene_changes: list[str] = []
         self.mutes: list[tuple[str, bool]] = []
+        self.volumes: list[tuple[str, float]] = []
         self.created_scenes: list[str] = []
         self.inputs_settings: dict[str, dict] = {}
         self.scene_items: dict[tuple[str, str], int] = {}
@@ -78,6 +79,9 @@ class FakeObs(ObsController):
 
     async def set_input_mute(self, input_name: str, muted: bool) -> None:
         self.mutes.append((input_name, muted))
+
+    async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
+        self.volumes.append((input_name, volume_mul))
 
     async def ensure_scene(self, scene_name: str) -> None:
         self.scenes.add(scene_name)

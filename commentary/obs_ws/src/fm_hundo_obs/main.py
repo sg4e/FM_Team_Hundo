@@ -506,6 +506,13 @@ def _validate_config(config: AppConfig, config_path: Path, simulate_mediamtx: bo
             f"(Resolved to: {audio_path})"
         )
 
+    if config.obs.stream_volume_mul <= 0:
+        raise ValueError(
+            "obs.stream_volume_mul must be greater than 0. "
+            "Set it in config.yml to the desired linear volume multiplier for stream inputs "
+            "(e.g. 0.25 for approximately -12 dB)."
+        )
+
     if not simulate_mediamtx:
         if not config.twitch.client_id:
             raise ValueError(

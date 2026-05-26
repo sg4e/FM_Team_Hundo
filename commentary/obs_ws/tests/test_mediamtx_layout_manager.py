@@ -506,3 +506,17 @@ async def test_non_managed_scene_does_not_change_managed_audio_focus():
 
     assert focused is False
     assert len(obs.mutes) == mute_count
+
+
+@pytest.mark.asyncio
+async def test_stream_volume_is_set_on_media_sources():
+    obs = FakeObs()
+    config = AppConfig(obs=ObsConfig(stream_volume_mul=0.5))
+    manager = ObsLayoutManager(obs, config, players(), [Team(1, "Alpha"), Team(2, "Beta")], registry({"runner10"}))
+
+    await manager.setup()
+
+    volumes = {name: mul for name, mul in obs.volumes}
+    assert volumes.get("FM Hundo Media - Runner Ten") == 0.5
+    assert volumes.get("FM Hundo Media - Runner Eleven") == 0.5
+    assert volumes.get("FM Hundo Media - Runner Twenty") == 0.5

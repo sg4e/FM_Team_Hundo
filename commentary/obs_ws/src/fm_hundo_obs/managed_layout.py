@@ -354,6 +354,7 @@ class ObsLayoutManager:
             },
             enabled=False,
         )
+        await self.obs.set_input_volume(sources.media_input, self.config.obs.stream_volume_mul)
         await self.obs.ensure_input(
             sources.player_scene,
             sources.label_input,

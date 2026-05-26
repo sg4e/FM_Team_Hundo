@@ -27,6 +27,7 @@ class ObsConfig:
     media_source_kind: str = "ffmpeg_source"
     text_source_kind: str = "text_gdiplus_v3"
     browser_source_kind: str = "browser_source"
+    stream_volume_mul: float = 0.0
     alert_audio_path: str | None = None
     alert_audio_source: str | None = None
     all_managed_master_scene: str | None = None
