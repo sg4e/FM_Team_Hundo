@@ -27,6 +27,8 @@ class ObsConfig:
     media_source_kind: str = "ffmpeg_source"
     text_source_kind: str = "text_gdiplus_v3"
     browser_source_kind: str = "browser_source"
+    alert_audio_path: str | None = None
+    alert_audio_source: str | None = None
     all_managed_master_scene: str | None = None
     stream_layout_master_scene: str | None = None
     credits_scene: str | None = None
@@ -44,6 +46,10 @@ class ObsConfig:
     @property
     def credits_source_name(self) -> str:
         return self.credits_source or f"{self.managed_scene_prefix} Credits Browser"
+
+    @property
+    def alert_audio_source_name(self) -> str:
+        return self.alert_audio_source or f"{self.managed_scene_prefix} Alert Audio"
 
 
 @dataclass(frozen=True)
@@ -78,6 +84,7 @@ class TimingConfig:
     intro_delay_seconds: float = 0.0
     all_streamers_audio_seconds: float = 180.0
     team_showcase_seconds: float = 180.0
+    alert_audio_duration_seconds: float = 3.0
 
 
 @dataclass
@@ -87,6 +94,7 @@ class FeatureFlags:
     intro_overlay: bool = True
     banner_overlay: bool = True
     audio_rotation: bool = True
+    alert_audio: bool = True
 
 
 @dataclass(frozen=True)

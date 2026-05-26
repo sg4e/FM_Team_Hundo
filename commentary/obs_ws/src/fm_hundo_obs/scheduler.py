@@ -57,6 +57,8 @@ class AcquisitionScheduler:
         scene_lock: Callable[[], Awaitable[bool]] | None = None,
         *,
         simulate_mediamtx: bool = False,
+        alert_audio_source: str | None = None,
+        overlay_scene: str | None = None,
     ) -> None:
         self.obs = obs
         self.overlay = overlay
@@ -67,6 +69,9 @@ class AcquisitionScheduler:
         self.scene_lock = scene_lock
         self.simulate_mediamtx = simulate_mediamtx
         self._active_task: asyncio.Task[None] | None = None
+        self._alert_audio_source = alert_audio_source
+        self._overlay_scene = overlay_scene
+        self._alert_audio_task: asyncio.Task[None] | None = None
 
     def acquisition_active(self) -> bool:
         return self._active_task is not None and not self._active_task.done()
@@ -75,6 +80,9 @@ class AcquisitionScheduler:
         if self._active_task is not None and not self._active_task.done():
             self._active_task.cancel()
         self._active_task = None
+        if self._alert_audio_task is not None and not self._alert_audio_task.done():
+            self._alert_audio_task.cancel()
+        self._alert_audio_task = None
 
     async def handle_update(self, update: LibraryUpdate) -> AcquisitionResult:
         if not update.new_acquisitions:
@@ -150,6 +158,7 @@ class AcquisitionScheduler:
         # are rejected during any intro delay that follows.
         if visible_action:
             self._start_window(previous_scene, automated_scene, acquisition.player_id)
+            self._start_alert_audio()
 
         if switched_scene and self.features.intro_overlay:
             if self.timing.intro_delay_seconds > 0:
@@ -191,3 +200,28 @@ class AcquisitionScheduler:
             raise
         except Exception:
             LOGGER.exception("Failed while completing acquisition window")
+
+    def _start_alert_audio(self) -> None:
+        if not self.features.alert_audio:
+            return
+        source = self._alert_audio_source
+        scene = self._overlay_scene
+        if not source or not scene:
+            return
+        self._alert_audio_task = asyncio.create_task(self._play_alert_audio(scene, source))
+
+    async def _play_alert_audio(self, scene: str, source: str) -> None:
+        item_id: int | None = None
+        try:
+            item_id = await self.obs.ensure_scene_item(scene, source, enabled=True)
+            await asyncio.sleep(self.timing.alert_audio_duration_seconds)
+            await self.obs.set_scene_item_enabled(scene, item_id, False)
+        except asyncio.CancelledError:
+            if item_id is not None:
+                try:
+                    await self.obs.set_scene_item_enabled(scene, item_id, False)
+                except Exception:
+                    pass
+            raise
+        except Exception:
+            LOGGER.exception("Failed alert audio playback")

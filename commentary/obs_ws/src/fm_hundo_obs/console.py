@@ -14,6 +14,7 @@ class CommandType(StrEnum):
     INTRO = "intro"
     BANNER = "banner"
     AUDIO = "audio"
+    ALERT = "alert"
     CREDITS = "credits"
     RECONCILE = "reconcile"
     TEST = "test"
@@ -34,6 +35,7 @@ HELP_TEXT = """Commands:
   intro on|off
   banner on|off
   audio on|off|next
+  alert on|off
   credits
   reconcile
   production test:  test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]

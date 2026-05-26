@@ -7,6 +7,7 @@ import pytest
 from fm_hundo_obs.config import FeatureFlags, TimingConfig
 from fm_hundo_obs.mapping import NameResolver
 from fm_hundo_obs.models import CardAcquisition, LibraryUpdate, MessageType, Player, Team
+from fm_hundo_obs.obs import stable_item_id
 from fm_hundo_obs.scheduler import AcquisitionScheduler
 
 from .fakes import FakeObs, FakeOverlay, IntroCall
@@ -77,6 +78,7 @@ async def test_uses_first_acquisition_only_and_switches_then_restores():
     assert obs.scene_changes == ["Player Ten"]
     assert overlay.banners == [("Big Drop Alert", MessageType.DROP, 0.01)]
     assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5)]
+    assert subject._active_task is not None
     await subject._active_task
     assert obs.scene_changes == ["Player Ten", "Main"]
 
@@ -219,6 +221,7 @@ async def test_restore_respects_manual_scene_change():
 
     await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
     obs.current_scene = "Manual"
+    assert subject._active_task is not None
     await subject._active_task
 
     assert obs.scene_changes == ["Player Ten"]
@@ -305,6 +308,7 @@ async def test_restore_focuses_managed_previous_scene_after_switch_back():
     )
 
     await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+    assert subject._active_task is not None
     await subject._active_task
 
     assert obs.scene_changes == ["Player Ten", "FM Hundo - All Streamers"]
@@ -327,6 +331,7 @@ async def test_manual_scene_change_prevents_restore_focus():
 
     await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
     obs.current_scene = "Manual"
+    assert subject._active_task is not None
     await subject._active_task
 
     assert obs.scene_changes == ["Player Ten"]
@@ -393,6 +398,7 @@ async def test_intro_respects_delay_when_configured():
     assert overlay.intros[0].use_twitch_profile is True
     # Window should have been started BEFORE the delay, so it's already active.
     assert subject.acquisition_active(), "Window should lock before intro delay"
+    assert subject._active_task is not None
     await subject._active_task
 
 
@@ -425,4 +431,81 @@ async def test_second_acquisition_blocked_during_intro_delay():
     assert len(overlay.intros) == 1
     assert overlay.intros[0].player_name == "Alpha - Runner Ten"
 
+    assert subject._active_task is not None
     await subject._active_task
+
+
+@pytest.mark.asyncio
+async def test_alert_audio_enables_then_disables():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
+    subject = AcquisitionScheduler(
+        obs,
+        overlay,
+        names,
+        {10: "Player Ten"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.05, intro_seconds=0.01, alert_audio_duration_seconds=0.01),
+        alert_audio_source="FM Hundo Alert Audio",
+        overlay_scene="FM Hundo Overlay",
+    )
+
+    result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    assert result.accepted is True
+    await asyncio.sleep(0)
+    alert_id = stable_item_id("FM Hundo Overlay", "FM Hundo Alert Audio")
+    enable_calls = [entry for entry in obs.enabled if entry[0] == "FM Hundo Overlay" and entry[1] == alert_id]
+    assert len(enable_calls) >= 1
+    assert enable_calls[0][2] is True
+    assert subject._alert_audio_task is not None
+    await subject._alert_audio_task
+    disable_calls = [entry for entry in obs.enabled if entry[0] == "FM Hundo Overlay" and entry[1] == alert_id and entry[2] is False]
+    assert len(disable_calls) >= 1
+    assert subject._active_task is not None
+    await subject._active_task
+
+
+@pytest.mark.asyncio
+async def test_alert_audio_skipped_when_feature_disabled():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
+    subject = AcquisitionScheduler(
+        obs,
+        overlay,
+        names,
+        {10: "Player Ten"},
+        FeatureFlags(alert_audio=False),
+        TimingConfig(acquisition_window_seconds=0.05, intro_seconds=0.01),
+        alert_audio_source="FM Hundo Alert Audio",
+        overlay_scene="FM Hundo Overlay",
+    )
+
+    await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+
+    alert_id = stable_item_id("FM Hundo Overlay", "FM Hundo Alert Audio")
+    audio_calls = [
+        entry for entry in obs.enabled
+        if entry[0] == "FM Hundo Overlay" and entry[1] == alert_id
+    ]
+    assert audio_calls == []
+
+
+@pytest.mark.asyncio
+async def test_alert_audio_skipped_when_no_source_configured():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
+    subject = AcquisitionScheduler(
+        obs,
+        overlay,
+        names,
+        {10: "Player Ten"},
+        FeatureFlags(),
+        TimingConfig(acquisition_window_seconds=0.05, intro_seconds=0.01),
+    )
+
+    await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
+    assert subject._alert_audio_task is None

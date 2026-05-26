@@ -63,3 +63,15 @@ This file records design decisions that should be treated as durable during futu
 - At startup, the app validates that the directory exists and contains at least one `duelist_*.png` file, raising a clear error if not.
 - The `ygofm_portraits/` directory is gitignored (listed in `obs_ws/.gitignore`).
 - Twitch credentials (`twitch.client_id`, `twitch.client_secret`) are validated at startup in production mode and raise a clear error if missing. Not checked in simulation mode.
+
+## Alert Audio
+
+- The alert audio source type is `ffmpeg_source`, matching the existing Media Source kind used for RTSP streams. This provides native OBS mixer visibility so the production team can manually adjust volume.
+- The audio source is placed in the overlay scene (`obs.overlay_scene`), which is nested into every generated managed scene via `_ensure_overlay_on_top()`. This guarantees the source is always audible regardless of the active scene.
+- The audio file path is configured in `config.yml` via `obs.alert_audio_path`. The path is required — the app fails at startup with a `ValueError` if it's missing or the file doesn't exist.
+- The alert sound fires simultaneously with the banner display (and scene switch, if applicable) — not before or after the intro animation.
+- Playback uses an enable→sleep→disable lifecycle: the source is enabled (with `restart_on_activate: True` to play from start), the controller waits for `timing.alert_audio_duration_seconds`, then disables the source.
+- The duration is a config value (`timing.alert_audio_duration_seconds`, default 3.0 seconds), not auto-detected via ffprobe.
+- A single universal audio file plays for all acquisition types (drop, fusion, ritual).
+- The audio source uses `close_when_inactive: False` to keep the file decoded in memory between alerts, avoiding disk re-open latency.
+- A `features.alert_audio` toggle (default `true`) allows runtime enable/disable via the `alert on|off` console command.

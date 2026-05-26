@@ -11,6 +11,8 @@ obs:
   media_source_kind: "ffmpeg_source"
   text_source_kind: "text_gdiplus_v3"
   browser_source_kind: "browser_source"
+  alert_audio_path: null   # Required. Absolute or relative path to alert sound file.
+  alert_audio_source: null   # defaults to "{managed_scene_prefix} Alert Audio"
   # Optional production-owned master scenes. Python creates the empty scenes if
   # configured, nests them into generated scenes, and never edits their contents.
   all_managed_master_scene: null
@@ -38,6 +40,7 @@ timing:
   intro_delay_seconds: 0
   all_streamers_audio_seconds: 180
   team_showcase_seconds: 180
+  alert_audio_duration_seconds: 3.0
 
 credits:
   # Defaults to credits_scene.yml beside this config file.
@@ -49,6 +52,7 @@ features:
   intro_overlay: true
   banner_overlay: true
   audio_rotation: true
+  alert_audio: true
 
 portraits:
   # Required. Path to extracted duelist portrait directory (e.g. ygofm_portraits/extracted_portraits).

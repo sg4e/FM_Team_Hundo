@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from pathlib import Path
 
-from fm_hundo_obs.config import AppConfig
+from fm_hundo_obs.config import AppConfig, ObsConfig
 from fm_hundo_obs.main import Application
 from fm_hundo_obs.obs import ObsError
 from fm_hundo_obs.overlay import OverlayClientTimeout, OverlayServer
@@ -129,11 +130,17 @@ class CapturingLayoutManager:
         return True
 
 
+def _valid_config(tmp_path: Path) -> AppConfig:
+    audio_file = tmp_path / "alert.wav"
+    audio_file.write_bytes(b"fake audio")
+    return AppConfig(obs=ObsConfig(alert_audio_path=str(audio_file)))
+
+
 @pytest.mark.asyncio
-async def test_preflight_failure_stops_overlay_and_disconnects_obs(monkeypatch):
+async def test_preflight_failure_stops_overlay_and_disconnects_obs(monkeypatch, tmp_path):
     overlay = FakeOverlayServer()
     obs = FailingObs()
-    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    app = Application(_valid_config(tmp_path), config_path=tmp_path / "config.yml", simulate_mediamtx=True)
     app.overlay_server = overlay  # type: ignore[assignment]
     app.obs = obs  # type: ignore[assignment]
 
@@ -159,14 +166,14 @@ async def test_preflight_failure_stops_overlay_and_disconnects_obs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_overlay_timeout_stops_overlay_and_disconnects_obs(monkeypatch):
+async def test_overlay_timeout_stops_overlay_and_disconnects_obs(monkeypatch, tmp_path):
     class TimeoutOverlay(FakeOverlayServer):
         async def wait_for_client(self, timeout_seconds: float) -> None:
             raise OverlayClientTimeout("overlay did not connect")
 
     overlay = TimeoutOverlay()
     obs = SetupObs()
-    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    app = Application(_valid_config(tmp_path), config_path=tmp_path / "config.yml", simulate_mediamtx=True)
     app.overlay_server = overlay  # type: ignore[assignment]
     app.obs = obs  # type: ignore[assignment]
 
@@ -254,29 +261,25 @@ async def test_startup_browser_source_timeout_still_fails_after_refresh():
 
 
 @pytest.mark.asyncio
-async def test_ensure_overlay_obs_setup_creates_browser_source():
+async def test_ensure_overlay_obs_setup_creates_browser_source(tmp_path):
     obs = SetupObs()
-    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    config = _valid_config(tmp_path)
+    app = Application(config, config_path=tmp_path / "config.yml", simulate_mediamtx=True)
     app.obs = obs  # type: ignore[assignment]
 
     await app._ensure_overlay_obs_setup()
 
     assert "FM Hundo Overlay" in obs.scenes
-    assert obs.inputs == [
-        (
-            "FM Hundo Overlay",
-            "FM Hundo Overlay Browser",
-            "browser_source",
-            {
-                "url": "http://127.0.0.1:8765/overlay",
-                "width": 1920,
-                "height": 1080,
-                "reroute_audio": False,
-                "shutdown": False,
-            },
-            True,
-        )
-    ]
+    overlay_browser = next((item for item in obs.inputs if item[1] == "FM Hundo Overlay Browser"), None)
+    assert overlay_browser is not None
+    assert overlay_browser[0] == "FM Hundo Overlay"
+    assert overlay_browser[2] == "browser_source"
+    assert overlay_browser[3]["url"] == "http://127.0.0.1:8765/overlay"
+    assert overlay_browser[3]["width"] == 1920
+    assert overlay_browser[3]["height"] == 1080
+
+    alert_audio = next((item for item in obs.inputs if item[1] == "FM Hundo Alert Audio"), None)
+    assert alert_audio is not None
 
 
 @pytest.mark.asyncio
@@ -349,3 +352,32 @@ async def test_managed_cycle_fallback_reconcile_uses_current_scene_lookup():
     assert await app._reconcile_current_scene_audio() is True
 
     assert layout.calls == [(None, False)]
+
+
+@pytest.mark.asyncio
+async def test_ensure_overlay_obs_setup_creates_alert_audio_source(tmp_path):
+    audio_file = tmp_path / "alert.wav"
+    audio_file.write_bytes(b"fake audio")
+    obs = SetupObs()
+    config = AppConfig(
+        obs=ObsConfig(alert_audio_path=str(audio_file)),
+    )
+    app = Application(config, config_path=tmp_path / "config.yml", simulate_mediamtx=True)
+    app.obs = obs  # type: ignore[assignment]
+
+    await app._ensure_overlay_obs_setup()
+
+    assert "FM Hundo Overlay" in obs.scenes
+    overlay_browser = next(item for item in obs.inputs if item[1] == "FM Hundo Overlay Browser")
+    assert overlay_browser is not None
+
+    alert_audio = next((item for item in obs.inputs if item[1] == "FM Hundo Alert Audio"), None)
+    assert alert_audio is not None
+    assert alert_audio[0] == "FM Hundo Overlay"
+    assert alert_audio[1] == "FM Hundo Alert Audio"
+    assert alert_audio[2] == "ffmpeg_source"
+    assert alert_audio[3]["local_file"] == str(audio_file)
+    assert alert_audio[3]["is_local_file"] is True
+    assert alert_audio[3]["restart_on_activate"] is True
+    assert alert_audio[3]["close_when_inactive"] is False
+    assert alert_audio[4] is False

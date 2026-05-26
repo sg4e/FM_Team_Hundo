@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from fm_hundo_obs.config import AppConfig, PortraitsConfig, TwitchConfig, load_config
+from fm_hundo_obs.config import AppConfig, ObsConfig, PortraitsConfig, TwitchConfig, load_config
 from fm_hundo_obs.main import _validate_config
 from fm_hundo_obs.console import CommandType, parse_command, parse_on_off
 from fm_hundo_obs.mapping import NameResolver, load_duelist_names
@@ -151,49 +151,76 @@ def test_twitch_config_loads_from_yaml(tmp_path):
 
 def test_validate_config_raises_on_missing_portraits_dir(tmp_path):
     """_validate_config raises ValueError when portraits directory is missing."""
+    config_path = tmp_path / "config.yml"
     config = AppConfig(portraits=PortraitsConfig(directory=str(tmp_path / "nonexistent")))
     with pytest.raises(ValueError, match="does not exist"):
-        _validate_config(config, simulate_mediamtx=False)
+        _validate_config(config, config_path, simulate_mediamtx=False)
 
 
 def test_validate_config_raises_on_empty_portraits_dir(tmp_path):
     """_validate_config raises ValueError when portraits directory has no duelist_*.png."""
+    config_path = tmp_path / "config.yml"
     empty_dir = tmp_path / "empty_portraits"
     empty_dir.mkdir()
     config = AppConfig(portraits=PortraitsConfig(directory=str(empty_dir)))
     with pytest.raises(ValueError, match="contains no duelist"):
-        _validate_config(config, simulate_mediamtx=False)
+        _validate_config(config, config_path, simulate_mediamtx=False)
 
 
 def test_validate_config_passes_with_valid_portraits_dir(tmp_path):
     """_validate_config passes when portraits directory has duelist_*.png."""
+    config_path = tmp_path / "config.yml"
+    portraits_dir = tmp_path / "portraits"
+    portraits_dir.mkdir()
+    (portraits_dir / "duelist_001.png").write_bytes(b"fake")
+    audio_file = tmp_path / "alert.wav"
+    audio_file.write_bytes(b"fake")
+    config = AppConfig(
+        obs=ObsConfig(alert_audio_path=str(audio_file)),
+        portraits=PortraitsConfig(directory=str(portraits_dir)),
+    )
+    _validate_config(config, config_path, simulate_mediamtx=True)
+
+
+def test_validate_config_raises_on_missing_alert_audio_path(tmp_path):
+    """_validate_config raises ValueError when alert_audio_path is not set."""
+    config_path = tmp_path / "config.yml"
     portraits_dir = tmp_path / "portraits"
     portraits_dir.mkdir()
     (portraits_dir / "duelist_001.png").write_bytes(b"fake")
     config = AppConfig(portraits=PortraitsConfig(directory=str(portraits_dir)))
-    _validate_config(config, simulate_mediamtx=True)
+    with pytest.raises(ValueError, match="alert_audio_path"):
+        _validate_config(config, config_path, simulate_mediamtx=True)
 
 
 def test_validate_config_raises_on_missing_twitch_creds_in_production(tmp_path):
     """_validate_config raises ValueError when Twitch creds are missing in production."""
+    config_path = tmp_path / "config.yml"
     portraits_dir = tmp_path / "portraits"
     portraits_dir.mkdir()
     (portraits_dir / "duelist_001.png").write_bytes(b"fake")
+    audio_file = tmp_path / "alert.wav"
+    audio_file.write_bytes(b"fake")
     config = AppConfig(
+        obs=ObsConfig(alert_audio_path=str(audio_file)),
         portraits=PortraitsConfig(directory=str(portraits_dir)),
         twitch=TwitchConfig(),
     )
     with pytest.raises(ValueError, match="twitch.client_id"):
-        _validate_config(config, simulate_mediamtx=False)
+        _validate_config(config, config_path, simulate_mediamtx=False)
 
 
 def test_validate_config_skips_twitch_check_in_simulation(tmp_path):
     """_validate_config does not check Twitch creds in simulation mode."""
+    config_path = tmp_path / "config.yml"
     portraits_dir = tmp_path / "portraits"
     portraits_dir.mkdir()
     (portraits_dir / "duelist_001.png").write_bytes(b"fake")
+    audio_file = tmp_path / "alert.wav"
+    audio_file.write_bytes(b"fake")
     config = AppConfig(
+        obs=ObsConfig(alert_audio_path=str(audio_file)),
         portraits=PortraitsConfig(directory=str(portraits_dir)),
         twitch=TwitchConfig(),
     )
-    _validate_config(config, simulate_mediamtx=True)
+    _validate_config(config, config_path, simulate_mediamtx=True)

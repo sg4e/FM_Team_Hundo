@@ -116,6 +116,8 @@ class Application:
                 self.config.timing,
                 scene_lock=self._credits_scene_active,
                 simulate_mediamtx=self.simulate_mediamtx,
+                alert_audio_source=self.config.obs.alert_audio_source_name,
+                overlay_scene=self.config.obs.overlay_scene,
             )
             if not self.simulate_mediamtx:
                 self.firehose = TeamFirehose(
@@ -174,6 +176,21 @@ class Application:
                 "shutdown": False,
             },
             enabled=True,
+        )
+        audio_path = Path(self.config.obs.alert_audio_path)
+        if not audio_path.is_absolute():
+            audio_path = self.config_path.resolve().parent / audio_path
+        await self.obs.ensure_input(
+            self.config.obs.overlay_scene,
+            self.config.obs.alert_audio_source_name,
+            self.config.obs.media_source_kind,
+            {
+                "local_file": str(audio_path),
+                "is_local_file": True,
+                "restart_on_activate": True,
+                "close_when_inactive": False,
+            },
+            enabled=False,
         )
 
     async def _ensure_credits_obs_setup(self) -> None:
@@ -305,7 +322,7 @@ class Application:
         elif command.type == CommandType.RESUME:
             features.paused = False
             self.console.print("Resumed")
-        elif command.type in {CommandType.SCENE, CommandType.INTRO, CommandType.BANNER}:
+        elif command.type in {CommandType.SCENE, CommandType.INTRO, CommandType.BANNER, CommandType.ALERT}:
             value = parse_on_off(command.args)
             if value is None:
                 self.console.print("Expected: on|off")
@@ -314,6 +331,8 @@ class Application:
                 features.scene_switching = value
             elif command.type == CommandType.INTRO:
                 features.intro_overlay = value
+            elif command.type == CommandType.ALERT:
+                features.alert_audio = value
             else:
                 features.banner_overlay = value
             self.console.print(f"{command.type.value}: {'on' if value else 'off'}")
@@ -425,6 +444,7 @@ class Application:
         table.add_row("Intro overlay", str(self.config.features.intro_overlay))
         table.add_row("Banner overlay", str(self.config.features.banner_overlay))
         table.add_row("Audio rotation", str(self.config.features.audio_rotation))
+        table.add_row("Alert audio", str(self.config.features.alert_audio))
         table.add_row("OBS dry-run", str(self.config.obs.dry_run))
         self.console.print(table)
 
@@ -451,7 +471,7 @@ class Application:
         return player_id
 
 
-def _validate_config(config: AppConfig, simulate_mediamtx: bool) -> None:
+def _validate_config(config: AppConfig, config_path: Path, simulate_mediamtx: bool) -> None:
     """Validate config at startup before connecting to anything."""
     portraits_dir = config.portraits.directory
     if not portraits_dir:
@@ -470,6 +490,20 @@ def _validate_config(config: AppConfig, simulate_mediamtx: bool) -> None:
         raise ValueError(
             f"portraits.directory '{portraits_dir}' contains no duelist_*.png files. "
             "Ensure the extracted portrait images are in that directory."
+        )
+
+    if not config.obs.alert_audio_path:
+        raise ValueError(
+            "obs.alert_audio_path is not configured. Set it in config.yml to point to the "
+            "alert audio file (e.g. C:/path/to/alert.wav)."
+        )
+    audio_path = Path(config.obs.alert_audio_path)
+    if not audio_path.is_absolute():
+        audio_path = config_path.resolve().parent / audio_path
+    if not audio_path.is_file():
+        raise ValueError(
+            f"obs.alert_audio_path '{config.obs.alert_audio_path}' does not exist or is not a file. "
+            f"(Resolved to: {audio_path})"
         )
 
     if not simulate_mediamtx:
@@ -496,7 +530,7 @@ async def async_main() -> int:
     args = parse_args()
     setup_logging(PROJECT_DIR)
     config = load_config(args.config)
-    _validate_config(config, args.simulate_mediamtx)
+    _validate_config(config, args.config, args.simulate_mediamtx)
     app = Application(config, args.config, simulate_mediamtx=args.simulate_mediamtx)
     try:
         await app.run()

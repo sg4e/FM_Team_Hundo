@@ -47,6 +47,7 @@ http://127.0.0.1:8765/credits
 - `intro on|off`
 - `banner on|off`
 - `audio on|off|next`
+- `alert on|off`
 - `credits`
 - `reconcile`
 - production: `test <player_id> <drop|fusion|fuse|ritual> <opponent_id> [--force]`
@@ -85,6 +86,25 @@ Put LiveSplit, Discord streaming kit, and related labels in
 above stream tiles but below alert overlays. OBS source and scene names are
 global, so keep these names distinct from generated `FM Hundo` scenes and other
 sources.
+
+## Alert Audio
+
+An optional alert sound plays when an acquisition fires. Configure it in `config.yml`:
+
+```yaml
+obs:
+  alert_audio_path: "C:/path/to/alert.wav"  # required to enable; absolute or relative to config.yml
+  alert_audio_source: null                   # defaults to "{managed_scene_prefix} Alert Audio"
+timing:
+  alert_audio_duration_seconds: 3.0
+features:
+  alert_audio: true
+```
+
+- The audio file must exist at startup; a `ValueError` is raised immediately if it's missing.
+- The controller creates a managed `ffmpeg_source` in the overlay scene with `restart_on_activate: True` and `close_when_inactive: False` so the file stays loaded in memory between alerts.
+- The source appears in OBS's audio mixer, allowing the production team to tweak volume manually.
+- Use `alert on|off` in the console to toggle at runtime.
 
 ## MediaMTX Simulation Mode
 
