@@ -162,6 +162,7 @@ public class AdminView extends VerticalLayout {
                     Team selectedTeam = teamSelector.getValue();
                     if (selectedTeam != null) {
                         user.setTeamId(selectedTeam.getTeamId());
+                        user.setRegisteredForNextHundo(false);
                         userRepository.save(user);
                         renderAdminPanel();  // Refresh the view
                     }
