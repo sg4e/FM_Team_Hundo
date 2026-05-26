@@ -182,6 +182,7 @@ public class AdminView extends VerticalLayout {
 
         content.add(assignmentSection);
         content.add(createManualPlayerUpdateSection());
+        content.add(createRegisteredForNextHundoSection());
     }
 
     private HorizontalLayout createTeamRow(Team team) {
@@ -247,6 +248,29 @@ public class AdminView extends VerticalLayout {
         row.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
         row.addClassName("admin-team-row");
         return row;
+    }
+
+    private VerticalLayout createRegisteredForNextHundoSection() {
+        VerticalLayout section = createSection("Registered for Next Hundo");
+
+        List<User> registeredUsers = userRepository.findByRegisteredForNextHundo(true);
+
+        if (registeredUsers.isEmpty()) {
+            section.add(new Paragraph("No users registered."));
+        } else {
+            HorizontalLayout nameRow = new HorizontalLayout();
+            nameRow.getStyle()
+                .set("flex-wrap", "wrap")
+                .set("gap", "8px 16px");
+
+            registeredUsers.stream()
+                .sorted(Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER))
+                .forEach(user -> nameRow.add(new Span(user.getName())));
+
+            section.add(nameRow);
+        }
+
+        return section;
     }
 
     private VerticalLayout createManualPlayerUpdateSection() {

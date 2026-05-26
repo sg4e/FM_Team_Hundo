@@ -15,7 +15,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
     Optional<User> findByTwitchId(String twitchId);
     List<User> findByTeamId(int teamId);
     List<User> findByTeamIdAndRegisteredForNextHundo(int teamId, boolean registeredForNextHundo);
+    List<User> findByRegisteredForNextHundo(boolean registeredForNextHundo);
     long countByTeamId(int teamId);
     Optional<User> getByDatabaseId(long databaseId);
 }
-
