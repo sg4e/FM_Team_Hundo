@@ -12,6 +12,8 @@
 
 2. A card is added to the team's Library when a team member **drops, fuses, or ritual-summons** the card. Any other way of obtaining a card (starter deck, bought with starchips, etc.) does not count.
 
+2. Drops that are subsequently lost by the player (e.g. Game Over against Final 6, resetting without saving, etc.) are NOT removed from the team's Library. Library additions are permanent.
+
 3. You may spend your starchips freely to improve your deck, but spent starchips will be automatically deducted from your team's starchip total.
 
 4. All gameplay must be streamed on either the one Twitch account you used to log into the FM Team Hundo website, or the one alt Twitch account you specified on your profile page. You must have enabled storage of past broadcasts.
