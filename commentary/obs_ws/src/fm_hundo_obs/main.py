@@ -192,6 +192,7 @@ class Application:
             },
             enabled=False,
         )
+        await self.obs.set_input_volume(self.config.obs.alert_audio_source_name, self.config.obs.alert_audio_volume_mul)
 
     async def _ensure_credits_obs_setup(self) -> None:
         await self.obs.ensure_scene(self.config.obs.credits_scene_name)
@@ -511,6 +512,13 @@ def _validate_config(config: AppConfig, config_path: Path, simulate_mediamtx: bo
             "obs.stream_volume_mul must be greater than 0. "
             "Set it in config.yml to the desired linear volume multiplier for stream inputs "
             "(e.g. 0.25 for approximately -12 dB)."
+        )
+
+    if config.obs.alert_audio_volume_mul <= 0:
+        raise ValueError(
+            "obs.alert_audio_volume_mul must be greater than 0. "
+            "Set it in config.yml to the desired linear volume multiplier for the alert audio source "
+            "(e.g. 0.25 for approximately -12 dB, or 1.0 for default volume)."
         )
 
     if not simulate_mediamtx:
