@@ -74,6 +74,7 @@ async def test_simulation_intro_includes_simulation_team_name():
 
     assert result.accepted is True
     assert overlay.intros == [IntroCall("Simulation - alpha_cam", "Villager2", 3.0, player_id=player.id, opponent_id=5)]
+    assert subject._active_task is not None
     await subject._active_task
 
 
@@ -95,6 +96,7 @@ async def test_simulation_intro_infers_team_for_manual_acquisition():
 
     assert result.accepted is True
     assert overlay.intros == [IntroCall("Simulation - alpha_cam", "Villager2", 3.0, player_id=player.id, opponent_id=5)]
+    assert subject._active_task is not None
     await subject._active_task
 
 

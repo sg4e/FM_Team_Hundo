@@ -4,17 +4,15 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiohttp import web
 
 from .config import OverlayConfig, PortraitsConfig
 from .models import MessageType
 
-try:
+if TYPE_CHECKING:
     from .twitch_cache import TwitchProfileCache
-except ImportError:
-    TwitchProfileCache = None  # type: ignore[assignment, misc]
 
 LOGGER = logging.getLogger(__name__)
 

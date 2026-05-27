@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 import logging
+from typing import Any, Protocol
 
 import simpleobsws
 
@@ -101,15 +102,31 @@ class ObsController:
         raise NotImplementedError
 
 
+
+
+class ConnectedObsWsClient(Protocol):
+    ws: Any
+
+    async def connect(self) -> bool | None: ...
+
+    async def wait_until_identified(self) -> bool: ...
+
+    async def disconnect(self) -> bool | None: ...
+
+    async def call(self, request: Any) -> Any: ...
+
+    def register_event_callback(self, callback: Any, event: str | None = None) -> None: ...
+
+
 class SimpleObsController(ObsController):
     def __init__(
         self,
         config: ObsConfig,
-        client_factory: Callable[..., simpleobsws.WebSocketClient] = simpleobsws.WebSocketClient,
+        client_factory: Callable[..., Any] = simpleobsws.WebSocketClient,
     ) -> None:
         self.config = config
         self._client_factory = client_factory
-        self._client: simpleobsws.WebSocketClient | None = None
+        self._client: ConnectedObsWsClient | None = None
         self._connected = False
 
     @property

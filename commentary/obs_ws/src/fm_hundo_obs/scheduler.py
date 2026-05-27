@@ -8,12 +8,29 @@ from typing import Protocol, runtime_checkable
 
 from .config import FeatureFlags, TimingConfig
 from .mapping import NameResolver
-from .models import AcquisitionContext, CardAcquisition, LibraryUpdate
+from .models import AcquisitionContext, CardAcquisition, LibraryUpdate, MessageType
 from .obs import ObsController
-from .overlay import OverlayEvents
 
 LOGGER = logging.getLogger(__name__)
 
+
+
+
+class OverlaySink(Protocol):
+    async def banner(self, label: str, source: MessageType, duration_seconds: float) -> bool:
+        ...
+
+    async def intro(
+        self,
+        player_name: str,
+        opponent_name: str,
+        duration_seconds: float,
+        *,
+        player_id: int = 0,
+        opponent_id: int = 0,
+        use_twitch_profile: bool = True,
+    ) -> bool:
+        ...
 
 class WindowObserver(Protocol):
     def acquisition_active(self) -> bool:
@@ -49,7 +66,7 @@ class AcquisitionScheduler:
     def __init__(
         self,
         obs: ObsController,
-        overlay: OverlayEvents,
+        overlay: OverlaySink,
         names: NameResolver,
         player_scenes: dict[int, str] | PlayerSceneResolver,
         features: FeatureFlags,

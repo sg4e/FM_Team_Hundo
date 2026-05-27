@@ -476,7 +476,7 @@ class ObsLayoutManager:
             self.team_rotations[team_id].showcased_player_id = showcased_player_id
         if apply_audio and showcased_player_id is None:
             await self._mute_all_player_audio()
-        elif apply_audio:
+        elif apply_audio and showcased_player_id is not None:
             await self._set_only_player_audio(showcased_player_id)
         ordered_ids = ([showcased_player_id] if showcased_player_id else []) + [player_id for player_id in active_ids if player_id != showcased_player_id]
         rects = team_showcase_layout(len(ordered_ids), self.config.overlay.canvas_width, self.config.overlay.canvas_height)

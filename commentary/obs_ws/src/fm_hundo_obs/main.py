@@ -30,9 +30,9 @@ PROJECT_DIR = Path(__file__).resolve().parents[2]
 
 
 class Application:
-    def __init__(self, config: AppConfig, config_path: Path, *, simulate_mediamtx: bool = False) -> None:
+    def __init__(self, config: AppConfig, config_path: Path | None, *, simulate_mediamtx: bool = False) -> None:
         self.config = config
-        self.config_path = config_path
+        self.config_path = config_path or Path.cwd() / "config.yml"
         self.simulate_mediamtx = simulate_mediamtx
         self.console = Console()
         real_obs = SimpleObsController(config.obs)
@@ -177,6 +177,8 @@ class Application:
             },
             enabled=True,
         )
+        if self.config.obs.alert_audio_path is None:
+            raise ObsError("obs.alert_audio_path is not configured")
         audio_path = Path(self.config.obs.alert_audio_path)
         if not audio_path.is_absolute():
             audio_path = self.config_path.resolve().parent / audio_path
