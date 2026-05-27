@@ -55,7 +55,11 @@ def scheduler(
         names,
         player_scenes if player_scenes is not None else {10: "Player Ten", 11: "Player Eleven"},
         features or FeatureFlags(),
-        TimingConfig(acquisition_window_seconds=window_seconds, intro_seconds=3),
+        TimingConfig(
+            acquisition_window_seconds=window_seconds,
+            banner_end_buffer_seconds=0,
+            intro_seconds=3,
+        ),
     )
 
 
@@ -385,7 +389,7 @@ async def test_intro_respects_delay_when_configured():
         names,
         {10: "Player Ten"},
         FeatureFlags(),
-        TimingConfig(acquisition_window_seconds=0.5, intro_seconds=3, intro_delay_seconds=0.05),
+        TimingConfig(acquisition_window_seconds=0.5, banner_end_buffer_seconds=0, intro_seconds=3, intro_delay_seconds=0.05),
     )
 
     result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
