@@ -75,3 +75,13 @@ This file records design decisions that should be treated as durable during futu
 - A single universal audio file plays for all acquisition types (drop, fusion, ritual).
 - The audio source uses `close_when_inactive: False` to keep the file decoded in memory between alerts, avoiding disk re-open latency.
 - A `features.alert_audio` toggle (default `true`) allows runtime enable/disable via the `alert on|off` console command.
+
+## Banner Animation Timing
+
+- Banner animation timing is backend-configured via `timing.banner_enter_seconds`, `timing.banner_exit_seconds`, `timing.banner_end_buffer_seconds`, and optional `timing.banner_total_seconds`.
+- Banner display always starts at the beginning of the acquisition window.
+- Default end timing is the acquisition window end minus `timing.banner_end_buffer_seconds`, so exit animation completes shortly before the window closes.
+- Optional `timing.banner_total_seconds` may end banners earlier than the acquisition window; it is never clamped upward/downward.
+- Invalid banner timing configuration is a fatal startup error (fail loudly; operator must fix config and restart).
+- Drop, fusion, and ritual banners share the same animation timing model.
+- Alerts received while an acquisition window is active are ignored (no queue, no interrupt, no restart).

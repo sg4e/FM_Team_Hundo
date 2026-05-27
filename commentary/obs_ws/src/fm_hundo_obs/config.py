@@ -82,6 +82,10 @@ class MediaMtxConfig:
 @dataclass(frozen=True)
 class TimingConfig:
     acquisition_window_seconds: float = 30.0
+    banner_enter_seconds: float = 0.3
+    banner_exit_seconds: float = 0.3
+    banner_end_buffer_seconds: float = 0.08
+    banner_total_seconds: float | None = None
     intro_seconds: float = 3.0
     intro_delay_seconds: float = 0.0
     all_streamers_audio_seconds: float = 180.0
@@ -151,7 +155,7 @@ def load_config(path: Path | str) -> AppConfig:
     if os.getenv("OBS_WS_PASSWORD"):
         obs_data["password"] = os.environ["OBS_WS_PASSWORD"]
 
-    return AppConfig(
+    config = AppConfig(
         api=ApiConfig(**dict(data.get("api") or {})),
         obs=ObsConfig(**obs_data),
         overlay=OverlayConfig(**dict(data.get("overlay") or {})),
@@ -164,6 +168,8 @@ def load_config(path: Path | str) -> AppConfig:
         player_scenes={int(key): str(value) for key, value in (data.get("player_scenes") or {}).items()},
         group_scenes=tuple(_group_scene(item) for item in data.get("group_scenes") or ()),
     )
+    _validate_timing(config.timing)
+    return config
 
 
 def _group_scene(data: dict[str, Any]) -> GroupSceneConfig:
@@ -172,3 +178,32 @@ def _group_scene(data: dict[str, Any]) -> GroupSceneConfig:
         audio_sources=tuple(str(source) for source in data.get("audio_sources") or ()),
         interval_seconds=float(data.get("interval_seconds", 180.0)),
     )
+
+
+def _validate_timing(timing: TimingConfig) -> None:
+    non_negative = {
+        "timing.acquisition_window_seconds": timing.acquisition_window_seconds,
+        "timing.banner_enter_seconds": timing.banner_enter_seconds,
+        "timing.banner_exit_seconds": timing.banner_exit_seconds,
+        "timing.banner_end_buffer_seconds": timing.banner_end_buffer_seconds,
+        "timing.intro_seconds": timing.intro_seconds,
+        "timing.intro_delay_seconds": timing.intro_delay_seconds,
+        "timing.all_streamers_audio_seconds": timing.all_streamers_audio_seconds,
+        "timing.team_showcase_seconds": timing.team_showcase_seconds,
+        "timing.alert_audio_duration_seconds": timing.alert_audio_duration_seconds,
+    }
+    for key, value in non_negative.items():
+        if value < 0:
+            raise ValueError(f"{key} must be >= 0")
+    if timing.banner_total_seconds is not None and timing.banner_total_seconds < 0:
+        raise ValueError("timing.banner_total_seconds must be >= 0 when provided")
+    max_banner_total = timing.acquisition_window_seconds - timing.banner_end_buffer_seconds
+    if max_banner_total < 0:
+        raise ValueError("timing.banner_end_buffer_seconds cannot exceed timing.acquisition_window_seconds")
+    if timing.banner_total_seconds is not None and timing.banner_total_seconds > max_banner_total:
+        raise ValueError(
+            "timing.banner_total_seconds exceeds timing.acquisition_window_seconds - timing.banner_end_buffer_seconds"
+        )
+    effective_total = timing.banner_total_seconds if timing.banner_total_seconds is not None else max_banner_total
+    if effective_total < (timing.banner_enter_seconds + timing.banner_exit_seconds):
+        raise ValueError("Banner timing invalid: total duration is shorter than enter+exit durations")
