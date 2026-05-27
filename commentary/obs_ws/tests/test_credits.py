@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from typing import cast
 
 from fm_hundo_obs.config import AppConfig
 from fm_hundo_obs.credits import (
@@ -190,11 +191,15 @@ async def test_credits_command_fetches_payload_switches_scene_and_sends_to_brows
 
     await app._handle_credits()
 
-    assert app.obs.current_scene == "FM Hundo - Credits"
-    assert app.scheduler.cancelled is True
-    assert app.obs.refreshed_browser_sources == ["FM Hundo Credits Browser"]
-    assert app.overlay_server.payloads
-    assert app.overlay_server.payloads[0]["blocks"][0]["text"] == "FM Team Hundo"
+    obs = cast(FakeObs, app.obs)
+    scheduler = cast(FakeScheduler, app.scheduler)
+    overlay_server = cast(FakeCreditsOverlay, app.overlay_server)
+
+    assert obs.current_scene == "FM Hundo - Credits"
+    assert scheduler.cancelled is True
+    assert obs.refreshed_browser_sources == ["FM Hundo Credits Browser"]
+    assert overlay_server.payloads
+    assert overlay_server.payloads[0]["blocks"][0]["text"] == "FM Team Hundo"
 
 
 @pytest.mark.asyncio
@@ -206,8 +211,10 @@ async def test_credits_command_does_not_switch_when_config_missing(tmp_path):
 
     await app._handle_credits()
 
-    assert app.obs.current_scene == "Main"
-    assert not app.overlay_server.payloads
+    obs = cast(FakeObs, app.obs)
+    overlay_server = cast(FakeCreditsOverlay, app.overlay_server)
+    assert obs.current_scene == "Main"
+    assert not overlay_server.payloads
 
 
 def load_credits_scene_config_from_text(text: str):
