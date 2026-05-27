@@ -38,6 +38,11 @@ mediamtx:
 
 timing:
   acquisition_window_seconds: 30
+  banner_delay_seconds: 0.0
+  banner_enter_seconds: 0.3
+  banner_exit_seconds: 0.3
+  banner_end_buffer_seconds: 0.08
+  banner_total_seconds: null  # optional; if set, must be <= acquisition_window_seconds - banner_end_buffer_seconds
   intro_seconds: 3
   intro_delay_seconds: 0
   all_streamers_audio_seconds: 180

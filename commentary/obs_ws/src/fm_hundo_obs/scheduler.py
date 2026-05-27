@@ -17,7 +17,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 class OverlaySink(Protocol):
-    async def banner(self, label: str, source: MessageType, duration_seconds: float) -> bool:
+    async def banner(
+        self,
+        label: str,
+        source: MessageType,
+        duration_seconds: float,
+        *,
+        delay_seconds: float = 0.0,
+        enter_seconds: float = 0.3,
+        exit_seconds: float = 0.3,
+    ) -> bool:
         ...
 
     async def intro(
@@ -162,11 +171,19 @@ class AcquisitionScheduler:
                     visible_action = True
 
         if self.features.banner_overlay:
+            banner_duration = (
+                self.timing.banner_total_seconds
+                if self.timing.banner_total_seconds is not None
+                else self.timing.acquisition_window_seconds - self.timing.banner_end_buffer_seconds
+            )
             visible_action = (
                 await self.overlay.banner(
                     context.alert_label,
                     context.acquisition.source,
-                    self.timing.acquisition_window_seconds,
+                    banner_duration,
+                    delay_seconds=self.timing.banner_delay_seconds,
+                    enter_seconds=self.timing.banner_enter_seconds,
+                    exit_seconds=self.timing.banner_exit_seconds,
                 )
                 or visible_action
             )

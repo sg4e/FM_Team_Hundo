@@ -148,7 +148,16 @@ class FakeOverlay:
         self.banners: list[tuple[str, MessageType, float]] = []
         self.intros: list[IntroCall] = []
 
-    async def banner(self, label: str, source: MessageType, duration_seconds: float) -> bool:
+    async def banner(
+        self,
+        label: str,
+        source: MessageType,
+        duration_seconds: float,
+        *,
+        delay_seconds: float = 0.0,
+        enter_seconds: float = 0.3,
+        exit_seconds: float = 0.3,
+    ) -> bool:
         self.banners.append((label, source, duration_seconds))
         return self.banner_success
 

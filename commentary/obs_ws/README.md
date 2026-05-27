@@ -97,6 +97,11 @@ obs:
   alert_audio_source: null                   # defaults to "{managed_scene_prefix} Alert Audio"
 timing:
   alert_audio_duration_seconds: 3.0
+  banner_delay_seconds: 0.0
+  banner_enter_seconds: 0.3
+  banner_exit_seconds: 0.3
+  banner_end_buffer_seconds: 0.08
+  banner_total_seconds: null
 features:
   alert_audio: true
 ```
@@ -105,6 +110,21 @@ features:
 - The controller creates a managed `ffmpeg_source` in the overlay scene with `restart_on_activate: True` and `close_when_inactive: False` so the file stays loaded in memory between alerts.
 - The source appears in OBS's audio mixer, allowing the production team to tweak volume manually.
 - Use `alert on|off` in the console to toggle at runtime.
+
+## Banner Timing
+
+Banner timing is backend-configured under `timing`:
+
+- `banner_delay_seconds`: delay before fly-in starts.
+- `banner_enter_seconds`: fly-in duration.
+- `banner_exit_seconds`: fly-out duration.
+- `banner_end_buffer_seconds`: default gap between banner exit completion and acquisition window end.
+- `banner_total_seconds` (optional): explicitly end banner earlier than the acquisition window.
+
+The banner always starts at the beginning of the acquisition window. If
+`banner_total_seconds` is set, it must be less than or equal to
+`acquisition_window_seconds - banner_end_buffer_seconds`; invalid values are
+treated as startup configuration errors.
 
 ## MediaMTX Simulation Mode
 

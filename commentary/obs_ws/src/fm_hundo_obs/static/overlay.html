@@ -30,7 +30,7 @@
       left: 0;
       width: 100vw;
       height: 58px;
-      display: none;
+      display: flex;
       align-items: center;
       overflow: hidden;
       background: linear-gradient(90deg, var(--ink), #26313a, var(--ink));
@@ -38,6 +38,10 @@
       --banner-glow: rgba(245, 197, 66, 0.45);
       border-block: 2px solid var(--banner-accent);
       box-shadow: 0 0 22px var(--banner-glow);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: transform 300ms ease, opacity 300ms ease;
     }
 
     .banner.source-drop {
@@ -55,9 +59,16 @@
       --banner-glow: rgba(168, 121, 255, 0.45);
     }
 
-    .banner.top { top: 0; }
-    .banner.bottom { bottom: 0; }
-    .banner.active { display: flex; }
+    .banner.top { top: 0; transform: translateY(-110%); }
+    .banner.bottom { bottom: 0; transform: translateY(110%); }
+    .banner.is-entering,
+    .banner.is-visible,
+    .banner.is-exiting {
+      visibility: visible;
+      opacity: 1;
+    }
+    .banner.is-entering,
+    .banner.is-visible { transform: translateY(0); }
 
     .track {
       white-space: nowrap;
@@ -164,6 +175,8 @@
     const player = document.querySelector(".player");
     const opponent = document.querySelector(".opponent");
     let bannerTimer = null;
+    let bannerExitTimer = null;
+    let bannerCleanupTimer = null;
     let introTimer = null;
     const sourceClasses = ["source-drop", "source-fuse", "source-ritual"];
     const sourceWords = {
@@ -199,18 +212,45 @@
 
     function showBanner(payload) {
       clearTimeout(bannerTimer);
+      clearTimeout(bannerExitTimer);
+      clearTimeout(bannerCleanupTimer);
       const source = sourceWords[payload.source] ? payload.source : "drop";
+      const total = Math.max(0, Number(payload.durationSeconds || 30));
+      const delay = Math.max(0, Number(payload.delaySeconds || 0));
+      const enter = Math.max(0, Number(payload.enterSeconds || 0.3));
+      const exit = Math.max(0, Number(payload.exitSeconds || 0.3));
+      const hold = Math.max(0, total - delay - enter - exit);
       setBannerSource(source);
       tracks.forEach(track => {
         track.replaceChildren();
         appendLabel(track, payload.label || "Alert", source);
       });
-      topBanner.classList.add("active");
-      bottomBanner.classList.add("active");
       bannerTimer = setTimeout(() => {
-        topBanner.classList.remove("active");
-        bottomBanner.classList.remove("active");
-      }, Math.max(0, Number(payload.durationSeconds || 30)) * 1000);
+        [topBanner, bottomBanner].forEach(banner => {
+          banner.style.transitionDuration = `${enter}s`;
+          banner.classList.remove("is-exiting", "is-visible", "is-entering");
+          void banner.offsetWidth;
+          banner.classList.add("is-entering");
+        });
+        setTimeout(() => {
+          [topBanner, bottomBanner].forEach(banner => {
+            banner.classList.remove("is-entering");
+            banner.classList.add("is-visible");
+          });
+        }, enter * 1000);
+      }, delay * 1000);
+      bannerExitTimer = setTimeout(() => {
+        [topBanner, bottomBanner].forEach(banner => {
+          banner.style.transitionDuration = `${exit}s`;
+          banner.classList.remove("is-entering", "is-visible");
+          banner.classList.add("is-exiting");
+        });
+      }, (delay + enter + hold) * 1000);
+      bannerCleanupTimer = setTimeout(() => {
+        [topBanner, bottomBanner].forEach(banner => {
+          banner.classList.remove("is-entering", "is-visible", "is-exiting");
+        });
+      }, (delay + enter + hold + exit) * 1000);
     }
 
     function showIntro(payload) {

@@ -213,10 +213,26 @@ class OverlayEvents:
     def __init__(self, server: OverlayServer) -> None:
         self.server = server
 
-    async def banner(self, label: str, source: MessageType, duration_seconds: float) -> bool:
+    async def banner(
+        self,
+        label: str,
+        source: MessageType,
+        duration_seconds: float,
+        *,
+        delay_seconds: float = 0.0,
+        enter_seconds: float = 0.3,
+        exit_seconds: float = 0.3,
+    ) -> bool:
         return await self.server.send(
             "banner",
-            {"label": label, "source": str(source), "durationSeconds": duration_seconds},
+            {
+                "label": label,
+                "source": str(source),
+                "durationSeconds": duration_seconds,
+                "delaySeconds": delay_seconds,
+                "enterSeconds": enter_seconds,
+                "exitSeconds": exit_seconds,
+            },
         )
 
     async def intro(
