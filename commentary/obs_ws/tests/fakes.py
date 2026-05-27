@@ -154,6 +154,7 @@ class FakeOverlay:
         source: MessageType,
         duration_seconds: float,
         *,
+        delay_seconds: float = 0.0,
         enter_seconds: float = 0.3,
         exit_seconds: float = 0.3,
     ) -> bool:

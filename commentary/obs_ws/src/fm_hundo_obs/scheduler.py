@@ -23,6 +23,7 @@ class OverlaySink(Protocol):
         source: MessageType,
         duration_seconds: float,
         *,
+        delay_seconds: float = 0.0,
         enter_seconds: float = 0.3,
         exit_seconds: float = 0.3,
     ) -> bool:
@@ -180,6 +181,7 @@ class AcquisitionScheduler:
                     context.alert_label,
                     context.acquisition.source,
                     banner_duration,
+                    delay_seconds=self.timing.banner_delay_seconds,
                     enter_seconds=self.timing.banner_enter_seconds,
                     exit_seconds=self.timing.banner_exit_seconds,
                 )

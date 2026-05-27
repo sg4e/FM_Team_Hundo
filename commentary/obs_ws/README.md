@@ -97,6 +97,7 @@ obs:
   alert_audio_source: null                   # defaults to "{managed_scene_prefix} Alert Audio"
 timing:
   alert_audio_duration_seconds: 3.0
+  banner_delay_seconds: 0.0
   banner_enter_seconds: 0.3
   banner_exit_seconds: 0.3
   banner_end_buffer_seconds: 0.08
@@ -114,6 +115,7 @@ features:
 
 Banner timing is backend-configured under `timing`:
 
+- `banner_delay_seconds`: delay before fly-in starts.
 - `banner_enter_seconds`: fly-in duration.
 - `banner_exit_seconds`: fly-out duration.
 - `banner_end_buffer_seconds`: default gap between banner exit completion and acquisition window end.

@@ -216,38 +216,41 @@
       clearTimeout(bannerCleanupTimer);
       const source = sourceWords[payload.source] ? payload.source : "drop";
       const total = Math.max(0, Number(payload.durationSeconds || 30));
+      const delay = Math.max(0, Number(payload.delaySeconds || 0));
       const enter = Math.max(0, Number(payload.enterSeconds || 0.3));
       const exit = Math.max(0, Number(payload.exitSeconds || 0.3));
-      const hold = Math.max(0, total - enter - exit);
+      const hold = Math.max(0, total - delay - enter - exit);
       setBannerSource(source);
       tracks.forEach(track => {
         track.replaceChildren();
         appendLabel(track, payload.label || "Alert", source);
       });
-      [topBanner, bottomBanner].forEach(banner => {
-        banner.style.transitionDuration = `${enter}s`;
-        banner.classList.remove("is-exiting", "is-visible", "is-entering");
-        void banner.offsetWidth;
-        banner.classList.add("is-entering");
-      });
       bannerTimer = setTimeout(() => {
         [topBanner, bottomBanner].forEach(banner => {
-          banner.classList.remove("is-entering");
-          banner.classList.add("is-visible");
+          banner.style.transitionDuration = `${enter}s`;
+          banner.classList.remove("is-exiting", "is-visible", "is-entering");
+          void banner.offsetWidth;
+          banner.classList.add("is-entering");
         });
-      }, enter * 1000);
+        setTimeout(() => {
+          [topBanner, bottomBanner].forEach(banner => {
+            banner.classList.remove("is-entering");
+            banner.classList.add("is-visible");
+          });
+        }, enter * 1000);
+      }, delay * 1000);
       bannerExitTimer = setTimeout(() => {
         [topBanner, bottomBanner].forEach(banner => {
           banner.style.transitionDuration = `${exit}s`;
           banner.classList.remove("is-entering", "is-visible");
           banner.classList.add("is-exiting");
         });
-      }, (enter + hold) * 1000);
+      }, (delay + enter + hold) * 1000);
       bannerCleanupTimer = setTimeout(() => {
         [topBanner, bottomBanner].forEach(banner => {
           banner.classList.remove("is-entering", "is-visible", "is-exiting");
         });
-      }, (enter + hold + exit) * 1000);
+      }, (delay + enter + hold + exit) * 1000);
     }
 
     function showIntro(payload) {

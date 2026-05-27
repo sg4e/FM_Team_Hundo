@@ -78,7 +78,7 @@ This file records design decisions that should be treated as durable during futu
 
 ## Banner Animation Timing
 
-- Banner animation timing is backend-configured via `timing.banner_enter_seconds`, `timing.banner_exit_seconds`, `timing.banner_end_buffer_seconds`, and optional `timing.banner_total_seconds`.
+- Banner animation timing is backend-configured via `timing.banner_delay_seconds`, `timing.banner_enter_seconds`, `timing.banner_exit_seconds`, `timing.banner_end_buffer_seconds`, and optional `timing.banner_total_seconds`.
 - Banner display always starts at the beginning of the acquisition window.
 - Default end timing is the acquisition window end minus `timing.banner_end_buffer_seconds`, so exit animation completes shortly before the window closes.
 - Optional `timing.banner_total_seconds` may end banners earlier than the acquisition window; it is never clamped upward/downward.
