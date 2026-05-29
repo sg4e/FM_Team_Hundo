@@ -103,9 +103,11 @@ jobs:
           if [ "$RUNNER_OS" == "Windows" ]; then
             cp middleware/target/release/FM_Sentinel.exe artifact/
             cp middleware/scripts/run_FM_Sentinel.bat artifact/
+            cp middleware/scripts/TEST_FM_Sentinel.bat artifact/
           else
             cp middleware/target/release/FM_Sentinel artifact/
-            cp middleware/scripts/run_FM_Sentinel.bat artifact/
+            cp middleware/scripts/run_FM_Sentinel.sh artifact/
+            cp middleware/scripts/TEST_FM_Sentinel.sh artifact/
             chmod u+x artifact/*
           fi
 
