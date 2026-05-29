@@ -12,7 +12,7 @@ spring:
             redirect-uri: "https://hundo.maika.moe/login/oauth2/code/{registrationId}"
 ygo:
   apiUrl: https://hundo.maika.moe/api
-  teamAutoAssign: true
+  teamAutoAssign: false
 hundo:
   twitch-vod:
-    enabled: false  # Switch to true for real event
+    enabled: true  # Switch to true for real event
