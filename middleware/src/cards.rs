@@ -737,7 +737,7 @@ const CARD_NAMES: &[&str] = &[
     "Dokurorider",
     "Mask of Shine & Dark",
     "Dark Magic Ritual",
-    "Magician of Black Chaos"
+    "Magician of Black Chaos",
 ];
 
 pub fn get_card_name_for_id(card_id: i32) -> Option<&'static str> {
@@ -745,8 +745,7 @@ pub fn get_card_name_for_id(card_id: i32) -> Option<&'static str> {
     if id > 0 && id <= CARD_NAMES.len() {
         let index = id - 1;
         Some(CARD_NAMES[index])
-    }
-    else {
+    } else {
         None
     }
 }

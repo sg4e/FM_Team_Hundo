@@ -83,6 +83,16 @@ class ApiControllerIntegrationTest {
         validApiKey = apiKeyService.generateNewApiKey(testUser);
     }
 
+
+    private User createNoTeamUser(String twitchId) {
+        User noTeamUser = new User();
+        noTeamUser.setTwitchId(twitchId);
+        noTeamUser.setName("NoTeamUser");
+        noTeamUser.setTeamId(0);
+        noTeamUser.setOauth("test_oauth_token");
+        return userRepository.save(noTeamUser);
+    }
+
     @Test
     void testPlayersEndpointReturnsUsersAssignedToTeams() throws Exception {
         User noTeamUser = new User();
@@ -222,6 +232,107 @@ class ApiControllerIntegrationTest {
         assertThat(secondUpdate.getSource()).isEqualTo(MessageType.STARCHIPS);
         assertThat(secondUpdate.getValue()).isEqualTo(5);
         assertThat(secondUpdate.getParticipantId()).isEqualTo(testUser.getDatabaseId());
+    }
+
+
+    @Test
+    void testUpdateEndpointWithTestHeaderReturnsTestResponseWithoutPersisting() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1),
+                new EmuMessage(MessageType.STARCHIPS, 5, 0, 0, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .header("test", "true")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("ok"))
+                .andExpect(jsonPath("$.message").value("TestUser"))
+                .andExpect(jsonPath("$.test").value(true));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
+    @Test
+    void testUpdateEndpointAllowsUserWithNoTeamInTestMode() throws Exception {
+        User noTeamUser = createNoTeamUser("no_team_test_user");
+        String noTeamApiKey = apiKeyService.generateNewApiKey(noTeamUser);
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", noTeamApiKey)
+                .header("test", "true")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("ok"))
+                .andExpect(jsonPath("$.message").value("NoTeamUser"))
+                .andExpect(jsonPath("$.test").value(true));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
+    @Test
+    void testUpdateEndpointTreatsFalseTestHeaderAsNormalMode() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .header("test", " false ")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("ok"))
+                .andExpect(jsonPath("$.test").doesNotExist());
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).hasSize(1);
+    }
+
+    @Test
+    void testUpdateEndpointWithInvalidApiKeyStillFailsInTestMode() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, 122, 0, 1, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", "invalid_api_key")
+                .header("test", "true")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid API key"));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
+    }
+
+    @Test
+    void testUpdateEndpointWithInvalidPayloadStillFailsInTestMode() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.DROP, -1, 0, 1, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .header("test", "true")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid card id"));
+
+        List<PlayerUpdate> updates = playerUpdateRepository.findAll();
+        assertThat(updates).isEmpty();
     }
 
     @Test
@@ -419,15 +530,7 @@ class ApiControllerIntegrationTest {
 
     @Test
     void testUpdateEndpointRejectsUserWithNoTeam() throws Exception {
-        // Create a user with teamId 0 (no team)
-        User noTeamUser = new User();
-        noTeamUser.setTwitchId("no_team_user");
-        noTeamUser.setName("NoTeamUser");
-        noTeamUser.setTeamId(0);
-        noTeamUser.setOauth("test_oauth_token");
-        noTeamUser = userRepository.save(noTeamUser);
-
-        // Generate a valid API key for this user
+        User noTeamUser = createNoTeamUser("no_team_user");
         String noTeamApiKey = apiKeyService.generateNewApiKey(noTeamUser);
 
         List<EmuMessage> messages = Arrays.asList(

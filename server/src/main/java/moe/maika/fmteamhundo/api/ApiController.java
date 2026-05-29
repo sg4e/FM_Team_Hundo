@@ -115,11 +115,13 @@ public class ApiController {
     }
 
     @PostMapping(value = "/update", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, String>> update(
+    public ResponseEntity<Map<String, Object>> update(
             @RequestHeader(value = "X-API-Key", required = false) String apiKey,
+            @RequestHeader(value = "test", required = false) String testHeader,
             @RequestBody List<EmuMessage> emuMessages) {
         Validation validation = new Validation(apiKeyService, apiKey);
-        HashMap<String, String> response = validation.getResponse();
+        HashMap<String, Object> response = new HashMap<>(validation.getResponse());
+        boolean testMode = isTestMode(testHeader);
         
         if (validation.isValid()) {
             User user = validation.getUser().get();
@@ -127,34 +129,39 @@ public class ApiController {
 
             if(emuMessages.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("result", "error", "message", "No updates provided"));
+                    .body(Map.<String, Object>of("result", "error", "message", "No updates provided"));
             }
 
             // Make sure no unobtainable cards are included in the update
             if(emuMessages.stream().filter(msg -> msg.type() != MessageType.STARCHIPS).map(EmuMessage::value)
                 .anyMatch(cardId -> unobtainableCards.contains(cardId))) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("result", "error", "message", "Update contains unobtainable cards"));
+                    .body(Map.<String, Object>of("result", "error", "message", "Update contains unobtainable cards"));
             }
 
             //Make sure no card id is non-positive or greater than 722
             if(emuMessages.stream().filter(msg -> msg.type() != MessageType.STARCHIPS).map(EmuMessage::value)
                 .anyMatch(cardId -> cardId <= 0 || cardId > 722)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("result", "error", "message", "Invalid card id"));
+                    .body(Map.<String, Object>of("result", "error", "message", "Invalid card id"));
             }
 
             //Make sure starchips total is not at or above 1000000
             if(emuMessages.stream().filter(msg -> msg.type() == MessageType.STARCHIPS).mapToInt(EmuMessage::value)
                 .anyMatch(starchips -> starchips >= 1_000_000)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("result", "error", "message", "Total starchips cannot be equal to or exceed 1000000"));
+                    .body(Map.<String, Object>of("result", "error", "message", "Total starchips cannot be equal to or exceed 1000000"));
             }
 
-            // Check if user is on team 0 (no team)
-            if (user.getTeamId() == 0) {
+            // Check if user is on team 0 (no team) unless this is an API test
+            if (!testMode && user.getTeamId() == 0) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("result", "error", "message", "User is not assigned to a team"));
+                    .body(Map.<String, Object>of("result", "error", "message", "User is not assigned to a team"));
+            }
+
+            if (testMode) {
+                response.put("test", true);
+                return ResponseEntity.ok(response);
             }
             
             Instant now = Instant.now();
@@ -165,6 +172,10 @@ public class ApiController {
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
+    }
+
+    private boolean isTestMode(String testHeader) {
+        return testHeader != null && !testHeader.trim().equalsIgnoreCase("false");
     }
 
     @Getter

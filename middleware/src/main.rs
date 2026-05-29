@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::{crate_name, crate_version};
+use clap::{Arg, ArgAction, Command, crate_name, crate_version};
 use reqwest::header::HeaderMap;
 use reqwest::{Client, StatusCode, Url};
 use serde::Deserialize;
@@ -55,12 +55,19 @@ struct ApiResponse {
     result: String,
     message: Option<String>,
     protocol_version: Option<String>,
+    test: Option<bool>,
+}
+
+#[derive(Debug, PartialEq)]
+struct RuntimeArgs {
+    test_mode: bool,
 }
 
 struct StartupContext {
     credentials: Credentials,
     http_client: Client,
     server_protocol_version: Option<String>,
+    test_mode: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -93,6 +100,44 @@ enum ProtocolCheck {
     Match,
     Skipped(&'static str),
     Mismatch,
+}
+
+fn parse_runtime_args_from<I, T>(args: I) -> RuntimeArgs
+where
+    I: IntoIterator<Item = T>,
+    T: Into<std::ffi::OsString> + Clone,
+{
+    let matches = Command::new(crate_name!())
+        .version(crate_version!())
+        .arg(
+            Arg::new("test")
+                .long("test")
+                .help("Run in API test mode without adding cards to the team Library")
+                .action(ArgAction::SetTrue),
+        )
+        .get_matches_from(args);
+
+    RuntimeArgs {
+        test_mode: matches.get_flag("test"),
+    }
+}
+
+fn parse_runtime_args() -> RuntimeArgs {
+    parse_runtime_args_from(std::env::args_os())
+}
+
+fn add_test_header(request: reqwest::RequestBuilder, test_mode: bool) -> reqwest::RequestBuilder {
+    if test_mode {
+        request.header("test", "true")
+    } else {
+        request
+    }
+}
+
+fn log_test_success(api_response: &ApiResponse) {
+    if api_response.result == "ok" && api_response.test == Some(true) {
+        println!("Server responded that test was successful");
+    }
 }
 
 fn stamped_version(version: Option<&str>) -> Option<&str> {
@@ -336,7 +381,7 @@ async fn handle_connection(
     Ok(())
 }
 
-async fn validate_startup() -> StartupContext {
+async fn validate_startup(test_mode: bool) -> StartupContext {
     let credential_file = match File::open(CREDENTIALS_FILENAME) {
         Ok(file) => file,
         Err(e) => {
@@ -372,12 +417,10 @@ async fn validate_startup() -> StartupContext {
             process::exit(1);
         }
     };
-    let send_request = match http_client
+    let validate_request = http_client
         .get(validate_endpoint.clone())
-        .header("X-API-Key", &credentials.key)
-        .send()
-        .await
-    {
+        .header("X-API-Key", &credentials.key);
+    let send_request = match add_test_header(validate_request, test_mode).send().await {
         Ok(req) => req,
         Err(e) => {
             eprintln!("Error sending validation request: {}", e);
@@ -405,8 +448,8 @@ async fn validate_startup() -> StartupContext {
         "ok" => {
             println!("Successfully connected to FM Hundo website");
             match validation_parsed.message {
-                Some(message) => {
-                    if message == credentials.username {
+                Some(ref message) => {
+                    if message == credentials.username.as_str() {
                         println!("Welcome, {}.", message);
                     } else {
                         println!(
@@ -418,6 +461,7 @@ async fn validate_startup() -> StartupContext {
                     "WARNING: No username provided by server. This may cause issues with card tracking."
                 ),
             }
+            log_test_success(&validation_parsed);
             validate_middleware_protocol(validation_parsed.protocol_version.as_deref());
         }
         "error" => {
@@ -443,6 +487,7 @@ async fn validate_startup() -> StartupContext {
         credentials,
         http_client,
         server_protocol_version: validation_parsed.protocol_version,
+        test_mode,
     }
 }
 
@@ -450,6 +495,7 @@ async fn consume_cards(
     mut receiver: mpsc::Receiver<String>,
     credentials: Credentials,
     http_client: Client,
+    test_mode: bool,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut buffer: Vec<String> = Vec::with_capacity(EMU_MESSAGE_BUFFER_SIZE);
     while !receiver.is_closed() {
@@ -484,13 +530,12 @@ async fn consume_cards(
                     continue;
                 }
             };
-            let server_response = http_client
+            let update_request = http_client
                 .post(update_endpoint.clone())
                 .header("X-API-Key", &credentials.key)
                 .header("Content-Type", "application/json")
-                .body(messages)
-                .send()
-                .await;
+                .body(messages);
+            let server_response = add_test_header(update_request, test_mode).send().await;
             match server_response {
                 Ok(resp) => {
                     let status = resp.status();
@@ -511,7 +556,7 @@ async fn consume_cards(
                                     }
                                 };
                             match api_response.result.as_str() {
-                                "ok" => (),
+                                "ok" => log_test_success(&api_response),
                                 "error" => eprintln!(
                                     "Server returned error: {}",
                                     match api_response.message {
@@ -592,13 +637,21 @@ async fn listen_for_emu_connection(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+    let runtime_args = parse_runtime_args();
+
     println!("{}: version {}", crate_name!(), crate_version!());
     match stamped_version(MIDDLEWARE_PROTOCOL_VERSION) {
         Some(version) => println!("FM_Sentinel protocol version: {version}"),
         None => println!("FM_Sentinel protocol version: unstamped local build"),
     }
 
-    let startup_context = validate_startup().await;
+    if runtime_args.test_mode {
+        println!(
+            "Currently running in TEST mode. None of your cards will be added to the team's Library."
+        );
+    }
+
+    let startup_context = validate_startup(runtime_args.test_mode).await;
     let (sender, receiver) = mpsc::channel(EMU_MESSAGE_BUFFER_SIZE);
 
     let emu_server = tokio::spawn(listen_for_emu_connection(
@@ -609,6 +662,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         receiver,
         startup_context.credentials,
         startup_context.http_client,
+        startup_context.test_mode,
     )); // consumer
 
     let (emu_result, http_result) = tokio::join!(emu_server, http_poster);
@@ -664,6 +718,22 @@ mod tests {
     }
 
     #[test]
+    fn parse_runtime_args_defaults_to_non_test_mode() {
+        assert_eq!(
+            parse_runtime_args_from(["FM_Sentinel"]),
+            RuntimeArgs { test_mode: false }
+        );
+    }
+
+    #[test]
+    fn parse_runtime_args_accepts_test_flag() {
+        assert_eq!(
+            parse_runtime_args_from(["FM_Sentinel", "--test"]),
+            RuntimeArgs { test_mode: true }
+        );
+    }
+
+    #[test]
     fn parse_api_response_accepts_json() {
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -680,6 +750,27 @@ mod tests {
 
         assert_eq!(response.result, "ok");
         assert_eq!(response.message.as_deref(), Some("mai"));
+        assert_eq!(response.test, None);
+    }
+
+    #[test]
+    fn parse_api_response_accepts_test_confirmation() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json"),
+        );
+
+        let response = parse_api_response(
+            StatusCode::OK,
+            &headers,
+            r#"{"result":"ok","message":"mai","test":true}"#,
+        )
+        .unwrap();
+
+        assert_eq!(response.result, "ok");
+        assert_eq!(response.message.as_deref(), Some("mai"));
+        assert_eq!(response.test, Some(true));
     }
 
     #[test]
