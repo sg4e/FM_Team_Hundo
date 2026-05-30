@@ -70,17 +70,21 @@ The `credits` command reloads `credits_scene.yml`, fetches `/api/credits`, cuts
 to `FM Hundo - Credits`, and starts the roll from the beginning. While that
 scene is active, acquisition alerts do not take scene control.
 
-Optional production-owned master scenes can be configured in `config.yml`:
+Production-owned manual scenes can be configured in `config.yml`:
 
 ```yaml
 obs:
+  manual_background_scene: "Manual Background"
   all_managed_master_scene: "Production - Managed Global"
   stream_layout_master_scene: "Production - Stream Layout Chrome"
 ```
 
-If configured, Python creates these scenes if missing and nests them into managed
-layouts, but never edits their contents. Put commentary audio sources in
-`all_managed_master_scene`; it is added to every managed scene directly under
+Python creates these scenes if missing and nests them into managed
+layouts, but never edits their contents. `manual_background_scene` defaults to
+`Manual Background` and is added to every generated managed scene as the bottom
+source layer; set it to `null` to disable it. It is not added to the overlay or
+credits scenes. Put commentary audio sources in `all_managed_master_scene`;
+it is added to every managed scene directly under
 the FM Hundo overlay scene, making it second-to-the-top in the managed scene
 source order. Put LiveSplit, Discord streaming kit, and related labels in
 `stream_layout_master_scene`; it is added only to All Streamers and Team scenes

@@ -42,8 +42,10 @@ obs:
           release_time: 250
           output_gain: 0.0
           sidechain_source: "Production Commentary Bus"
-  # Optional production-owned master scenes. Python creates the empty scenes if
-  # configured, nests them into generated scenes, and never edits their contents.
+  # Production-owned manual scenes. Python creates empty scenes if needed, nests
+  # them into generated scenes, and never edits their contents.
+  # Set null to disable; nested at the bottom of generated scenes.
+  manual_background_scene: "Manual Background"
   all_managed_master_scene: null
   stream_layout_master_scene: null
   credits_scene: null

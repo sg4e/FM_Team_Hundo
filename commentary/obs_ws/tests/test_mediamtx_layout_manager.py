@@ -253,6 +253,54 @@ async def test_master_scenes_are_nested_into_configured_managed_scenes():
         assert (scene, "Prod Stream Layout") not in obs.scene_items
 
 
+@pytest.mark.asyncio
+async def test_manual_background_scene_is_bottom_layer_for_generated_managed_scenes():
+    obs = FakeObs()
+    manager = ObsLayoutManager(
+        obs,
+        AppConfig(),
+        players(),
+        [Team(1, "Alpha"), Team(2, "Beta")],
+        registry({"runner10"}),
+    )
+
+    await manager.setup()
+
+    generated_scenes = {
+        "FM Hundo - All Streamers",
+        "FM Hundo - Team - Alpha",
+        "FM Hundo - Team - Beta",
+        "FM Hundo - Player - Runner Ten",
+        "FM Hundo - Player - Runner Eleven",
+        "FM Hundo - Player - Runner Twenty",
+    }
+    assert "Manual Background" in obs.created_scenes
+    for scene in generated_scenes:
+        assert (scene, "Manual Background") in obs.scene_items
+        background_id = obs.scene_items[(scene, "Manual Background")]
+        assert (scene, background_id) in obs.bottom_moves
+        assert (scene, background_id, 0) in obs.indices
+    assert ("FM Hundo Overlay", "Manual Background") not in obs.scene_items
+    assert ("FM Hundo - Credits", "Manual Background") not in obs.scene_items
+
+
+@pytest.mark.asyncio
+async def test_manual_background_can_be_disabled():
+    obs = FakeObs()
+    manager = ObsLayoutManager(
+        obs,
+        AppConfig(obs=ObsConfig(manual_background_scene=None)),
+        players(),
+        [Team(1, "Alpha")],
+        registry({"runner10"}),
+    )
+
+    await manager.setup()
+
+    assert "Manual Background" not in obs.created_scenes
+    assert all(source != "Manual Background" for _scene, source in obs.scene_items)
+
+
 def test_master_scene_names_cannot_self_nest_generated_or_overlay_scenes():
     with pytest.raises(ObsError, match="master scene"):
         ObsLayoutManager(

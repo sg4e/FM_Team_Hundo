@@ -49,6 +49,7 @@ class ObsConfig:
     stream_audio_filters: StreamAudioFiltersConfig = field(default_factory=StreamAudioFiltersConfig)
     all_managed_master_scene: str | None = None
     stream_layout_master_scene: str | None = None
+    manual_background_scene: str | None = "Manual Background"
     credits_scene: str | None = None
     credits_source: str | None = None
     dry_run: bool = False

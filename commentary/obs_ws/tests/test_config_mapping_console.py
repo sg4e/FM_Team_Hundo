@@ -43,6 +43,7 @@ group_scenes:
     assert config.obs.password == "env-secret"
     assert config.obs.all_managed_master_scene == "Prod Global"
     assert config.obs.stream_layout_master_scene == "Prod Stream Layout"
+    assert config.obs.manual_background_scene == "Manual Background"
     assert config.player_scenes == {10: "Player Ten"}
     assert config.group_scenes[0].scene == "Group"
     assert config.group_scenes[0].interval_seconds == 120
@@ -144,6 +145,7 @@ def test_master_scene_config_defaults_disabled(tmp_path):
 
     assert config.obs.all_managed_master_scene is None
     assert config.obs.stream_layout_master_scene is None
+    assert config.obs.manual_background_scene == "Manual Background"
 
 
 def test_name_resolver_and_duelist_file(tmp_path):
