@@ -532,10 +532,18 @@ class ObsLayoutManager:
         await self.obs.move_scene_item_to_top(scene, item_id)
 
     async def _ensure_master_scenes(self) -> None:
-        for scene in self._configured_master_scenes():
+        for scene in self._configured_manual_scenes():
             await self.obs.ensure_scene(scene)
 
+    async def _ensure_manual_background_for_scene(self, scene: str) -> None:
+        background_scene = self.config.obs.manual_background_scene
+        if not background_scene:
+            return
+        item_id = await self.obs.ensure_scene_item(scene, background_scene, enabled=True)
+        await self.obs.move_scene_item_to_bottom(scene, item_id)
+
     async def _ensure_master_scenes_for_scene(self, scene: str) -> None:
+        await self._ensure_manual_background_for_scene(scene)
         stream_master = self.config.obs.stream_layout_master_scene
         if stream_master and scene in (self.all_scene, *self.team_scenes.values()):
             item_id = await self.obs.ensure_scene_item(scene, stream_master, enabled=True)
@@ -555,14 +563,29 @@ class ObsLayoutManager:
             if scene
         )
 
+    def _configured_manual_scenes(self) -> tuple[str, ...]:
+        return tuple(
+            scene
+            for scene in (
+                self.config.obs.manual_background_scene,
+                *self._configured_master_scenes(),
+            )
+            if scene
+        )
+
     def _validate_master_scene_names(self) -> None:
         generated = set(self.generated_scene_names())
-        forbidden = generated | {self.config.obs.overlay_scene}
-        for scene in self._configured_master_scenes():
+        forbidden = generated | {self.config.obs.overlay_scene, self.config.obs.credits_scene_name}
+        for scene in self._configured_manual_scenes():
             if scene in forbidden:
                 raise ObsError(
-                    f"Configured master scene {scene!r} cannot be the overlay scene or a generated managed scene"
+                    f"Configured manual master scene {scene!r} cannot be the overlay scene, credits scene, or a generated managed scene"
                 )
+        manual_scenes = self._configured_manual_scenes()
+        duplicates = sorted({scene for scene in manual_scenes if manual_scenes.count(scene) > 1})
+        if duplicates:
+            duplicate_names = ", ".join(duplicates)
+            raise ObsError(f"Configured manual scenes must be distinct; duplicate scene(s): {duplicate_names}")
 
     def _offline_message_transform(self):
         width = self.config.overlay.canvas_width * 0.72
