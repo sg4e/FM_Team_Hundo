@@ -536,13 +536,13 @@ class ObsLayoutManager:
             await self.obs.ensure_scene(scene)
 
     async def _ensure_master_scenes_for_scene(self, scene: str) -> None:
-        all_master = self.config.obs.all_managed_master_scene
-        if all_master:
-            item_id = await self.obs.ensure_scene_item(scene, all_master, enabled=True)
-            await self.obs.move_scene_item_to_bottom(scene, item_id)
         stream_master = self.config.obs.stream_layout_master_scene
         if stream_master and scene in (self.all_scene, *self.team_scenes.values()):
             item_id = await self.obs.ensure_scene_item(scene, stream_master, enabled=True)
+            await self.obs.move_scene_item_to_top(scene, item_id)
+        all_master = self.config.obs.all_managed_master_scene
+        if all_master:
+            item_id = await self.obs.ensure_scene_item(scene, all_master, enabled=True)
             await self.obs.move_scene_item_to_top(scene, item_id)
 
     def _configured_master_scenes(self) -> tuple[str, ...]:

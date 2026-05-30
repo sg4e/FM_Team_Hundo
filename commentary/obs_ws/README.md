@@ -80,12 +80,13 @@ obs:
 
 If configured, Python creates these scenes if missing and nests them into managed
 layouts, but never edits their contents. Put commentary audio sources in
-`all_managed_master_scene`; it is added to every managed scene at the bottom.
-Put LiveSplit, Discord streaming kit, and related labels in
+`all_managed_master_scene`; it is added to every managed scene directly under
+the FM Hundo overlay scene, making it second-to-the-top in the managed scene
+source order. Put LiveSplit, Discord streaming kit, and related labels in
 `stream_layout_master_scene`; it is added only to All Streamers and Team scenes
-above stream tiles but below alert overlays. OBS source and scene names are
-global, so keep these names distinct from generated `FM Hundo` scenes and other
-sources.
+above stream tiles but below `all_managed_master_scene` and alert overlays. OBS
+source and scene names are global, so keep these names distinct from generated
+`FM Hundo` scenes and other sources.
 
 ## Managed Stream Audio Filters
 
