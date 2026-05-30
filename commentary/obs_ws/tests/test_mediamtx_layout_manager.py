@@ -234,14 +234,21 @@ async def test_master_scenes_are_nested_into_configured_managed_scenes():
     for scene in generated_scenes:
         assert (scene, "Prod Global") in obs.scene_items
         global_id = obs.scene_items[(scene, "Prod Global")]
-        assert (scene, global_id) in obs.bottom_moves
+        overlay_id = obs.scene_items[(scene, "FM Hundo Overlay")]
+        assert (scene, global_id) in obs.top_moves
+        assert (scene, overlay_id) in obs.top_moves
+        assert obs.top_moves.index((scene, global_id)) < obs.top_moves.index((scene, overlay_id))
+        assert (scene, global_id) not in obs.bottom_moves
     for scene in ("FM Hundo - All Streamers", "FM Hundo - Team - Alpha", "FM Hundo - Team - Beta"):
         assert (scene, "Prod Stream Layout") in obs.scene_items
         stream_id = obs.scene_items[(scene, "Prod Stream Layout")]
+        global_id = obs.scene_items[(scene, "Prod Global")]
         overlay_id = obs.scene_items[(scene, "FM Hundo Overlay")]
         assert (scene, stream_id) in obs.top_moves
+        assert (scene, global_id) in obs.top_moves
         assert (scene, overlay_id) in obs.top_moves
-        assert obs.top_moves.index((scene, stream_id)) < obs.top_moves.index((scene, overlay_id))
+        assert obs.top_moves.index((scene, stream_id)) < obs.top_moves.index((scene, global_id))
+        assert obs.top_moves.index((scene, global_id)) < obs.top_moves.index((scene, overlay_id))
     for scene in ("FM Hundo - Player - Runner Ten", "FM Hundo - Player - Runner Eleven", "FM Hundo - Player - Runner Twenty"):
         assert (scene, "Prod Stream Layout") not in obs.scene_items
 
