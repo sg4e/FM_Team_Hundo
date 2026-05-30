@@ -17,6 +17,21 @@ class ApiConfig:
 
 
 @dataclass(frozen=True)
+class ObsAudioFilterSpec:
+    name: str
+    kind: str
+    enabled: bool = True
+    settings: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class StreamAudioFiltersConfig:
+    enabled: bool = False
+    sync_settings: bool = True
+    filters: tuple[ObsAudioFilterSpec, ...] = ()
+
+
+@dataclass(frozen=True)
 class ObsConfig:
     host: str = "127.0.0.1"
     port: int = 4455
@@ -31,6 +46,7 @@ class ObsConfig:
     alert_audio_volume_mul: float = 1.0
     alert_audio_path: str | None = None
     alert_audio_source: str | None = None
+    stream_audio_filters: StreamAudioFiltersConfig = field(default_factory=StreamAudioFiltersConfig)
     all_managed_master_scene: str | None = None
     stream_layout_master_scene: str | None = None
     credits_scene: str | None = None
@@ -155,6 +171,7 @@ def load_config(path: Path | str) -> AppConfig:
     obs_data = dict(data.get("obs") or {})
     if os.getenv("OBS_WS_PASSWORD"):
         obs_data["password"] = os.environ["OBS_WS_PASSWORD"]
+    obs_data["stream_audio_filters"] = _stream_audio_filters(obs_data.get("stream_audio_filters"))
 
     config = AppConfig(
         api=ApiConfig(**dict(data.get("api") or {})),
@@ -171,6 +188,46 @@ def load_config(path: Path | str) -> AppConfig:
     )
     _validate_timing(config.timing)
     return config
+
+
+def _stream_audio_filters(data: Any) -> StreamAudioFiltersConfig:
+    if data is None:
+        return StreamAudioFiltersConfig()
+    if not isinstance(data, dict):
+        raise ValueError("obs.stream_audio_filters must be a YAML mapping")
+    filter_specs = tuple(_obs_audio_filter_spec(item) for item in data.get("filters") or ())
+    names = [spec.name for spec in filter_specs]
+    duplicate_names = sorted({name for name in names if names.count(name) > 1})
+    if duplicate_names:
+        raise ValueError(
+            "obs.stream_audio_filters.filters must have unique names; duplicate filter(s): "
+            + ", ".join(duplicate_names)
+        )
+    return StreamAudioFiltersConfig(
+        enabled=bool(data.get("enabled", False)),
+        sync_settings=bool(data.get("sync_settings", True)),
+        filters=filter_specs,
+    )
+
+
+def _obs_audio_filter_spec(data: Any) -> ObsAudioFilterSpec:
+    if not isinstance(data, dict):
+        raise ValueError("Each obs.stream_audio_filters.filters item must be a YAML mapping")
+    name = str(data.get("name") or "").strip()
+    kind = str(data.get("kind") or "").strip()
+    if not name:
+        raise ValueError("Each obs.stream_audio_filters.filters item must have a non-empty name")
+    if not kind:
+        raise ValueError(f"obs.stream_audio_filters filter {name!r} must have a non-empty kind")
+    settings = data.get("settings") or {}
+    if not isinstance(settings, dict):
+        raise ValueError(f"obs.stream_audio_filters filter {name!r} settings must be a YAML mapping")
+    return ObsAudioFilterSpec(
+        name=name,
+        kind=kind,
+        enabled=bool(data.get("enabled", True)),
+        settings=dict(settings),
+    )
 
 
 def _group_scene(data: dict[str, Any]) -> GroupSceneConfig:

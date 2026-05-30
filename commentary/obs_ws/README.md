@@ -87,6 +87,60 @@ above stream tiles but below alert overlays. OBS source and scene names are
 global, so keep these names distinct from generated `FM Hundo` scenes and other
 sources.
 
+## Managed Stream Audio Filters
+
+Every website/simulation player gets one stable OBS Media Source, and that source
+is reused across the All Streamers, Team, and Player scenes. You can apply an
+ordered OBS audio filter chain to each managed stream source from `config.yml`:
+
+```yaml
+obs:
+  stream_audio_filters:
+    enabled: true
+    sync_settings: true  # true = YAML is authoritative; false = keep existing OBS filter settings
+    filters:
+      - name: "FM Hundo Stream Compressor"
+        kind: "compressor_filter"
+        enabled: true
+        settings:
+          ratio: 6.0
+          threshold: -18.0
+          attack_time: 6
+          release_time: 60
+          output_gain: 0.0
+
+      - name: "FM Hundo Commentary Duck"
+        kind: "compressor_filter"
+        enabled: true
+        settings:
+          ratio: 10.0
+          threshold: -24.0
+          attack_time: 6
+          release_time: 250
+          output_gain: 0.0
+          sidechain_source: "Production Commentary Bus"
+
+      - name: "FM Hundo Safety Limiter"
+        kind: "limiter_filter"
+        enabled: true
+        settings: {}
+```
+
+Filter `kind` and `settings` are passed through to OBS WebSocket, so this can
+manage compressors, limiters, and future OBS/plugin audio filters without adding
+filter-specific Python code. The configured order is enforced on every managed
+stream source.
+
+For OBS compressor sidechain ducking, set `settings.sidechain_source` to the
+exact OBS audio source name. This may be a manually managed production source
+from a master scene, such as a commentary bus. Startup OBS validation checks that
+configured sidechain source names exist as OBS inputs.
+
+With `sync_settings: true`, `config.yml` overwrites existing OBS filter settings
+on setup/reconcile. With `sync_settings: false`, missing filters are created and
+the configured order/enabled state is maintained, but existing OBS filter
+settings are left available for manual live tweaking.
+
 ## Alert Audio
 
 An optional alert sound plays when an acquisition fires. Configure it in `config.yml`:

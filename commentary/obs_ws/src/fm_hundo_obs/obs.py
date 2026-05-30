@@ -63,6 +63,20 @@ class ObsController:
     async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
         raise NotImplementedError
 
+    async def ensure_source_filter(
+        self,
+        source_name: str,
+        filter_name: str,
+        filter_kind: str,
+        settings: dict,
+        *,
+        enabled: bool = True,
+        index: int | None = None,
+        sync_settings: bool = True,
+        overlay: bool = True,
+    ) -> None:
+        raise NotImplementedError
+
     async def ensure_scene(self, scene_name: str) -> None:
         raise NotImplementedError
 
@@ -225,6 +239,49 @@ class SimpleObsController(ObsController):
     async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
         await self._call("SetInputVolume", {"inputName": input_name, "inputVolumeMul": volume_mul})
 
+    async def ensure_source_filter(
+        self,
+        source_name: str,
+        filter_name: str,
+        filter_kind: str,
+        settings: dict,
+        *,
+        enabled: bool = True,
+        index: int | None = None,
+        sync_settings: bool = True,
+        overlay: bool = True,
+    ) -> None:
+        filters = await self._source_filters(source_name)
+        if filter_name not in filters:
+            await self._call(
+                "CreateSourceFilter",
+                {
+                    "sourceName": source_name,
+                    "filterName": filter_name,
+                    "filterKind": filter_kind,
+                    "filterSettings": settings,
+                },
+            )
+        elif sync_settings:
+            await self._call(
+                "SetSourceFilterSettings",
+                {
+                    "sourceName": source_name,
+                    "filterName": filter_name,
+                    "filterSettings": settings,
+                    "overlay": overlay,
+                },
+            )
+        await self._call(
+            "SetSourceFilterEnabled",
+            {"sourceName": source_name, "filterName": filter_name, "filterEnabled": enabled},
+        )
+        if index is not None:
+            await self._call(
+                "SetSourceFilterIndex",
+                {"sourceName": source_name, "filterName": filter_name, "filterIndex": index},
+            )
+
     async def ensure_scene(self, scene_name: str) -> None:
         if scene_name not in set(await self._scene_names()):
             await self._call("CreateScene", {"sceneName": scene_name})
@@ -327,6 +384,10 @@ class SimpleObsController(ObsController):
         data = await self._call("GetSceneItemList", {"sceneName": scene_name})
         return {str(item["sourceName"]) for item in data["sceneItems"]}
 
+    async def _source_filters(self, source_name: str) -> set[str]:
+        data = await self._call("GetSourceFilterList", {"sourceName": source_name})
+        return {str(item["filterName"]) for item in data["filters"]}
+
     async def _find_scene_item_id(self, scene_name: str, source_name: str) -> int | None:
         data = await self._call("GetSceneItemList", {"sceneName": scene_name})
         for item in data["sceneItems"]:
@@ -382,6 +443,23 @@ class DryRunObsController(ObsController):
 
     async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
         self.actions.append(f"set volume {input_name} -> {volume_mul}")
+
+    async def ensure_source_filter(
+        self,
+        source_name: str,
+        filter_name: str,
+        filter_kind: str,
+        settings: dict,
+        *,
+        enabled: bool = True,
+        index: int | None = None,
+        sync_settings: bool = True,
+        overlay: bool = True,
+    ) -> None:
+        self.actions.append(
+            f"ensure source filter {filter_name} ({filter_kind}) on {source_name}, "
+            f"enabled={enabled}, index={index}, sync_settings={sync_settings}, overlay={overlay} -> {settings}"
+        )
 
     async def ensure_scene(self, scene_name: str) -> None:
         self.actions.append(f"ensure scene {scene_name}")
