@@ -354,6 +354,7 @@ class ObsLayoutManager:
             },
             enabled=False,
         )
+        await self._ensure_stream_audio_filters(sources.media_input)
         await self.obs.set_input_volume(sources.media_input, self.config.obs.stream_volume_mul)
         await self.obs.ensure_input(
             sources.player_scene,
@@ -376,6 +377,21 @@ class ObsLayoutManager:
             {"text": f"{player.name}\nStream offline"},
             enabled=True,
         )
+
+    async def _ensure_stream_audio_filters(self, media_input: str) -> None:
+        stream_filters = self.config.obs.stream_audio_filters
+        if not stream_filters.enabled:
+            return
+        for index, filter_spec in enumerate(stream_filters.filters):
+            await self.obs.ensure_source_filter(
+                media_input,
+                filter_spec.name,
+                filter_spec.kind,
+                filter_spec.settings,
+                enabled=filter_spec.enabled,
+                index=index,
+                sync_settings=stream_filters.sync_settings,
+            )
 
     async def _ensure_scene_offline_inputs(self) -> None:
         await self.obs.ensure_input(

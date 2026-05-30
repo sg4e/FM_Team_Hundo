@@ -15,6 +15,33 @@ obs:
   alert_audio_volume_mul: 1.0   # Linear volume multiplier for the alert audio source (1.0 = 0 dB, 0.25 ≈ -12 dB).
   alert_audio_path: null   # Required. Absolute or relative path to alert sound file.
   alert_audio_source: null   # defaults to "{managed_scene_prefix} Alert Audio"
+  # Optional ordered filter chain applied to every managed player stream Media Source.
+  # Filter names/kinds/settings are passed through to OBS, so this can manage
+  # compressors, limiters, and future OBS audio filters. Compressor sidechain
+  # ducking uses settings.sidechain_source with an exact OBS audio source name.
+  stream_audio_filters:
+    enabled: false
+    sync_settings: true   # true = YAML is authoritative; false = leave existing OBS settings alone.
+    filters:
+      - name: "FM Hundo Stream Compressor"
+        kind: "compressor_filter"
+        enabled: true
+        settings:
+          ratio: 6.0
+          threshold: -18.0
+          attack_time: 6
+          release_time: 60
+          output_gain: 0.0
+      - name: "FM Hundo Commentary Duck"
+        kind: "compressor_filter"
+        enabled: true
+        settings:
+          ratio: 10.0
+          threshold: -24.0
+          attack_time: 6
+          release_time: 250
+          output_gain: 0.0
+          sidechain_source: "Production Commentary Bus"
   # Optional production-owned master scenes. Python creates the empty scenes if
   # configured, nests them into generated scenes, and never edits their contents.
   all_managed_master_scene: null

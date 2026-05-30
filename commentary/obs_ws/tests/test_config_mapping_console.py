@@ -4,8 +4,16 @@ import json
 
 import pytest
 
-from fm_hundo_obs.config import AppConfig, ObsConfig, PortraitsConfig, TwitchConfig, load_config
-from fm_hundo_obs.main import _validate_config
+from fm_hundo_obs.config import (
+    AppConfig,
+    ObsAudioFilterSpec,
+    ObsConfig,
+    PortraitsConfig,
+    StreamAudioFiltersConfig,
+    TwitchConfig,
+    load_config,
+)
+from fm_hundo_obs.main import _stream_filter_sidechain_sources, _validate_config
 from fm_hundo_obs.console import CommandType, parse_command, parse_on_off
 from fm_hundo_obs.mapping import NameResolver, load_duelist_names
 from fm_hundo_obs.models import ALERT_LABELS, MessageType, Player, Team
@@ -39,6 +47,93 @@ group_scenes:
     assert config.group_scenes[0].scene == "Group"
     assert config.group_scenes[0].interval_seconds == 120
     assert config.group_scenes[0].audio_sources == ("A", "B")
+
+
+def test_load_config_stream_audio_filters(tmp_path):
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        """
+obs:
+  stream_audio_filters:
+    enabled: true
+    sync_settings: false
+    filters:
+      - name: Leveling Compressor
+        kind: compressor_filter
+        settings:
+          ratio: 4.0
+          threshold: -18.0
+      - name: Commentary Duck
+        kind: compressor_filter
+        enabled: false
+        settings:
+          sidechain_source: Production Commentary Bus
+""",
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.obs.stream_audio_filters.enabled is True
+    assert config.obs.stream_audio_filters.sync_settings is False
+    assert [filter_spec.name for filter_spec in config.obs.stream_audio_filters.filters] == [
+        "Leveling Compressor",
+        "Commentary Duck",
+    ]
+    assert config.obs.stream_audio_filters.filters[0].kind == "compressor_filter"
+    assert config.obs.stream_audio_filters.filters[0].settings == {"ratio": 4.0, "threshold": -18.0}
+    assert config.obs.stream_audio_filters.filters[1].enabled is False
+    assert config.obs.stream_audio_filters.filters[1].settings == {
+        "sidechain_source": "Production Commentary Bus"
+    }
+
+
+def test_stream_filter_sidechain_sources_are_collected_for_obs_validation():
+    config = AppConfig(
+        obs=ObsConfig(
+            stream_audio_filters=StreamAudioFiltersConfig(
+                enabled=True,
+                filters=(
+                    ObsAudioFilterSpec(
+                        name="Duck",
+                        kind="compressor_filter",
+                        settings={"sidechain_source": "Production Commentary Bus"},
+                    ),
+                    ObsAudioFilterSpec(
+                        name="Duplicate Duck",
+                        kind="compressor_filter",
+                        settings={"sidechain_source": "Production Commentary Bus"},
+                    ),
+                    ObsAudioFilterSpec(
+                        name="No Sidechain",
+                        kind="compressor_filter",
+                        settings={"sidechain_source": "none"},
+                    ),
+                ),
+            )
+        )
+    )
+
+    assert _stream_filter_sidechain_sources(config) == ["Production Commentary Bus"]
+
+
+def test_load_config_rejects_duplicate_stream_audio_filter_names(tmp_path):
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        """
+obs:
+  stream_audio_filters:
+    filters:
+      - name: Compressor
+        kind: compressor_filter
+      - name: Compressor
+        kind: limiter_filter
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unique names"):
+        load_config(config_path)
 
 
 def test_master_scene_config_defaults_disabled(tmp_path):

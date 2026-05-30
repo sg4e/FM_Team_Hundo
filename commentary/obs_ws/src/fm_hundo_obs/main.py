@@ -154,6 +154,7 @@ class Application:
             for group in self.config.group_scenes
             for source in group.audio_sources
         ]
+        audio_sources.extend(_stream_filter_sidechain_sources(self.config))
         await self.obs.validate(
             player_scenes=(),
             group_scenes=(),
@@ -534,6 +535,20 @@ def _validate_config(config: AppConfig, config_path: Path, simulate_mediamtx: bo
                 "twitch.client_secret is not configured. Set it in config.yml to enable "
                 "Twitch profile image fetching for the cut-in popup."
             )
+
+
+def _stream_filter_sidechain_sources(config: AppConfig) -> list[str]:
+    if not config.obs.stream_audio_filters.enabled:
+        return []
+    sources: list[str] = []
+    for filter_spec in config.obs.stream_audio_filters.filters:
+        sidechain_source = filter_spec.settings.get("sidechain_source")
+        if not isinstance(sidechain_source, str):
+            continue
+        source_name = sidechain_source.strip()
+        if source_name and source_name.lower() != "none" and source_name not in sources:
+            sources.append(source_name)
+    return sources
 
 
 def parse_args() -> argparse.Namespace:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from fm_hundo_obs.config import AppConfig, MediaMtxConfig, ObsConfig
+from fm_hundo_obs.config import AppConfig, MediaMtxConfig, ObsAudioFilterSpec, ObsConfig, StreamAudioFiltersConfig
 from fm_hundo_obs.layout import Rect, fit_inside, grid_layout
 from fm_hundo_obs.managed_layout import ObsLayoutManager
 from fm_hundo_obs.mediamtx import StreamRegistry, parse_active_paths
@@ -506,6 +506,117 @@ async def test_non_managed_scene_does_not_change_managed_audio_focus():
 
     assert focused is False
     assert len(obs.mutes) == mute_count
+
+
+@pytest.mark.asyncio
+async def test_stream_audio_filters_are_disabled_by_default():
+    obs = FakeObs()
+    manager = ObsLayoutManager(obs, AppConfig(), players(), [Team(1, "Alpha"), Team(2, "Beta")], registry({"runner10"}))
+
+    await manager.setup()
+
+    assert obs.source_filter_calls == []
+    assert obs.source_filters == {}
+
+
+@pytest.mark.asyncio
+async def test_stream_audio_filter_chain_applies_to_managed_media_sources_only():
+    obs = FakeObs()
+    filter_config = StreamAudioFiltersConfig(
+        enabled=True,
+        filters=(
+            ObsAudioFilterSpec(
+                name="FM Hundo Leveling Compressor",
+                kind="compressor_filter",
+                settings={"ratio": 4.0, "threshold": -18.0, "attack_time": 6, "release_time": 60},
+            ),
+            ObsAudioFilterSpec(
+                name="FM Hundo Commentary Duck",
+                kind="compressor_filter",
+                settings={
+                    "ratio": 10.0,
+                    "threshold": -24.0,
+                    "attack_time": 6,
+                    "release_time": 250,
+                    "sidechain_source": "Production Commentary Bus",
+                },
+            ),
+            ObsAudioFilterSpec(
+                name="FM Hundo Safety Limiter",
+                kind="limiter_filter",
+                enabled=False,
+                settings={"threshold": -1.0, "release_time": 60},
+            ),
+        ),
+    )
+    config = AppConfig(obs=ObsConfig(stream_audio_filters=filter_config))
+    manager = ObsLayoutManager(obs, config, players(), [Team(1, "Alpha"), Team(2, "Beta")], registry({"runner10"}))
+
+    await manager.setup()
+
+    media_sources = {
+        "FM Hundo Media - Runner Ten",
+        "FM Hundo Media - Runner Eleven",
+        "FM Hundo Media - Runner Twenty",
+    }
+    for source in media_sources:
+        assert obs.source_filters[(source, "FM Hundo Leveling Compressor")] == {
+            "kind": "compressor_filter",
+            "settings": {"ratio": 4.0, "threshold": -18.0, "attack_time": 6, "release_time": 60},
+            "enabled": True,
+            "index": 0,
+        }
+        assert obs.source_filters[(source, "FM Hundo Commentary Duck")]["settings"]["sidechain_source"] == (
+            "Production Commentary Bus"
+        )
+        assert obs.source_filters[(source, "FM Hundo Commentary Duck")]["index"] == 1
+        assert obs.source_filters[(source, "FM Hundo Safety Limiter")] == {
+            "kind": "limiter_filter",
+            "settings": {"threshold": -1.0, "release_time": 60},
+            "enabled": False,
+            "index": 2,
+        }
+
+    assert {call["source_name"] for call in obs.source_filter_calls} == media_sources
+    assert all(not source.startswith("FM Hundo Label -") for source, _filter in obs.source_filters)
+    assert all(not source.startswith("FM Hundo Audio Note -") for source, _filter in obs.source_filters)
+    assert all(not source.startswith("FM Hundo Placeholder -") for source, _filter in obs.source_filters)
+
+
+@pytest.mark.asyncio
+async def test_stream_audio_filters_can_leave_existing_settings_under_obs_control():
+    obs = FakeObs()
+    obs.source_filters[("FM Hundo Media - Runner Ten", "Manual Compressor")] = {
+        "kind": "compressor_filter",
+        "settings": {"threshold": -12.0},
+        "enabled": True,
+        "index": 5,
+    }
+    filter_config = StreamAudioFiltersConfig(
+        enabled=True,
+        sync_settings=False,
+        filters=(
+            ObsAudioFilterSpec(
+                name="Manual Compressor",
+                kind="compressor_filter",
+                settings={"threshold": -24.0, "sidechain_source": "Production Commentary Bus"},
+            ),
+        ),
+    )
+    config = AppConfig(obs=ObsConfig(stream_audio_filters=filter_config))
+    manager = ObsLayoutManager(obs, config, players(), [Team(1, "Alpha"), Team(2, "Beta")], registry({"runner10"}))
+
+    await manager.setup()
+
+    assert obs.source_filters[("FM Hundo Media - Runner Ten", "Manual Compressor")]["settings"] == {
+        "threshold": -12.0
+    }
+    assert obs.source_filters[("FM Hundo Media - Runner Ten", "Manual Compressor")]["index"] == 0
+    assert obs.source_filters[("FM Hundo Media - Runner Eleven", "Manual Compressor")]["settings"] == {
+        "threshold": -24.0,
+        "sidechain_source": "Production Commentary Bus",
+    }
+    assert all(call["sync_settings"] is False for call in obs.source_filter_calls)
 
 
 @pytest.mark.asyncio

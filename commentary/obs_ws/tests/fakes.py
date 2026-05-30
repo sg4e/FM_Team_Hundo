@@ -23,6 +23,8 @@ class FakeObs(ObsController):
         self.scene_changes: list[str] = []
         self.mutes: list[tuple[str, bool]] = []
         self.volumes: list[tuple[str, float]] = []
+        self.source_filters: dict[tuple[str, str], dict] = {}
+        self.source_filter_calls: list[dict] = []
         self.created_scenes: list[str] = []
         self.inputs_settings: dict[str, dict] = {}
         self.scene_items: dict[tuple[str, str], int] = {}
@@ -82,6 +84,49 @@ class FakeObs(ObsController):
 
     async def set_input_volume(self, input_name: str, volume_mul: float) -> None:
         self.volumes.append((input_name, volume_mul))
+
+    async def ensure_source_filter(
+        self,
+        source_name: str,
+        filter_name: str,
+        filter_kind: str,
+        settings: dict,
+        *,
+        enabled: bool = True,
+        index: int | None = None,
+        sync_settings: bool = True,
+        overlay: bool = True,
+    ) -> None:
+        key = (source_name, filter_name)
+        existing = self.source_filters.get(key)
+        if existing is None:
+            self.source_filters[key] = {
+                "kind": filter_kind,
+                "settings": dict(settings),
+                "enabled": enabled,
+                "index": index,
+            }
+            action = "create"
+        else:
+            if sync_settings:
+                existing["settings"] = dict(settings)
+            existing["kind"] = filter_kind
+            existing["enabled"] = enabled
+            existing["index"] = index
+            action = "update"
+        self.source_filter_calls.append(
+            {
+                "action": action,
+                "source_name": source_name,
+                "filter_name": filter_name,
+                "filter_kind": filter_kind,
+                "settings": dict(settings),
+                "enabled": enabled,
+                "index": index,
+                "sync_settings": sync_settings,
+                "overlay": overlay,
+            }
+        )
 
     async def ensure_scene(self, scene_name: str) -> None:
         self.scenes.add(scene_name)
