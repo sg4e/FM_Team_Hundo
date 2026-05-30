@@ -59,7 +59,7 @@ class TwitchProfileCache:
         """Fetch profiles for any actively-streaming players not yet cached.
 
         Safe to call repeatedly — it compares against the internal set of
-        already-fetched Twitch IDs and only fetches what is missing.
+        already-fetched Twitch usernames and only fetches what is missing.
         """
         needed: list[tuple[int, str]] = []
         for player_id in active_player_ids:
@@ -150,4 +150,4 @@ class TwitchProfileCache:
     @staticmethod
     def _twitch_login(names: NameResolver, player_id: int) -> str | None:
         """Return the Twitch login for *player_id*, or *None* if unknown."""
-        return names.twitch_id_for(player_id)
+        return names.twitch_username_for(player_id)

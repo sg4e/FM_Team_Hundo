@@ -7,7 +7,7 @@ import pytest
 from fm_hundo_obs.config import AppConfig, MediaMtxConfig, ObsAudioFilterSpec, ObsConfig, StreamAudioFiltersConfig
 from fm_hundo_obs.layout import Rect, fit_inside, grid_layout
 from fm_hundo_obs.managed_layout import ObsLayoutManager
-from fm_hundo_obs.mediamtx import StreamRegistry, parse_active_paths
+from fm_hundo_obs.mediamtx import StreamRegistry, parse_active_paths, stream_path_for_player
 from fm_hundo_obs.models import Player, Team
 from fm_hundo_obs.obs import ObsError
 
@@ -79,13 +79,22 @@ def test_parse_active_paths_handles_ready_and_source_shapes():
     assert parse_active_paths(payload) == {"runner10", "runner20"}
 
 
-def test_stream_registry_maps_twitch_id_to_rtsp_url_and_active_state():
-    streams = registry({"runner10"})
+def test_stream_registry_maps_twitch_username_to_rtsp_url_and_active_state():
+    roster = [
+        Player(10, "123456", "runner10", None, 1),
+        Player(11, "234567", "runner11", None, 1),
+    ]
+    streams = registry({"runner10"}, roster)
 
     assert streams.path_for_player(10) == "runner10"
     assert streams.rtsp_url_for_player(10) == "rtsp://127.0.0.1:8554/runner10"
     assert streams.is_player_active(10) is True
     assert streams.is_player_active(11) is False
+
+
+def test_stream_path_for_player_prefers_username_over_twitch_id():
+    assert stream_path_for_player(Player(10, "123456", "runner10", None, 1)) == "runner10"
+    assert stream_path_for_player(Player(11, "234567", "  ", None, 1)) == "234567"
 
 
 def test_layout_math_fit_inside_and_grid():

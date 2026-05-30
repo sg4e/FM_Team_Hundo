@@ -101,5 +101,5 @@ twitch:
   client_id: ""
   client_secret: ""
 
-# Player stream paths are derived from /api/players twitchId:
-# rtsp://127.0.0.1:8554/{twitchId}
+# Player stream paths are derived from /api/players name (Twitch username):
+# rtsp://127.0.0.1:8554/{twitchUsername}

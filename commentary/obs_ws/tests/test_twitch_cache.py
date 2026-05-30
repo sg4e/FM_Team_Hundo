@@ -65,7 +65,7 @@ async def test_sync_streaming_players_fetches_new_profiles():
     cache._token = "test_token"
 
     names = NameResolver(
-        [Player(1, "twitch_1", "Streamer One", None, 1), Player(2, "twitch_2", "Streamer Two", None, 1)],
+        [Player(1, "123", "twitch_1", None, 1), Player(2, "456", "twitch_2", None, 1)],
         {},
         [Team(1, "Alpha")],
     )
@@ -98,7 +98,7 @@ async def test_sync_streaming_players_skips_cached():
     cache._cached_twitch_ids.add("twitch_1")
 
     names = NameResolver(
-        [Player(1, "twitch_1", "Streamer One", None, 1), Player(2, "twitch_2", "Streamer Two", None, 1)],
+        [Player(1, "123", "twitch_1", None, 1), Player(2, "456", "twitch_2", None, 1)],
         {},
         [Team(1, "Alpha")],
     )
@@ -128,14 +128,14 @@ async def test_get_image_returns_cached_bytes():
 
 
 @pytest.mark.asyncio
-async def test_skips_player_without_twitch_id():
-    """Players without twitch_id are skipped during sync."""
+async def test_skips_player_without_twitch_username():
+    """Players without a Twitch username are skipped during sync."""
     session = mock.AsyncMock(spec=ClientSession)
     cache = TwitchProfileCache("test_client", "test_secret", session)
     cache._token = "test_token"
 
     names = NameResolver(
-        [Player(1, None, "No Twitch", None, 1)],
+        [Player(1, None, "  ", None, 1)],
         {},
         [Team(1, "Alpha")],
     )
@@ -161,7 +161,7 @@ async def test_rate_limiting_semaphore_used():
     assert cache._semaphore._value == 1  # noqa: SLF001
 
     names = NameResolver(
-        [Player(1, "twitch_1", "Streamer One", None, 1)],
+        [Player(1, "123", "twitch_1", None, 1)],
         {},
         [Team(1, "Alpha")],
     )

@@ -47,9 +47,9 @@ class StreamRegistry:
 
     def update_players(self, players: list[Player]) -> None:
         self.paths_by_player_id = {
-            player.id: player.twitch_id
+            player.id: path
             for player in players
-            if player.twitch_id
+            if (path := stream_path_for_player(player))
         }
 
     def set_active_paths_for_tests(self, paths: set[str]) -> None:
@@ -75,6 +75,21 @@ class StreamRegistry:
             for player_id, path in self.paths_by_player_id.items()
             if path in self._active_paths
         }
+
+
+def stream_path_for_player(player: Player) -> str | None:
+    """Return the MediaMTX path used for a player's forwarded Twitch stream."""
+    # Twitch OAuth exposes the numeric account id as twitchId and the channel
+    # username/login as name. The restream helper publishes to MediaMTX using
+    # the channel username, so OBS must subscribe to that path rather than the
+    # numeric Twitch id. Keep accepting non-numeric twitchId values for older
+    # fixtures/local data that already store the username there.
+    if player.twitch_id and not player.twitch_id.isdecimal():
+        return player.twitch_id
+    username = player.name.strip()
+    if username:
+        return username
+    return player.twitch_id
 
 
 def parse_active_paths(payload: dict) -> set[str]:

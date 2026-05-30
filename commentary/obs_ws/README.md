@@ -15,10 +15,10 @@ fm-hundo-obs --config config.yml
 ```
 
 Enable the MediaMTX Control API on localhost and keep RTSP enabled. The
-controller expects player paths to match `/api/players` Twitch IDs:
+controller expects player paths to match `/api/players` Twitch usernames:
 
 ```text
-rtsp://127.0.0.1:8554/{twitchId}
+rtsp://127.0.0.1:8554/{twitchUsername}
 ```
 
 OBS should contain one reusable overlay scene with a Browser Source pointed at:

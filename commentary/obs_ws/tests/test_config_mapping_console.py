@@ -169,14 +169,19 @@ def test_name_resolver_and_duelist_file(tmp_path):
     assert resolver.opponent_name(42) == "Opponent 42"
 
 
-def test_twitch_id_for():
+def test_twitch_id_and_username_for():
     resolver = NameResolver(
-        [Player(id=10, twitch_id="twitch_name", name="Runner", alt_account=None, team_id=1)],
+        [Player(id=10, twitch_id="123456", name="runner_name", alt_account=None, team_id=1)],
         {},
         [Team(1, "Alpha")],
     )
-    assert resolver.twitch_id_for(10) == "twitch_name"
+    assert resolver.twitch_id_for(10) == "123456"
     assert resolver.twitch_id_for(999) is None
+    assert resolver.twitch_username_for(10) == "runner_name"
+    assert resolver.twitch_username_for(999) is None
+
+    no_username = NameResolver([Player(id=11, twitch_id="234567", name="  ", alt_account=None, team_id=1)], {}, [])
+    assert no_username.twitch_username_for(11) is None
 
 
 def test_alert_labels():
