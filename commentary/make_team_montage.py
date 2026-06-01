@@ -338,17 +338,14 @@ def render_clip(
         f"fps={OUTPUT_FRAME_RATE},{','.join(drawtext_filters)}"
     )
 
-    # Keep -ss after -i so ffmpeg decodes up to the exact requested timestamp
-    # instead of depending on keyframe-aligned input seeking. This is slower,
-    # but keeps clip timing consistent across VODs.
     subprocess.run(
         [
             ffmpeg,
             "-y",
-            "-i",
-            str(job.input_path),
             "-ss",
             f"{clip_start:.3f}",
+            "-i",
+            str(job.input_path),
             "-t",
             f"{per_card_seconds:.3f}",
             "-vf",
