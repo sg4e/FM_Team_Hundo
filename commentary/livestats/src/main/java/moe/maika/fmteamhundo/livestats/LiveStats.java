@@ -95,7 +95,11 @@ public class LiveStats extends Application {
     private Scene createScene() {
         HBox teamPanels = new HBox(0);
         TeamPanelView panelView = new TeamPanelView();
-        state.teams().forEach(team -> teamPanels.getChildren().add(panelView.create(team)));
+        int visiblePlayerRows = state.teams().stream()
+            .mapToInt(team -> team.players().size())
+            .max()
+            .orElse(0);
+        state.teams().forEach(team -> teamPanels.getChildren().add(panelView.create(team, visiblePlayerRows)));
 
         playerStatus = new Label("Player firehose: disconnected");
         teamStatus = new Label("Team firehose: disconnected");
@@ -109,8 +113,7 @@ public class LiveStats extends Application {
         BorderPane root = new BorderPane(teamPanels);
         root.setTop(status);
         root.getStyleClass().add("root-pane");
-        double width = Math.max(TeamPanelView.PANEL_WIDTH, state.teams().size() * TeamPanelView.PANEL_WIDTH);
-        Scene scene = new Scene(root, width, 560);
+        Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/livestats.css").toExternalForm());
         return scene;
     }

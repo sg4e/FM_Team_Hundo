@@ -23,6 +23,11 @@
     -fx-text-fill: #1f2933;
 }
 
+.player-table .column-header,
+.player-table .filler {
+    -fx-size: 24px;
+}
+
 .library-stats {
     -fx-padding: 8 0 0 0;
 }
