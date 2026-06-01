@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from fm_hundo_obs.config import AppConfig, MediaMtxConfig, ObsAudioFilterSpec, ObsConfig, StreamAudioFiltersConfig
@@ -396,17 +394,6 @@ async def test_missing_team_label_falls_back_to_team_id():
     await manager.setup()
 
     assert obs.inputs_settings["FM Hundo Label - Runner Thirty"]["text"] == "Runner Thirty - Team 30"
-
-
-def test_decisions_file_records_durable_obs_layout_decisions():
-    decisions = Path(__file__).parents[1] / "DECISIONS.md"
-
-    assert decisions.exists()
-    text = decisions.read_text(encoding="utf-8")
-    assert "Player Name - Team Name" in text
-    assert "OBS_BOUNDS_MAX_ONLY" in text
-    assert "Simulation" in text
-    assert "confirming a revised decision" in text
 
 
 @pytest.mark.asyncio

@@ -7,11 +7,20 @@ Python 3.12+ OBS controller for FM Team Hundo restream automation.
 ```powershell
 cd commentary\obs_ws
 py -3.12 -m venv .venv
-.\.venv\Scripts\pip install -e .[dev]
+.\.venv\Scripts\python -m pip install -e '.[dev]'
 Copy-Item config.example.yml config.yml
 Copy-Item credits_scene.example.yml credits_scene.yml
 $env:OBS_WS_PASSWORD = "your OBS websocket password"
 fm-hundo-obs --config config.yml
+```
+
+For tests, use an activated virtual environment and install the package in editable dev mode before running pytest:
+
+```powershell
+cd commentary\obs_ws
+py -3.12 -m venv .venv
+.\.venv\Scripts\python -m pip install -e '.[dev]'
+.\.venv\Scripts\python -m pytest
 ```
 
 Enable the MediaMTX Control API on localhost and keep RTSP enabled. The
