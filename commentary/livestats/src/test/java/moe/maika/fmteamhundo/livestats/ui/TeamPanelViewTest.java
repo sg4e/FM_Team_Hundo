@@ -6,12 +6,12 @@ import org.junit.jupiter.api.Test;
 
 class TeamPanelViewTest {
     @Test
-    void tableHeightMatchesActualPlayerRowsPlusHeader() {
-        double rowHeight = TeamPanelView.tableHeightForPlayerCount(1) - TeamPanelView.tableHeightForPlayerCount(0);
+    void tableHeightMatchesVisibleRowsPlusHeaderAndBorder() {
+        double rowHeight = TeamPanelView.tableHeightForVisibleRows(1) - TeamPanelView.tableHeightForVisibleRows(0);
 
         assertEquals(28.0, rowHeight, 0.0001);
-        assertEquals(39.2, TeamPanelView.tableHeightForPlayerCount(0), 0.0001);
-        assertEquals(95.2, TeamPanelView.tableHeightForPlayerCount(2), 0.0001);
-        assertEquals(263.2, TeamPanelView.tableHeightForPlayerCount(8), 0.0001);
+        assertEquals(26.0, TeamPanelView.tableHeightForVisibleRows(0), 0.0001);
+        assertEquals(82.0, TeamPanelView.tableHeightForVisibleRows(2), 0.0001);
+        assertEquals(250.0, TeamPanelView.tableHeightForVisibleRows(8), 0.0001);
     }
 }
