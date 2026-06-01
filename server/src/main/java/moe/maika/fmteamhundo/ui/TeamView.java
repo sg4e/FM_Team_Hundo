@@ -54,6 +54,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
 
     private static final int CARDS_PER_FULL_GRID = 100;
     private static final int TOTAL_CARDS = 722;
+    private static final byte[] UTF_8_BOM = new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
     private final GameStateService gameStateService;
     private final UserRepository userRepository;
@@ -203,13 +204,21 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     private DownloadHandler createTeamLibraryDownloadHandler() {
         return DownloadHandler.fromInputStream(event -> {
             List<Integer> cardIds = gameStateService.getLibrary(teamId).getAcquiredCardIds();
-            String content = cardIds.stream()
-                .map(String::valueOf)
-                .collect(Collectors.joining("\n"));
-            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = buildTeamLibraryDownloadBytes(cardIds);
             String fileName = teamName.replaceAll("[^a-zA-Z0-9._-]", "_") + "_cards.txt";
-            return new DownloadResponse(new ByteArrayInputStream(bytes), fileName, "text/plain", bytes.length);
+            return new DownloadResponse(new ByteArrayInputStream(bytes), fileName, "text/plain; charset=UTF-8", bytes.length);
         });
+    }
+
+    static byte[] buildTeamLibraryDownloadBytes(List<Integer> cardIds) {
+        String content = cardIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining("\r\n"));
+        byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = new byte[UTF_8_BOM.length + contentBytes.length];
+        System.arraycopy(UTF_8_BOM, 0, bytes, 0, UTF_8_BOM.length);
+        System.arraycopy(contentBytes, 0, bytes, UTF_8_BOM.length, contentBytes.length);
+        return bytes;
     }
 
     private void buildTeamShell(LibraryUpdate snapshot) {
