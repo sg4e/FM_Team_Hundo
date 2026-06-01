@@ -1,6 +1,7 @@
 package moe.maika.fmteamhundo.livestats.ui;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
@@ -19,7 +20,7 @@ import moe.maika.fmteamhundo.livestats.model.TeamPanelState;
 public class TeamPanelView {
     public static final double PANEL_WIDTH = 520.0;
     private static final double TABLE_ROW_HEIGHT = 28.0;
-    private static final int VISIBLE_ROWS = 8;
+    private static final double TABLE_HEADER_HEIGHT = TABLE_ROW_HEIGHT * 1.4;
 
     public VBox create(TeamPanelState state) {
         Label title = new Label(state.team().name());
@@ -41,9 +42,12 @@ public class TeamPanelView {
         TableView<PlayerRowState> table = new TableView<>(state.players());
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setFixedCellSize(TABLE_ROW_HEIGHT);
-        table.setPrefHeight(TABLE_ROW_HEIGHT * (VISIBLE_ROWS + 1.4));
-        table.setMinHeight(TABLE_ROW_HEIGHT * (VISIBLE_ROWS + 1.4));
-        table.setMaxHeight(TABLE_ROW_HEIGHT * (VISIBLE_ROWS + 1.4));
+        DoubleBinding tableHeight = Bindings.createDoubleBinding(
+            () -> tableHeightForPlayerCount(state.players().size()),
+            state.players());
+        table.prefHeightProperty().bind(tableHeight);
+        table.minHeightProperty().bind(tableHeight);
+        table.maxHeightProperty().bind(tableHeight);
         table.setFocusTraversable(false);
         table.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
@@ -96,6 +100,10 @@ public class TeamPanelView {
         });
         VBox.setVgrow(table, Priority.NEVER);
         return table;
+    }
+
+    static double tableHeightForPlayerCount(int playerCount) {
+        return TABLE_HEADER_HEIGHT + (TABLE_ROW_HEIGHT * playerCount);
     }
 
     private VBox createLibraryStats(TeamPanelState state) {
