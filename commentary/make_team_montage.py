@@ -40,7 +40,9 @@ SOURCE_LABELS = {
     "ritual": "Ritual",
 }
 OUTPUT_FRAME_RATE = 60
-INTERMEDIATE_TAG = "1080p60_gop2"
+DEFAULT_INTERMEDIATE_BITRATE = "12M"
+DEFAULT_INTERMEDIATE_MAXRATE = "18M"
+DEFAULT_INTERMEDIATE_GOP = 15
 
 
 @dataclass(frozen=True)
@@ -107,6 +109,25 @@ def parse_args() -> argparse.Namespace:
         "--show-count",
         action="store_true",
         help="Show the clip number in the montage's top-right corner.",
+    )
+    parser.add_argument(
+        "--intermediate-bitrate",
+        default=DEFAULT_INTERMEDIATE_BITRATE,
+        help=f"Target video bitrate for intermediate VOD encodes (default: {DEFAULT_INTERMEDIATE_BITRATE}).",
+    )
+    parser.add_argument(
+        "--intermediate-maxrate",
+        default=DEFAULT_INTERMEDIATE_MAXRATE,
+        help=f"Maximum video bitrate for intermediate VOD encodes (default: {DEFAULT_INTERMEDIATE_MAXRATE}).",
+    )
+    parser.add_argument(
+        "--intermediate-gop",
+        type=int,
+        default=DEFAULT_INTERMEDIATE_GOP,
+        help=(
+            "Keyframe interval for intermediate VOD encodes. Lower values seek better but make larger files "
+            f"(default: {DEFAULT_INTERMEDIATE_GOP}, about {DEFAULT_INTERMEDIATE_GOP / OUTPUT_FRAME_RATE:.2f}s at {OUTPUT_FRAME_RATE} fps)."
+        ),
     )
     parser.add_argument(
         "--cache-dir",
@@ -257,6 +278,15 @@ def safe_filename(value: str) -> str:
     return cleaned or "team"
 
 
+
+
+def bitrate_tag(value: str) -> str:
+    return safe_filename(value).replace(".", "_")
+
+def intermediate_tag(gop: int, bitrate: str, maxrate: str) -> str:
+    return f"1080p{OUTPUT_FRAME_RATE}_gop{gop}_{bitrate_tag(bitrate)}_max{bitrate_tag(maxrate)}"
+
+
 def canonical_vod_stem(video_id: str) -> str:
     if video_id.startswith("v") and video_id[1:].isdigit():
         return video_id
@@ -334,13 +364,21 @@ def ensure_vod(yt_dlp: str, yt_dlp_jobs: int | None, vod_dir: Path, video_id: st
     return downloaded[0]
 
 
-def intermediate_path_for(intermediate_dir: Path, video_id: str) -> Path:
-    return intermediate_dir / f"{canonical_vod_stem(video_id)}_{INTERMEDIATE_TAG}.mkv"
+def intermediate_path_for(intermediate_dir: Path, video_id: str, gop: int, bitrate: str, maxrate: str) -> Path:
+    return intermediate_dir / f"{canonical_vod_stem(video_id)}_{intermediate_tag(gop, bitrate, maxrate)}.mkv"
 
 
-def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_path: Path) -> Path:
+def ensure_intermediate(
+    ffmpeg: str,
+    intermediate_dir: Path,
+    video_id: str,
+    vod_path: Path,
+    gop: int,
+    bitrate: str,
+    maxrate: str,
+) -> Path:
     intermediate_dir.mkdir(parents=True, exist_ok=True)
-    output_path = intermediate_path_for(intermediate_dir, video_id)
+    output_path = intermediate_path_for(intermediate_dir, video_id, gop, bitrate, maxrate)
     if output_path.exists() and output_path.stat().st_size > 0:
         print(f"Reusing intermediate for VOD {video_id}: {output_path}")
         return output_path
@@ -374,11 +412,13 @@ def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_
         "-pix_fmt",
         "yuv420p",
         "-c:a",
-        "pcm_s16le",
+        "aac",
         "-ar",
         "48000",
         "-ac",
         "2",
+        "-b:a",
+        "192k",
         str(temp_output),
     ]
     attempts = [
@@ -390,13 +430,19 @@ def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_
                 "-preset",
                 "p4",
                 "-rc",
-                "constqp",
-                "-qp",
-                "18",
+                "vbr",
+                "-cq",
+                "24",
+                "-b:v",
+                bitrate,
+                "-maxrate",
+                maxrate,
+                "-bufsize",
+                maxrate,
                 "-bf",
                 "0",
                 "-g",
-                "2",
+                str(gop),
                 "-forced-idr",
                 "1",
             ],
@@ -409,9 +455,13 @@ def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_
                 "-preset",
                 "veryfast",
                 "-crf",
-                "16",
+                "23",
                 "-g",
-                "1",
+                str(gop),
+                "-keyint_min",
+                str(gop),
+                "-sc_threshold",
+                "0",
                 "-bf",
                 "0",
             ],
@@ -567,6 +617,8 @@ def main() -> None:
         fail("--jobs must be greater than 0")
     if args.yt_dlp_jobs is not None and args.yt_dlp_jobs <= 0:
         fail("--yt-dlp-jobs must be greater than 0")
+    if args.intermediate_gop <= 0:
+        fail("--intermediate-gop must be greater than 0")
     vod_shift_overrides = parse_vod_shift_overrides(args.vod_shift)
 
     yt_dlp = resolve_executable(args.yt_dlp, "yt-dlp")
@@ -586,6 +638,10 @@ def main() -> None:
             f"{vod_id}={shift:g}s" for vod_id, shift in sorted(vod_shift_overrides.items())
         )
         print(f"Using per-VOD shift overrides: {formatted_overrides}")
+    print(
+        "Intermediate encode settings: "
+        f"gop={args.intermediate_gop}, bitrate={args.intermediate_bitrate}, maxrate={args.intermediate_maxrate}"
+    )
 
     args.cache_dir.mkdir(parents=True, exist_ok=True)
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -620,7 +676,15 @@ def main() -> None:
                 vod_cache[video_id] = ensure_vod(yt_dlp, args.yt_dlp_jobs, vod_dir, video_id)
             vod_path = vod_cache[video_id]
             if video_id not in intermediate_cache:
-                intermediate_cache[video_id] = ensure_intermediate(ffmpeg, intermediate_dir, video_id, vod_path)
+                intermediate_cache[video_id] = ensure_intermediate(
+                    ffmpeg,
+                    intermediate_dir,
+                    video_id,
+                    vod_path,
+                    args.intermediate_gop,
+                    args.intermediate_bitrate,
+                    args.intermediate_maxrate,
+                )
             clip_input_path = intermediate_cache[video_id]
 
             card_name = card_names.get(card_id, f"Card {card_id}")
