@@ -301,6 +301,7 @@ def render_clip(
     per_card_seconds: float,
 ) -> None:
     clip_start = max(0.0, job.offset_seconds + shift_seconds - (per_card_seconds / 2.0))
+    label_y = "156" if job.count_label_path is not None else "48"
     drawtext_options = ":".join(
         [
             textfile_filter_arg(job.label_path),
@@ -311,7 +312,7 @@ def render_clip(
             "boxcolor=black@0.70",
             "boxborderw=18",
             "x=(w-text_w)/2",
-            "y=h-text_h-48",
+            f"y={label_y}",
         ]
     )
     drawtext_filters = [f"drawtext={drawtext_options}"]
