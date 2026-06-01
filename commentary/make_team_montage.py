@@ -3,10 +3,11 @@
 
 The companion export_acquisition_videos.sh script writes JSON Lines that include
 resolved Twitch VOD IDs and offsets. This script downloads each needed VOD once
-with yt-dlp, cuts one ffmpeg highlight per acquired card, overlays a readable
-label, and concatenates those highlights in cardId order by default, or in
-acquisition-time order with --timeline. Rendering uses 60 fps NVENC output and
-can run multiple independent clip jobs concurrently.
+with yt-dlp, builds a seek-friendly all-intra intermediate cache for each VOD,
+cuts one ffmpeg highlight per acquired card, overlays a readable label, and
+concatenates those highlights in cardId order by default, or in acquisition-time
+order with --timeline. Rendering uses 60 fps NVENC output and can run multiple
+independent clip jobs concurrently.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ SOURCE_LABELS = {
     "ritual": "Ritual",
 }
 OUTPUT_FRAME_RATE = 60
+INTERMEDIATE_TAG = "1080p60_intra"
 
 
 @dataclass(frozen=True)
@@ -244,6 +246,14 @@ def safe_filename(value: str) -> str:
     return cleaned or "team"
 
 
+def canonical_vod_stem(video_id: str) -> str:
+    if video_id.startswith("v") and video_id[1:].isdigit():
+        return video_id
+    if video_id.isdigit():
+        return f"v{video_id}"
+    return safe_filename(video_id)
+
+
 def vod_candidate_stems(video_id: str) -> list[str]:
     stems = [video_id]
     if video_id.startswith("v") and video_id[1:].isdigit():
@@ -284,6 +294,68 @@ def ensure_vod(yt_dlp: str, yt_dlp_jobs: int | None, vod_dir: Path, video_id: st
     if not downloaded:
         fail(f"yt-dlp completed but no downloaded file was found for Twitch VOD {video_id} in {vod_dir}")
     return downloaded[0]
+
+
+def intermediate_path_for(intermediate_dir: Path, video_id: str) -> Path:
+    return intermediate_dir / f"{canonical_vod_stem(video_id)}_{INTERMEDIATE_TAG}.mkv"
+
+
+def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_path: Path) -> Path:
+    intermediate_dir.mkdir(parents=True, exist_ok=True)
+    output_path = intermediate_path_for(intermediate_dir, video_id)
+    if output_path.exists():
+        print(f"Reusing intermediate for VOD {video_id}: {output_path}")
+        return output_path
+
+    temp_output = output_path.with_name(f"{output_path.stem}.tmp{output_path.suffix}")
+    temp_output.unlink(missing_ok=True)
+    print(f"Building seek-friendly intermediate for VOD {video_id}: {output_path}")
+    subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(vod_path),
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a?",
+            "-vf",
+            (
+                f"fps={OUTPUT_FRAME_RATE},"
+                "scale=1920:1080:force_original_aspect_ratio=decrease,"
+                "pad=1920:1080:(ow-iw)/2:(oh-ih)/2"
+            ),
+            "-r",
+            str(OUTPUT_FRAME_RATE),
+            "-c:v",
+            "h264_nvenc",
+            "-preset",
+            "p4",
+            "-rc",
+            "constqp",
+            "-qp",
+            "18",
+            "-g",
+            "1",
+            "-bf",
+            "0",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "pcm_s16le",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            str(temp_output),
+        ],
+        check=True,
+    )
+    if not temp_output.exists():
+        fail(f"ffmpeg completed but no intermediate was created for Twitch VOD {video_id} at {temp_output}")
+    temp_output.replace(output_path)
+    return output_path
 
 
 def textfile_filter_arg(path: Path) -> str:
@@ -332,11 +404,7 @@ def render_clip(
         )
         drawtext_filters.append(f"drawtext={count_options}")
 
-    video_filter = (
-        "scale=1920:1080:force_original_aspect_ratio=decrease,"
-        "pad=1920:1080:(ow-iw)/2:(oh-ih)/2,"
-        f"fps={OUTPUT_FRAME_RATE},{','.join(drawtext_filters)}"
-    )
+    video_filter = f"fps={OUTPUT_FRAME_RATE},{','.join(drawtext_filters)}"
 
     subprocess.run(
         [
@@ -436,8 +504,10 @@ def main() -> None:
     args.cache_dir.mkdir(parents=True, exist_ok=True)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     vod_dir = args.cache_dir / "vods"
+    intermediate_dir = args.cache_dir / "intermediate"
     clip_root = args.cache_dir / "clips"
     vod_dir.mkdir(parents=True, exist_ok=True)
+    intermediate_dir.mkdir(parents=True, exist_ok=True)
     clip_root.mkdir(parents=True, exist_ok=True)
 
     output_path = args.output_dir / f"{safe_filename(team_name)}_drops_montage.mp4"
@@ -446,6 +516,7 @@ def main() -> None:
         temp_dir = Path(temp_dir_name)
         jobs: list[ClipJob] = []
         vod_cache: dict[str, Path] = {}
+        intermediate_cache: dict[str, Path] = {}
 
         for index, row in enumerate(team_rows, start=1):
             try:
@@ -462,6 +533,9 @@ def main() -> None:
             if video_id not in vod_cache:
                 vod_cache[video_id] = ensure_vod(yt_dlp, args.yt_dlp_jobs, vod_dir, video_id)
             vod_path = vod_cache[video_id]
+            if video_id not in intermediate_cache:
+                intermediate_cache[video_id] = ensure_intermediate(ffmpeg, intermediate_dir, video_id, vod_path)
+            clip_input_path = intermediate_cache[video_id]
 
             card_name = card_names.get(card_id, f"Card {card_id}")
             player_name = str(row.get("playerName") or f"Player {row.get('playerId', 'unknown')}")
@@ -484,7 +558,7 @@ def main() -> None:
                     index=index,
                     total=len(team_rows),
                     card_id=card_id,
-                    input_path=vod_path,
+                    input_path=clip_input_path,
                     output_path=clip_path,
                     label_path=label_path,
                     count_label_path=count_label_path,
