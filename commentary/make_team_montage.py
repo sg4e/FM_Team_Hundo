@@ -54,6 +54,7 @@ class ClipJob:
     count_label_path: Path | None
     label: str
     offset_seconds: float
+    shift_seconds: float
 
 
 def parse_args() -> argparse.Namespace:
@@ -73,7 +74,17 @@ def parse_args() -> argparse.Namespace:
         "--shift-times",
         type=float,
         default=0.0,
-        help="Seconds to shift acquisition timestamps later or earlier before clipping (default: 0.0)",
+        help="Default seconds to shift acquisition timestamps later or earlier before clipping (default: 0.0)",
+    )
+    parser.add_argument(
+        "--vod-shift",
+        action="append",
+        default=[],
+        metavar="VOD_ID=SECONDS",
+        help=(
+            "Override --shift-times for one Twitch VOD. May be repeated, e.g. "
+            "--vod-shift 2784610972=-4.5. VOD IDs may include or omit the leading 'v'."
+        ),
     )
     parser.add_argument(
         "--per-card",
@@ -263,6 +274,33 @@ def vod_candidate_stems(video_id: str) -> list[str]:
     return list(dict.fromkeys(stems))
 
 
+def normalize_vod_id(video_id: str) -> str:
+    text = str(video_id).strip()
+    if text.lower().startswith("v") and text[1:].isdigit():
+        return text[1:]
+    return text
+
+
+def parse_vod_shift_overrides(values: list[str]) -> dict[str, float]:
+    overrides: dict[str, float] = {}
+    for value in values:
+        if "=" not in value:
+            fail(f"--vod-shift must be in VOD_ID=SECONDS format, got {value!r}")
+        vod_id, shift_text = value.split("=", 1)
+        vod_id = normalize_vod_id(vod_id)
+        if not vod_id:
+            fail(f"--vod-shift has an empty VOD_ID in {value!r}")
+        try:
+            overrides[vod_id] = float(shift_text)
+        except ValueError:
+            fail(f"--vod-shift seconds must be numeric in {value!r}")
+    return overrides
+
+
+def shift_for_vod(video_id: str, default_shift: float, overrides: dict[str, float]) -> float:
+    return overrides.get(normalize_vod_id(video_id), default_shift)
+
+
 def vod_candidates(vod_dir: Path, video_id: str) -> list[Path]:
     candidates: list[Path] = []
     for stem in vod_candidate_stems(video_id):
@@ -412,10 +450,9 @@ def textfile_filter_arg(path: Path) -> str:
 def render_clip(
     ffmpeg: str,
     job: ClipJob,
-    shift_seconds: float,
     per_card_seconds: float,
 ) -> None:
-    clip_start = max(0.0, job.offset_seconds + shift_seconds - (per_card_seconds / 2.0))
+    clip_start = max(0.0, job.offset_seconds + job.shift_seconds - (per_card_seconds / 2.0))
     label_y = "156" if job.count_label_path is not None else "48"
     drawtext_options = ":".join(
         [
@@ -530,6 +567,7 @@ def main() -> None:
         fail("--jobs must be greater than 0")
     if args.yt_dlp_jobs is not None and args.yt_dlp_jobs <= 0:
         fail("--yt-dlp-jobs must be greater than 0")
+    vod_shift_overrides = parse_vod_shift_overrides(args.vod_shift)
 
     yt_dlp = resolve_executable(args.yt_dlp, "yt-dlp")
     ffmpeg = resolve_executable(args.ffmpeg, "ffmpeg")
@@ -543,6 +581,11 @@ def main() -> None:
     team_rows.sort(key=timeline_sort_key if args.timeline else card_sort_key)
     print(f"Selected team: {team_name}")
     print(f"Rendering {len(team_rows)} acquisition highlights ordered by {order_description}")
+    if vod_shift_overrides:
+        formatted_overrides = ", ".join(
+            f"{vod_id}={shift:g}s" for vod_id, shift in sorted(vod_shift_overrides.items())
+        )
+        print(f"Using per-VOD shift overrides: {formatted_overrides}")
 
     args.cache_dir.mkdir(parents=True, exist_ok=True)
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -588,6 +631,7 @@ def main() -> None:
                 opponent_id = 0
             opponent_name = duelist_names.get(opponent_id, f"Opponent {opponent_id}")
             label = f"{card_name}: {source_label(row.get('source'))} by {player_name} vs. {opponent_name}"
+            shift_seconds = shift_for_vod(video_id, args.shift_times, vod_shift_overrides)
 
             label_path = temp_dir / f"label_{index:04d}.txt"
             label_path.write_text(label, encoding="utf-8")
@@ -607,6 +651,7 @@ def main() -> None:
                     count_label_path=count_label_path,
                     label=label,
                     offset_seconds=offset_seconds,
+                    shift_seconds=shift_seconds,
                 )
             )
 
@@ -621,11 +666,11 @@ def main() -> None:
         if worker_count == 1:
             for job in jobs:
                 print(f"[{job.index}/{job.total}] Card {job.card_id}: {job.label}")
-                render_clip(ffmpeg, job, args.shift_times, args.per_card)
+                render_clip(ffmpeg, job, args.per_card)
         else:
             with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
                 futures = {
-                    executor.submit(render_clip, ffmpeg, job, args.shift_times, args.per_card): job
+                    executor.submit(render_clip, ffmpeg, job, args.per_card): job
                     for job in jobs
                 }
                 for future in concurrent.futures.as_completed(futures):
