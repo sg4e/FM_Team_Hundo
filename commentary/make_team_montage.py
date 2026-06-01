@@ -61,6 +61,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("data", type=Path, help="JSONL data file from export_acquisition_videos.sh")
     parser.add_argument("team", help="Team name whose montage video should be created")
     parser.add_argument("--yt-dlp", default="yt-dlp", help="Path to yt-dlp executable (default: yt-dlp)")
+    parser.add_argument(
+        "--yt-dlp-jobs",
+        type=int,
+        help="Number of download fragments yt-dlp should use via -N/--concurrent-fragments.",
+    )
     parser.add_argument("--ffmpeg", default="ffmpeg", help="Path to ffmpeg executable (default: ffmpeg)")
     parser.add_argument(
         "--shift-times",
@@ -243,7 +248,7 @@ def vod_candidates(vod_dir: Path, video_id: str) -> list[Path]:
     return sorted(path for path in vod_dir.glob(f"{video_id}.*") if path.is_file() and not path.name.endswith(".part"))
 
 
-def ensure_vod(yt_dlp: str, vod_dir: Path, video_id: str) -> Path:
+def ensure_vod(yt_dlp: str, yt_dlp_jobs: int | None, vod_dir: Path, video_id: str) -> Path:
     existing = vod_candidates(vod_dir, video_id)
     if existing:
         print(f"Reusing VOD {video_id}: {existing[0]}")
@@ -253,10 +258,11 @@ def ensure_vod(yt_dlp: str, vod_dir: Path, video_id: str) -> Path:
     print(f"Downloading VOD {video_id} from {url}")
     vod_dir.mkdir(parents=True, exist_ok=True)
     output_template = str(vod_dir / "%(id)s.%(ext)s")
-    subprocess.run(
-        [yt_dlp, "--no-playlist", "--continue", "--output", output_template, url],
-        check=True,
-    )
+    command = [yt_dlp, "--no-playlist", "--continue", "--output", output_template]
+    if yt_dlp_jobs is not None:
+        command.extend(["-N", str(yt_dlp_jobs)])
+    command.append(url)
+    subprocess.run(command, check=True)
 
     downloaded = vod_candidates(vod_dir, video_id)
     if not downloaded:
@@ -394,6 +400,8 @@ def main() -> None:
         fail("--per-card must be greater than 0")
     if args.jobs <= 0:
         fail("--jobs must be greater than 0")
+    if args.yt_dlp_jobs is not None and args.yt_dlp_jobs <= 0:
+        fail("--yt-dlp-jobs must be greater than 0")
 
     yt_dlp = resolve_executable(args.yt_dlp, "yt-dlp")
     ffmpeg = resolve_executable(args.ffmpeg, "ffmpeg")
@@ -435,7 +443,7 @@ def main() -> None:
                 fail(f"row for cardId {card_id} has invalid offsetSeconds: {row.get('offsetSeconds')!r}")
 
             if video_id not in vod_cache:
-                vod_cache[video_id] = ensure_vod(yt_dlp, vod_dir, video_id)
+                vod_cache[video_id] = ensure_vod(yt_dlp, args.yt_dlp_jobs, vod_dir, video_id)
             vod_path = vod_cache[video_id]
 
             card_name = card_names.get(card_id, f"Card {card_id}")
