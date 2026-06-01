@@ -244,8 +244,24 @@ def safe_filename(value: str) -> str:
     return cleaned or "team"
 
 
+def vod_candidate_stems(video_id: str) -> list[str]:
+    stems = [video_id]
+    if video_id.startswith("v") and video_id[1:].isdigit():
+        stems.append(video_id[1:])
+    elif video_id.isdigit():
+        stems.append(f"v{video_id}")
+    return list(dict.fromkeys(stems))
+
+
 def vod_candidates(vod_dir: Path, video_id: str) -> list[Path]:
-    return sorted(path for path in vod_dir.glob(f"{video_id}.*") if path.is_file() and not path.name.endswith(".part"))
+    candidates: list[Path] = []
+    for stem in vod_candidate_stems(video_id):
+        candidates.extend(
+            path
+            for path in vod_dir.glob(f"{stem}.*")
+            if path.is_file() and not path.name.endswith(".part")
+        )
+    return sorted(set(candidates))
 
 
 def ensure_vod(yt_dlp: str, yt_dlp_jobs: int | None, vod_dir: Path, video_id: str) -> Path:
