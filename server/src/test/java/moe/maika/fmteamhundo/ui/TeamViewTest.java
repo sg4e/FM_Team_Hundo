@@ -8,7 +8,9 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,6 +98,15 @@ class TeamViewTest {
         UI.setCurrent(null);
         VaadinService.setCurrent(null);
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void teamLibraryDownloadUsesUtf8BomAndWindowsLineEndings() {
+        byte[] bytes = TeamView.buildTeamLibraryDownloadBytes(List.of(1, 42, 722));
+
+        assertThat(bytes).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
+        assertThat(new String(Arrays.copyOfRange(bytes, 3, bytes.length), StandardCharsets.UTF_8))
+                .isEqualTo("1\r\n42\r\n722");
     }
 
     @Test
