@@ -3,7 +3,7 @@
 
 The companion export_acquisition_videos.sh script writes JSON Lines that include
 resolved Twitch VOD IDs and offsets. This script downloads each needed VOD once
-with yt-dlp, builds a seek-friendly all-intra intermediate cache for each VOD,
+with yt-dlp, builds a seek-friendly short-GOP intermediate cache for each VOD,
 cuts one ffmpeg highlight per acquired card, overlays a readable label, and
 concatenates those highlights in cardId order by default, or in acquisition-time
 order with --timeline. Rendering uses 60 fps NVENC output and can run multiple
@@ -40,7 +40,7 @@ SOURCE_LABELS = {
     "ritual": "Ritual",
 }
 OUTPUT_FRAME_RATE = 60
-INTERMEDIATE_TAG = "1080p60_intra"
+INTERMEDIATE_TAG = "1080p60_gop2"
 
 
 @dataclass(frozen=True)
@@ -303,56 +303,64 @@ def intermediate_path_for(intermediate_dir: Path, video_id: str) -> Path:
 def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_path: Path) -> Path:
     intermediate_dir.mkdir(parents=True, exist_ok=True)
     output_path = intermediate_path_for(intermediate_dir, video_id)
-    if output_path.exists():
+    if output_path.exists() and output_path.stat().st_size > 0:
         print(f"Reusing intermediate for VOD {video_id}: {output_path}")
         return output_path
+    if output_path.exists():
+        print(f"Discarding empty intermediate for VOD {video_id}: {output_path}")
+        output_path.unlink()
 
     temp_output = output_path.with_name(f"{output_path.stem}.tmp{output_path.suffix}")
     temp_output.unlink(missing_ok=True)
     print(f"Building seek-friendly intermediate for VOD {video_id}: {output_path}")
-    subprocess.run(
-        [
-            ffmpeg,
-            "-y",
-            "-i",
-            str(vod_path),
-            "-map",
-            "0:v:0",
-            "-map",
-            "0:a?",
-            "-vf",
-            (
-                f"fps={OUTPUT_FRAME_RATE},"
-                "scale=1920:1080:force_original_aspect_ratio=decrease,"
-                "pad=1920:1080:(ow-iw)/2:(oh-ih)/2"
-            ),
-            "-r",
-            str(OUTPUT_FRAME_RATE),
-            "-c:v",
-            "h264_nvenc",
-            "-preset",
-            "p4",
-            "-rc",
-            "constqp",
-            "-qp",
-            "18",
-            "-g",
-            "1",
-            "-bf",
-            "0",
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "pcm_s16le",
-            "-ar",
-            "48000",
-            "-ac",
-            "2",
-            str(temp_output),
-        ],
-        check=True,
-    )
-    if not temp_output.exists():
+    command = [
+        ffmpeg,
+        "-y",
+        "-i",
+        str(vod_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a?",
+        "-vf",
+        (
+            f"fps={OUTPUT_FRAME_RATE},"
+            "scale=1920:1080:force_original_aspect_ratio=decrease,"
+            "pad=1920:1080:(ow-iw)/2:(oh-ih)/2"
+        ),
+        "-r",
+        str(OUTPUT_FRAME_RATE),
+        "-c:v",
+        "h264_nvenc",
+        "-preset",
+        "p4",
+        "-rc",
+        "constqp",
+        "-qp",
+        "18",
+        "-bf",
+        "0",
+        "-g",
+        "2",
+        "-forced-idr",
+        "1",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "pcm_s16le",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        str(temp_output),
+    ]
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as exc:
+        temp_output.unlink(missing_ok=True)
+        fail(f"ffmpeg failed while building intermediate for Twitch VOD {video_id} with exit code {exc.returncode}")
+    if not temp_output.exists() or temp_output.stat().st_size == 0:
+        temp_output.unlink(missing_ok=True)
         fail(f"ffmpeg completed but no intermediate was created for Twitch VOD {video_id} at {temp_output}")
     temp_output.replace(output_path)
     return output_path
