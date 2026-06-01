@@ -313,7 +313,8 @@ def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_
     temp_output = output_path.with_name(f"{output_path.stem}.tmp{output_path.suffix}")
     temp_output.unlink(missing_ok=True)
     print(f"Building seek-friendly intermediate for VOD {video_id}: {output_path}")
-    command = [
+
+    common_input_args = [
         ffmpeg,
         "-y",
         "-i",
@@ -330,20 +331,8 @@ def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_
         ),
         "-r",
         str(OUTPUT_FRAME_RATE),
-        "-c:v",
-        "h264_nvenc",
-        "-preset",
-        "p4",
-        "-rc",
-        "constqp",
-        "-qp",
-        "18",
-        "-bf",
-        "0",
-        "-g",
-        "2",
-        "-forced-idr",
-        "1",
+    ]
+    common_output_args = [
         "-pix_fmt",
         "yuv420p",
         "-c:a",
@@ -354,16 +343,62 @@ def ensure_intermediate(ffmpeg: str, intermediate_dir: Path, video_id: str, vod_
         "2",
         str(temp_output),
     ]
-    try:
-        subprocess.run(command, check=True)
-    except subprocess.CalledProcessError as exc:
+    attempts = [
+        (
+            "h264_nvenc short-GOP",
+            [
+                "-c:v",
+                "h264_nvenc",
+                "-preset",
+                "p4",
+                "-rc",
+                "constqp",
+                "-qp",
+                "18",
+                "-bf",
+                "0",
+                "-g",
+                "2",
+                "-forced-idr",
+                "1",
+            ],
+        ),
+        (
+            "libx264 all-intra fallback",
+            [
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "16",
+                "-g",
+                "1",
+                "-bf",
+                "0",
+            ],
+        ),
+    ]
+
+    failures: list[str] = []
+    for label, video_args in attempts:
         temp_output.unlink(missing_ok=True)
-        fail(f"ffmpeg failed while building intermediate for Twitch VOD {video_id} with exit code {exc.returncode}")
-    if not temp_output.exists() or temp_output.stat().st_size == 0:
-        temp_output.unlink(missing_ok=True)
-        fail(f"ffmpeg completed but no intermediate was created for Twitch VOD {video_id} at {temp_output}")
-    temp_output.replace(output_path)
-    return output_path
+        print(f"Building intermediate for VOD {video_id} with {label}")
+        command = [*common_input_args, *video_args, *common_output_args]
+        try:
+            subprocess.run(command, check=True)
+        except subprocess.CalledProcessError as exc:
+            failures.append(f"{label} exited {exc.returncode}")
+            print(f"Intermediate build attempt failed for VOD {video_id}: {failures[-1]}", file=sys.stderr)
+            continue
+        if temp_output.exists() and temp_output.stat().st_size > 0:
+            temp_output.replace(output_path)
+            return output_path
+        failures.append(f"{label} produced no output")
+        print(f"Intermediate build attempt failed for VOD {video_id}: {failures[-1]}", file=sys.stderr)
+
+    temp_output.unlink(missing_ok=True)
+    fail(f"ffmpeg failed while building intermediate for Twitch VOD {video_id}: {'; '.join(failures)}")
 
 
 def textfile_filter_arg(path: Path) -> str:
