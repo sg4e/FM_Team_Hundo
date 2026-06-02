@@ -10,6 +10,14 @@ When adding new entries, place them under the relevant component heading. Keep d
 
 - Do not add automated tests that load or assert on agent-facing meta documentation files such as `AGENTS.md`, `PROJECT_CONTEXT.md`, or `DECISIONS.md`. These files are guidance for humans and agents, not runtime contracts, and should be reviewed directly when changed.
 
+## `commentary/livestats`: LiveStats Desktop App
+
+### Starchips Player Updates
+
+- LiveStats player tables include a `Starchips` column between `Opponent` and `Time`.
+- `PlayerUpdate` events with source/type `starchips` update only that row's `Starchips` value and `Time` value in the player table.
+- Starchips player updates must not overwrite the row's existing `Source`, `Card`, or `Opponent` values.
+
 ## `commentary/obs_ws`: OBS Controller
 
 ### Streamer Team Labels

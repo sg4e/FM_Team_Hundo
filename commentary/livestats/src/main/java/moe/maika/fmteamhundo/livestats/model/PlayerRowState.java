@@ -24,6 +24,7 @@ public class PlayerRowState {
     private final StringProperty sourceText = new SimpleStringProperty("");
     private final StringProperty valueText = new SimpleStringProperty("");
     private final StringProperty opponentText = new SimpleStringProperty("");
+    private final StringProperty starchipsText = new SimpleStringProperty("");
     private final StringProperty relativeTimeText = new SimpleStringProperty("");
     private final BooleanProperty highlighted = new SimpleBooleanProperty(false);
 
@@ -54,6 +55,10 @@ public class PlayerRowState {
         return opponentText;
     }
 
+    public StringProperty starchipsTextProperty() {
+        return starchipsText;
+    }
+
     public StringProperty relativeTimeTextProperty() {
         return relativeTimeText;
     }
@@ -71,6 +76,13 @@ public class PlayerRowState {
     }
 
     public void apply(PlayerUpdate update, Clock clock) {
+        if (update.source() == MessageType.STARCHIPS) {
+            starchipsText.set(String.valueOf(update.value()));
+            updateTime.set(update.time());
+            refreshRelativeTime(clock);
+            return;
+        }
+
         source.set(update.source());
         value.set(update.value());
         opponentId.set(update.opponentId());

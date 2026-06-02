@@ -49,6 +49,23 @@ class LiveStatsStateTest {
     }
 
     @Test
+    void starchipPlayerUpdatesOnlyChangeStarchipsAndTimeColumns() {
+        LiveStatsState state = state();
+        PlayerUpdate drop = new PlayerUpdate(122, MessageType.DROP, 10, NOW.minusSeconds(30), 1, 2, 3);
+        PlayerUpdate starchips = new PlayerUpdate(987, MessageType.STARCHIPS, 10, NOW.minusSeconds(4), 4, 5, 6);
+
+        assertTrue(state.applyPlayerUpdate(drop, CLOCK));
+        assertTrue(state.applyPlayerUpdate(starchips, CLOCK));
+
+        PlayerRowState row = state.getPlayerRow(10).orElseThrow();
+        assertEquals("drop", row.sourceTextProperty().get());
+        assertEquals("122", row.valueTextProperty().get());
+        assertEquals(String.valueOf(FMDB.getInstance().getDuelist(3).getName()), row.opponentTextProperty().get());
+        assertEquals("987", row.starchipsTextProperty().get());
+        assertEquals("4s ago", row.relativeTimeTextProperty().get());
+    }
+
+    @Test
     void filtersTeamUpdatesByTeamId() {
         LiveStatsState state = state();
         LibraryUpdate update = library(2, 99);
