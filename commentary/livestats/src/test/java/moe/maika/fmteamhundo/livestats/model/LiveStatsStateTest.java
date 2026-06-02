@@ -40,10 +40,11 @@ class LiveStatsStateTest {
         PlayerUpdate update = new PlayerUpdate(122, MessageType.DROP, 10, NOW.minusSeconds(5), 1, 2, 3);
 
         assertTrue(state.applyPlayerUpdate(update, CLOCK));
-        assertEquals("drop", state.getPlayerRow(10).orElseThrow().sourceTextProperty().get());
-        assertEquals("122", state.getPlayerRow(10).orElseThrow().valueTextProperty().get());
-        assertEquals(String.valueOf(FMDB.getInstance().getDuelist(3).getName()), state.getPlayerRow(10).orElseThrow().opponentTextProperty().get());
-        assertEquals("5s ago", state.getPlayerRow(10).orElseThrow().relativeTimeTextProperty().get());
+        PlayerRowState row = state.getPlayerRow(10).orElseThrow();
+        assertEquals("drop", row.sourceTextProperty().get());
+        assertEquals(String.valueOf(FMDB.getInstance().getCard(122)), row.valueTextProperty().get());
+        assertEquals(String.valueOf(FMDB.getInstance().getDuelist(3).getName()), row.opponentTextProperty().get());
+        assertEquals("5s ago", row.relativeTimeTextProperty().get());
 
         assertFalse(state.applyPlayerUpdate(new PlayerUpdate(1, MessageType.DROP, 999, NOW, 0, 0, 0), CLOCK));
     }
@@ -59,7 +60,7 @@ class LiveStatsStateTest {
 
         PlayerRowState row = state.getPlayerRow(10).orElseThrow();
         assertEquals("drop", row.sourceTextProperty().get());
-        assertEquals("122", row.valueTextProperty().get());
+        assertEquals(String.valueOf(FMDB.getInstance().getCard(122)), row.valueTextProperty().get());
         assertEquals(String.valueOf(FMDB.getInstance().getDuelist(3).getName()), row.opponentTextProperty().get());
         assertEquals("987", row.starchipsTextProperty().get());
         assertEquals("4s ago", row.relativeTimeTextProperty().get());
