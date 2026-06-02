@@ -66,6 +66,10 @@ public class TeamPanelView {
         opponent.setCellValueFactory(data -> data.getValue().opponentTextProperty());
         opponent.setPrefWidth(74);
 
+        TableColumn<PlayerRowState, String> starchips = new TableColumn<>("Starchips");
+        starchips.setCellValueFactory(data -> data.getValue().starchipsTextProperty());
+        starchips.setPrefWidth(74);
+
         TableColumn<PlayerRowState, String> time = new TableColumn<>("Time");
         time.setCellValueFactory(data -> data.getValue().relativeTimeTextProperty());
         time.setPrefWidth(80);
@@ -74,6 +78,7 @@ public class TeamPanelView {
         table.getColumns().add(source);
         table.getColumns().add(value);
         table.getColumns().add(opponent);
+        table.getColumns().add(starchips);
         table.getColumns().add(time);
         table.setRowFactory(_ -> {
             TableRow<PlayerRowState> row = new TableRow<>();
