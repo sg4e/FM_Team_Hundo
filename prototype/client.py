@@ -1,41 +1,49 @@
 import json
+from pathlib import Path
+
 import requests
-from sys import argv
-from itertools import chain
+
+_CREDENTIAL_SEARCH_PATHS = [
+    Path("credentials_FM_Team_Hundo.json"),
+    Path("../middleware/credentials_FM_Team_Hundo.json"),
+]
 
 
-with open("../middleware/credentials_FM_Team_Hundo.json", "r") as f:
-    client_config = json.load(f)
+def _load_credentials():
+    for path in _CREDENTIAL_SEARCH_PATHS:
+        if path.is_file():
+            with open(path) as f:
+                config = json.load(f)
+            return config["url"], config["key"]
+    searched = ", ".join(str(p) for p in _CREDENTIAL_SEARCH_PATHS)
+    raise FileNotFoundError(
+        f"No credentials file found. Searched: {searched}"
+    )
 
 
-def create_emu_message(card_id: int, starchips: int = 3):
-    return [
-        {
-            "type": "drop",
-            "value": card_id,  # Yamatano
-            "last_rng": 0,
-            "now_rng": 1,
-            "opp_id": 1
-        },
-        {
-            "type": "starchips",
-            "value": starchips
-        }
-    ]
+_base_url, _api_key = _load_credentials()
+_base_url = _base_url.rstrip("/")
+
+# Validate credentials against the server at import time
+_validate_response = requests.get(
+    f"{_base_url}/validate",
+    headers={"X-API-Key": _api_key},
+)
+if _validate_response.status_code != 200:
+    raise ImportError(
+        f"Failed to validate API key: {_validate_response.text}"
+    )
 
 
-def send_updates(post_body):
-    url = f"{client_config['url']}/update"
-    headers = {
-        "X-API-Key": client_config['key'],
-        "Content-Type": "application/json"
-    }
-    response = requests.post(url, headers=headers, json=post_body)
-    return response
+def send(messages, test=False):
+    if not isinstance(messages, list):
+        messages = [messages]
 
+    headers = {"X-API-Key": _api_key, "Content-Type": "application/json"}
+    if test:
+        headers["test"] = "true"
 
-if __name__ == "__main__":
-    ids = [int(arg) for arg in argv[1:]] if len(argv) > 1 else [122]  # Yamatano
-    body = list(chain(*[create_emu_message(card_id, (index+1) * 3) for index, card_id in enumerate(ids)]))
-    response = send_updates(body)
-    print(f"Status Code: {response.status_code}: {response.text}")
+    response = requests.post(
+        f"{_base_url}/update", headers=headers, json=messages
+    )
+    return response.json()
