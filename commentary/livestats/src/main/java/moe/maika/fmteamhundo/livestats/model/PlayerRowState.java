@@ -88,7 +88,7 @@ public class PlayerRowState {
         opponentId.set(update.opponentId());
         updateTime.set(update.time());
         sourceText.set(update.source() == null ? "" : update.source().toString());
-        valueText.set(String.valueOf(update.value()));
+        valueText.set(String.valueOf(fmdb.getCard(update.value())));
         opponentText.set(String.valueOf(fmdb.getDuelist(update.opponentId()).getName()));
         refreshRelativeTime(clock);
     }
