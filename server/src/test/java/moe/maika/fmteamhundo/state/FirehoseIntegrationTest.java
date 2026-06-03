@@ -187,6 +187,7 @@ class FirehoseIntegrationTest {
         assertThat(snapshot.get("teamId").asInt()).isEqualTo(1);
         assertThat(snapshot.get("totalStarchips").asLong()).isEqualTo(250L);
         assertThat(snapshot.get("uniqueCardCount").asInt()).isEqualTo(1);
+        assertThat(snapshot.has("cardIds")).isFalse();
         assertThat(snapshot.get("newAcquisitions")).hasSize(1);
         assertThat(snapshot.get("newAcquisitions").get(0).get("cardId").asInt()).isEqualTo(122);
         assertThat(snapshot.get("newAcquisitions").get(0).get("playerId").asLong()).isEqualTo(team1User.getDatabaseId());

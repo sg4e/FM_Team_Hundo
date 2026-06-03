@@ -58,6 +58,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /library_contents/{teamId}:
+    get:
+      summary: List card ids currently in a team's library
+      operationId: getLibraryContents
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sorted card ids currently obtained by the team.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  minimum: 1
+                  maximum: 722
+        "400":
+          description: Invalid teamId path value that cannot be converted to an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /credits:
     get:
       summary: Get credits-scene data

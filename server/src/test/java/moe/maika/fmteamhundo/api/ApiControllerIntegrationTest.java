@@ -140,10 +140,58 @@ class ApiControllerIntegrationTest {
                 .andExpect(jsonPath("$.teamId").value(emptyTeamId))
                 .andExpect(jsonPath("$.totalStarchips").value(0))
                 .andExpect(jsonPath("$.uniqueCardCount").value(0))
+                .andExpect(jsonPath("$.cardIds").doesNotExist())
                 .andExpect(jsonPath("$.newAcquisitions").isArray())
                 .andExpect(jsonPath("$.newAcquisitions.length()").value(0))
                 .andExpect(jsonPath("$.hasCompletedHundo").value(false))
                 .andExpect(jsonPath("$.bewdCount").value(0));
+    }
+
+
+    @Test
+    void testLibraryContentsEndpointReturnsAllObtainedCardIds() throws Exception {
+        List<EmuMessage> messages = Arrays.asList(
+                new EmuMessage(MessageType.RITUAL, 300, 20, 21, 1),
+                new EmuMessage(MessageType.DROP, 100, 5, 6, 1),
+                new EmuMessage(MessageType.FUSE, 50, 10, 11, 1),
+                new EmuMessage(MessageType.STARCHIPS, 10, 0, 0, 1)
+        );
+
+        mockMvc.perform(post("/api/update")
+                .header("X-API-Key", validApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(messages)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/library_contents/{teamId}", testTeam.getTeamId())
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0]").value(50))
+                .andExpect(jsonPath("$[1]").value(100))
+                .andExpect(jsonPath("$[2]").value(300));
+    }
+
+
+    @Test
+    void testLibraryContentsEndpointReturnsEmptyArrayForUnknownTeam() throws Exception {
+        int emptyTeamId = testTeam.getTeamId() + 10_000;
+
+        mockMvc.perform(get("/api/library_contents/{teamId}", emptyTeamId)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void testLibraryContentsEndpointWithInvalidTeamIdReturnsApiError() throws Exception {
+        mockMvc.perform(get("/api/library_contents/not-an-integer")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid path parameter"));
     }
 
     @Test

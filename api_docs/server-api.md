@@ -100,6 +100,14 @@ Returns all teams.
 
 Returns the latest `LibraryUpdate` snapshot for a team. If the team has no in-memory snapshot yet, the server creates an empty snapshot for that team id.
 
+### `GET /api/library_contents/{teamId}`
+
+Returns a sorted JSON array of all unique card ids currently obtained by the team. If the team has no in-memory Library yet, the endpoint returns an empty array.
+
+```json
+[1, 50, 122]
+```
+
 ### `GET /api/credits`
 
 Returns credits-scene data for commentary tooling.
