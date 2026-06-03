@@ -6,3 +6,7 @@ credentials_FM_Team_Hundo.json
 .classpath
 .settings/
 .factorypath
+
+# Generated API docs/release packaging outputs
+/api_docs_site/
+/artifact/

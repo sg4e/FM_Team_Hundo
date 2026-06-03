@@ -35,6 +35,23 @@ Spring/Vaadin server (`server/`)
 - `LICENSE.md` is AGPL-3.0 text for this repository.
 - `vscode-java-workspace.md` records Java workspace notes.
 - `AGENTS.md`, `PROJECT_CONTEXT.md`, and `DECISIONS.md` are the meta files that must stay in sync with agent-facing repository reality.
+- `api_docs/` is the canonical source documentation for API contracts. It contains Markdown per API layer plus `schemas/openapi.yaml` as the OpenAPI 3.2 server HTTP API precursor. Keep it in sync whenever emulator plugin messages, middleware behavior, server endpoints/firehoses, commentary overlay routes/events, or compatibility rules change.
+
+
+## API documentation (`api_docs/`)
+
+`api_docs/` documents every API layer in source form rather than committed generated HTML:
+
+- `README.md` explains the documentation format, optional MkDocs/Redoc rendering, and maintenance checklist.
+- `plugin-middleware-protocol.md` covers newline-delimited JSON over `127.0.0.1:51155`.
+- `middleware-server-api.md` covers credentials, `/api/validate`, `/api/update`, test mode, and retry behavior.
+- `server-api.md` covers public REST endpoints and `/firehose/player` plus `/firehose/team` WebSocket payloads.
+- `commentary-overlay-api.md` covers LiveStats/OBS consumption and local overlay HTTP/WebSocket routes.
+- `compatibility.md` covers protocol-version stamping and bump rules.
+- `openapi.md` is the MkDocs page that links to the OpenAPI YAML precursor.
+- `schemas/openapi.yaml` is the machine-readable OpenAPI 3.2 server HTTP API precursor.
+
+Review these files directly for API-only documentation changes. Validate docs with `python api_docs/scripts/validate_api_docs.py` and `mkdocs build --strict --config-file api_docs/mkdocs.yml`. Optional local previews can be generated with MkDocs or Redoc, but generated HTML should be published out-of-repo and not committed.
 
 ## Main server (`server/`)
 
