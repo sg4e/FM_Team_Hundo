@@ -98,7 +98,7 @@ Returns all teams.
 
 ### `GET /api/library/{teamId}`
 
-Returns the latest `LibraryUpdate` snapshot for a team. If the team has no in-memory snapshot yet, the server creates an empty snapshot for that team id. Non-integer `teamId` path values return Spring's default HTTP `400` JSON error response before controller logic runs.
+Returns the latest `LibraryUpdate` snapshot for a team. If the team has no in-memory snapshot yet, the server creates an empty snapshot for that team id.
 
 ### `GET /api/credits`
 

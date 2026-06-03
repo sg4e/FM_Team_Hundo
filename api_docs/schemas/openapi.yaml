@@ -57,7 +57,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SpringErrorResponse"
+                $ref: "#/components/schemas/ErrorResponse"
   /credits:
     get:
       summary: Get credits-scene data
@@ -320,19 +320,6 @@ components:
           type: string
           const: error
         message:
-          type: string
-    SpringErrorResponse:
-      type: object
-      description: Default Spring error response for framework-level request errors such as path binding failures.
-      additionalProperties: true
-      properties:
-        timestamp:
-          type: string
-        status:
-          type: integer
-        error:
-          type: string
-        path:
           type: string
     CreditsResponse:
       type: object
