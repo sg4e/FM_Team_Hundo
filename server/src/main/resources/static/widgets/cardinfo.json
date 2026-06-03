@@ -1,0 +1,2890 @@
+[
+  {
+    "cardId": 1,
+    "cardName": "Blue-eyes White Dragon"
+  },
+  {
+    "cardId": 2,
+    "cardName": "Mystical Elf"
+  },
+  {
+    "cardId": 3,
+    "cardName": "Hitotsu-me Giant"
+  },
+  {
+    "cardId": 4,
+    "cardName": "Baby Dragon"
+  },
+  {
+    "cardId": 5,
+    "cardName": "Ryu-kishin"
+  },
+  {
+    "cardId": 6,
+    "cardName": "Feral Imp"
+  },
+  {
+    "cardId": 7,
+    "cardName": "Winged Dragon #1"
+  },
+  {
+    "cardId": 8,
+    "cardName": "Mushroom Man"
+  },
+  {
+    "cardId": 9,
+    "cardName": "Shadow Specter"
+  },
+  {
+    "cardId": 10,
+    "cardName": "Blackland Fire Dragon"
+  },
+  {
+    "cardId": 11,
+    "cardName": "Sword Arm of Dragon"
+  },
+  {
+    "cardId": 12,
+    "cardName": "Swamp Battleguard"
+  },
+  {
+    "cardId": 13,
+    "cardName": "Tyhone"
+  },
+  {
+    "cardId": 14,
+    "cardName": "Battle Steer"
+  },
+  {
+    "cardId": 15,
+    "cardName": "Flame Swordsman"
+  },
+  {
+    "cardId": 16,
+    "cardName": "Time Wizard"
+  },
+  {
+    "cardId": 17,
+    "cardName": "Right Leg of the Forbidden One"
+  },
+  {
+    "cardId": 18,
+    "cardName": "Left Leg of the Forbidden One"
+  },
+  {
+    "cardId": 19,
+    "cardName": "Right Arm of the Forbidden One"
+  },
+  {
+    "cardId": 20,
+    "cardName": "Left Arm of the Forbidden One"
+  },
+  {
+    "cardId": 21,
+    "cardName": "Exodia the Forbidden"
+  },
+  {
+    "cardId": 22,
+    "cardName": "Summoned Skull"
+  },
+  {
+    "cardId": 23,
+    "cardName": "The Wicked Worm Beast"
+  },
+  {
+    "cardId": 24,
+    "cardName": "Skull Servant"
+  },
+  {
+    "cardId": 25,
+    "cardName": "Horn Imp"
+  },
+  {
+    "cardId": 26,
+    "cardName": "Battle Ox"
+  },
+  {
+    "cardId": 27,
+    "cardName": "Beaver Warrior"
+  },
+  {
+    "cardId": 28,
+    "cardName": "Rock Ogre Grotto #1"
+  },
+  {
+    "cardId": 29,
+    "cardName": "Mountain Warrior"
+  },
+  {
+    "cardId": 30,
+    "cardName": "Zombie Warrior"
+  },
+  {
+    "cardId": 31,
+    "cardName": "Koumori Dragon"
+  },
+  {
+    "cardId": 32,
+    "cardName": "Two-headed King Rex"
+  },
+  {
+    "cardId": 33,
+    "cardName": "Judge Man"
+  },
+  {
+    "cardId": 34,
+    "cardName": "Saggi the Dark Clown"
+  },
+  {
+    "cardId": 35,
+    "cardName": "Dark Magician"
+  },
+  {
+    "cardId": 36,
+    "cardName": "The Snake Hair"
+  },
+  {
+    "cardId": 37,
+    "cardName": "Gaia the Dragon Champion"
+  },
+  {
+    "cardId": 38,
+    "cardName": "Gaia the Fierce Knight"
+  },
+  {
+    "cardId": 39,
+    "cardName": "Curse of Dragon"
+  },
+  {
+    "cardId": 40,
+    "cardName": "Dragon Piper"
+  },
+  {
+    "cardId": 41,
+    "cardName": "Celtic Guardian"
+  },
+  {
+    "cardId": 42,
+    "cardName": "Illusionist Faceless Mage"
+  },
+  {
+    "cardId": 43,
+    "cardName": "Karbonala Warrior"
+  },
+  {
+    "cardId": 44,
+    "cardName": "Rogue Doll"
+  },
+  {
+    "cardId": 45,
+    "cardName": "Oscillo Hero #2"
+  },
+  {
+    "cardId": 46,
+    "cardName": "Griffore"
+  },
+  {
+    "cardId": 47,
+    "cardName": "Torike"
+  },
+  {
+    "cardId": 48,
+    "cardName": "Sangan"
+  },
+  {
+    "cardId": 49,
+    "cardName": "Big Insect"
+  },
+  {
+    "cardId": 50,
+    "cardName": "Basic Insect"
+  },
+  {
+    "cardId": 51,
+    "cardName": "Armored Lizard"
+  },
+  {
+    "cardId": 52,
+    "cardName": "Hercules Beetle"
+  },
+  {
+    "cardId": 53,
+    "cardName": "Killer Needle"
+  },
+  {
+    "cardId": 54,
+    "cardName": "Gokibore"
+  },
+  {
+    "cardId": 55,
+    "cardName": "Giant Flea"
+  },
+  {
+    "cardId": 56,
+    "cardName": "Larvae Moth"
+  },
+  {
+    "cardId": 57,
+    "cardName": "Great Moth"
+  },
+  {
+    "cardId": 58,
+    "cardName": "Kuriboh"
+  },
+  {
+    "cardId": 59,
+    "cardName": "Mammoth Graveyard"
+  },
+  {
+    "cardId": 60,
+    "cardName": "Great White"
+  },
+  {
+    "cardId": 61,
+    "cardName": "Wolf"
+  },
+  {
+    "cardId": 62,
+    "cardName": "Harpie Lady"
+  },
+  {
+    "cardId": 63,
+    "cardName": "Harpie Lady Sisters"
+  },
+  {
+    "cardId": 64,
+    "cardName": "Tiger Axe"
+  },
+  {
+    "cardId": 65,
+    "cardName": "Silver Fang"
+  },
+  {
+    "cardId": 66,
+    "cardName": "Kojikocy"
+  },
+  {
+    "cardId": 67,
+    "cardName": "Perfectly Ultimate Great Moth"
+  },
+  {
+    "cardId": 68,
+    "cardName": "Garoozis"
+  },
+  {
+    "cardId": 69,
+    "cardName": "Thousand Dragon"
+  },
+  {
+    "cardId": 70,
+    "cardName": "Fiend Kraken"
+  },
+  {
+    "cardId": 71,
+    "cardName": "Jellyfish"
+  },
+  {
+    "cardId": 72,
+    "cardName": "Cocoon of Evolution"
+  },
+  {
+    "cardId": 73,
+    "cardName": "Kairyu-shin"
+  },
+  {
+    "cardId": 74,
+    "cardName": "Giant Soldier of Stone"
+  },
+  {
+    "cardId": 75,
+    "cardName": "Man-eating Plant"
+  },
+  {
+    "cardId": 76,
+    "cardName": "Krokodilus"
+  },
+  {
+    "cardId": 77,
+    "cardName": "Grappler"
+  },
+  {
+    "cardId": 78,
+    "cardName": "Axe Raider"
+  },
+  {
+    "cardId": 79,
+    "cardName": "Megazowler"
+  },
+  {
+    "cardId": 80,
+    "cardName": "Uraby"
+  },
+  {
+    "cardId": 81,
+    "cardName": "Crawling Dragon #2"
+  },
+  {
+    "cardId": 82,
+    "cardName": "Red-eyes B. Dragon"
+  },
+  {
+    "cardId": 83,
+    "cardName": "Castle of Dark Illusions"
+  },
+  {
+    "cardId": 84,
+    "cardName": "Reaper of the Cards"
+  },
+  {
+    "cardId": 85,
+    "cardName": "King of Yamimakai"
+  },
+  {
+    "cardId": 86,
+    "cardName": "Barox"
+  },
+  {
+    "cardId": 87,
+    "cardName": "Dark Chimera"
+  },
+  {
+    "cardId": 88,
+    "cardName": "Metal Guardian"
+  },
+  {
+    "cardId": 89,
+    "cardName": "Catapult Turtle"
+  },
+  {
+    "cardId": 90,
+    "cardName": "Gyakutenno Megami"
+  },
+  {
+    "cardId": 91,
+    "cardName": "Mystic Horseman"
+  },
+  {
+    "cardId": 92,
+    "cardName": "Rabid Horseman"
+  },
+  {
+    "cardId": 93,
+    "cardName": "Zanki"
+  },
+  {
+    "cardId": 94,
+    "cardName": "Crawling Dragon"
+  },
+  {
+    "cardId": 95,
+    "cardName": "Crass Clown"
+  },
+  {
+    "cardId": 96,
+    "cardName": "Armored Zombie"
+  },
+  {
+    "cardId": 97,
+    "cardName": "Dragon Zombie"
+  },
+  {
+    "cardId": 98,
+    "cardName": "Clown Zombie"
+  },
+  {
+    "cardId": 99,
+    "cardName": "Pumpking the King of Ghosts"
+  },
+  {
+    "cardId": 100,
+    "cardName": "Battle Warrior"
+  },
+  {
+    "cardId": 101,
+    "cardName": "Wings of Wicked Flame"
+  },
+  {
+    "cardId": 102,
+    "cardName": "Mask of Darkness"
+  },
+  {
+    "cardId": 103,
+    "cardName": "Job-change Mirror"
+  },
+  {
+    "cardId": 104,
+    "cardName": "Curtain of the Dark Ones"
+  },
+  {
+    "cardId": 105,
+    "cardName": "Tomozaurus"
+  },
+  {
+    "cardId": 106,
+    "cardName": "Spirit of the Winds"
+  },
+  {
+    "cardId": 107,
+    "cardName": "Kageningen"
+  },
+  {
+    "cardId": 108,
+    "cardName": "Graveyard and the Hand of Invitation"
+  },
+  {
+    "cardId": 109,
+    "cardName": "Goddess with the Third Eye"
+  },
+  {
+    "cardId": 110,
+    "cardName": "Hero of the East"
+  },
+  {
+    "cardId": 111,
+    "cardName": "Doma The Angel of Silence"
+  },
+  {
+    "cardId": 112,
+    "cardName": "That Which Feeds on Life"
+  },
+  {
+    "cardId": 113,
+    "cardName": "Dark Gray"
+  },
+  {
+    "cardId": 114,
+    "cardName": "White Magical Hat"
+  },
+  {
+    "cardId": 115,
+    "cardName": "Kamion Wizard"
+  },
+  {
+    "cardId": 116,
+    "cardName": "Nightmare Scorpion"
+  },
+  {
+    "cardId": 117,
+    "cardName": "Spirit of the Books"
+  },
+  {
+    "cardId": 118,
+    "cardName": "Supporter in the Shadows"
+  },
+  {
+    "cardId": 119,
+    "cardName": "Trial of Nightmares"
+  },
+  {
+    "cardId": 120,
+    "cardName": "Dream Clown"
+  },
+  {
+    "cardId": 121,
+    "cardName": "Sleeping Lion"
+  },
+  {
+    "cardId": 122,
+    "cardName": "Yamatano Dragon Scroll"
+  },
+  {
+    "cardId": 123,
+    "cardName": "Dark Plant"
+  },
+  {
+    "cardId": 124,
+    "cardName": "Ancient Tool"
+  },
+  {
+    "cardId": 125,
+    "cardName": "Faith Bird"
+  },
+  {
+    "cardId": 126,
+    "cardName": "Orion the Battle King"
+  },
+  {
+    "cardId": 127,
+    "cardName": "Ansatsu"
+  },
+  {
+    "cardId": 128,
+    "cardName": "LaMoon"
+  },
+  {
+    "cardId": 129,
+    "cardName": "Nemuriko"
+  },
+  {
+    "cardId": 130,
+    "cardName": "Weather Control"
+  },
+  {
+    "cardId": 131,
+    "cardName": "Octoberser"
+  },
+  {
+    "cardId": 132,
+    "cardName": "The 13th Grave"
+  },
+  {
+    "cardId": 133,
+    "cardName": "Charubin the Fire Knight"
+  },
+  {
+    "cardId": 134,
+    "cardName": "Mystical Capture Chain"
+  },
+  {
+    "cardId": 135,
+    "cardName": "Fiend's Hand"
+  },
+  {
+    "cardId": 136,
+    "cardName": "Witty Phantom"
+  },
+  {
+    "cardId": 137,
+    "cardName": "Mystery Hand"
+  },
+  {
+    "cardId": 138,
+    "cardName": "Dragon Statue"
+  },
+  {
+    "cardId": 139,
+    "cardName": "Blue-eyed Silver Zombie"
+  },
+  {
+    "cardId": 140,
+    "cardName": "Toad Master"
+  },
+  {
+    "cardId": 141,
+    "cardName": "Spiked Snail"
+  },
+  {
+    "cardId": 142,
+    "cardName": "Flame Manipulator"
+  },
+  {
+    "cardId": 143,
+    "cardName": "Necrolancer the Timelord"
+  },
+  {
+    "cardId": 144,
+    "cardName": "Djinn the Watcher of the Wind"
+  },
+  {
+    "cardId": 145,
+    "cardName": "The Bewitching Phantom Thief"
+  },
+  {
+    "cardId": 146,
+    "cardName": "Temple of Skulls"
+  },
+  {
+    "cardId": 147,
+    "cardName": "Monster Egg"
+  },
+  {
+    "cardId": 148,
+    "cardName": "The Shadow Who Controls the Dark"
+  },
+  {
+    "cardId": 149,
+    "cardName": "Lord of the Lamp"
+  },
+  {
+    "cardId": 150,
+    "cardName": "Akihiron"
+  },
+  {
+    "cardId": 151,
+    "cardName": "Rhaimundos of the Red Sword"
+  },
+  {
+    "cardId": 152,
+    "cardName": "The Melting Red Shadow"
+  },
+  {
+    "cardId": 153,
+    "cardName": "Dokuroizo the Grim Reaper"
+  },
+  {
+    "cardId": 154,
+    "cardName": "Fire Reaper"
+  },
+  {
+    "cardId": 155,
+    "cardName": "Larvas"
+  },
+  {
+    "cardId": 156,
+    "cardName": "Hard Armor"
+  },
+  {
+    "cardId": 157,
+    "cardName": "Firegrass"
+  },
+  {
+    "cardId": 158,
+    "cardName": "Man Eater"
+  },
+  {
+    "cardId": 159,
+    "cardName": "Dig Beak"
+  },
+  {
+    "cardId": 160,
+    "cardName": "M-warrior #1"
+  },
+  {
+    "cardId": 161,
+    "cardName": "M-warrior #2"
+  },
+  {
+    "cardId": 162,
+    "cardName": "Tainted Wisdom"
+  },
+  {
+    "cardId": 163,
+    "cardName": "Lisark"
+  },
+  {
+    "cardId": 164,
+    "cardName": "Lord of Zemia"
+  },
+  {
+    "cardId": 165,
+    "cardName": "The Judgement Hand"
+  },
+  {
+    "cardId": 166,
+    "cardName": "Mysterious Puppeteer"
+  },
+  {
+    "cardId": 167,
+    "cardName": "Ancient Jar"
+  },
+  {
+    "cardId": 168,
+    "cardName": "Darkfire Dragon"
+  },
+  {
+    "cardId": 169,
+    "cardName": "Dark King of the Abyss"
+  },
+  {
+    "cardId": 170,
+    "cardName": "Spirit of the Harp"
+  },
+  {
+    "cardId": 171,
+    "cardName": "Big Eye"
+  },
+  {
+    "cardId": 172,
+    "cardName": "Armaill"
+  },
+  {
+    "cardId": 173,
+    "cardName": "Dark Prisoner"
+  },
+  {
+    "cardId": 174,
+    "cardName": "Hurricail"
+  },
+  {
+    "cardId": 175,
+    "cardName": "Ancient Brain"
+  },
+  {
+    "cardId": 176,
+    "cardName": "Fire Eye"
+  },
+  {
+    "cardId": 177,
+    "cardName": "Monsturtle"
+  },
+  {
+    "cardId": 178,
+    "cardName": "Claw Reacher"
+  },
+  {
+    "cardId": 179,
+    "cardName": "Phantom Dewan"
+  },
+  {
+    "cardId": 180,
+    "cardName": "Arlownay"
+  },
+  {
+    "cardId": 181,
+    "cardName": "Dark Shade"
+  },
+  {
+    "cardId": 182,
+    "cardName": "Masked Clown"
+  },
+  {
+    "cardId": 183,
+    "cardName": "Lucky Trinket"
+  },
+  {
+    "cardId": 184,
+    "cardName": "Genin"
+  },
+  {
+    "cardId": 185,
+    "cardName": "Eyearmor"
+  },
+  {
+    "cardId": 186,
+    "cardName": "Fiend Refrection #2"
+  },
+  {
+    "cardId": 187,
+    "cardName": "Gate Deeg"
+  },
+  {
+    "cardId": 188,
+    "cardName": "Synchar"
+  },
+  {
+    "cardId": 189,
+    "cardName": "Fusionist"
+  },
+  {
+    "cardId": 190,
+    "cardName": "Akakieisu"
+  },
+  {
+    "cardId": 191,
+    "cardName": "LaLa Li-oon"
+  },
+  {
+    "cardId": 192,
+    "cardName": "Key Mace"
+  },
+  {
+    "cardId": 193,
+    "cardName": "Turtle Tiger"
+  },
+  {
+    "cardId": 194,
+    "cardName": "Terra the Terrible"
+  },
+  {
+    "cardId": 195,
+    "cardName": "Doron"
+  },
+  {
+    "cardId": 196,
+    "cardName": "Arma Knight"
+  },
+  {
+    "cardId": 197,
+    "cardName": "Mech Mole Zombie"
+  },
+  {
+    "cardId": 198,
+    "cardName": "Happy Lover"
+  },
+  {
+    "cardId": 199,
+    "cardName": "Penguin Knight"
+  },
+  {
+    "cardId": 200,
+    "cardName": "Petit Dragon"
+  },
+  {
+    "cardId": 201,
+    "cardName": "Frenzied Panda"
+  },
+  {
+    "cardId": 202,
+    "cardName": "Air Marmot of Nefariousness"
+  },
+  {
+    "cardId": 203,
+    "cardName": "Phantom Ghost"
+  },
+  {
+    "cardId": 204,
+    "cardName": "Mabarrel"
+  },
+  {
+    "cardId": 205,
+    "cardName": "Dorover"
+  },
+  {
+    "cardId": 206,
+    "cardName": "Twin Long Rods #1"
+  },
+  {
+    "cardId": 207,
+    "cardName": "Droll Bird"
+  },
+  {
+    "cardId": 208,
+    "cardName": "Petit Angel"
+  },
+  {
+    "cardId": 209,
+    "cardName": "Winged Cleaver"
+  },
+  {
+    "cardId": 210,
+    "cardName": "Hinotama Soul"
+  },
+  {
+    "cardId": 211,
+    "cardName": "Kaminarikozou"
+  },
+  {
+    "cardId": 212,
+    "cardName": "Meotoko"
+  },
+  {
+    "cardId": 213,
+    "cardName": "Aqua Madoor"
+  },
+  {
+    "cardId": 214,
+    "cardName": "Kagemusha of the Blue Flame"
+  },
+  {
+    "cardId": 215,
+    "cardName": "Flame Ghost"
+  },
+  {
+    "cardId": 216,
+    "cardName": "Dryad"
+  },
+  {
+    "cardId": 217,
+    "cardName": "B. Skull Dragon"
+  },
+  {
+    "cardId": 218,
+    "cardName": "Two-mouth Darkruler"
+  },
+  {
+    "cardId": 219,
+    "cardName": "Solitude"
+  },
+  {
+    "cardId": 220,
+    "cardName": "Masked Sorcerer"
+  },
+  {
+    "cardId": 221,
+    "cardName": "Kumootoko"
+  },
+  {
+    "cardId": 222,
+    "cardName": "Midnight Fiend"
+  },
+  {
+    "cardId": 223,
+    "cardName": "Roaring Ocean Snake"
+  },
+  {
+    "cardId": 224,
+    "cardName": "Trap Master"
+  },
+  {
+    "cardId": 225,
+    "cardName": "Fiend Sword"
+  },
+  {
+    "cardId": 226,
+    "cardName": "Skull Stalker"
+  },
+  {
+    "cardId": 227,
+    "cardName": "Hitodenchak"
+  },
+  {
+    "cardId": 228,
+    "cardName": "Wood Remains"
+  },
+  {
+    "cardId": 229,
+    "cardName": "Hourglass of Life"
+  },
+  {
+    "cardId": 230,
+    "cardName": "Rare Fish"
+  },
+  {
+    "cardId": 231,
+    "cardName": "Wood Clown"
+  },
+  {
+    "cardId": 232,
+    "cardName": "Madjinn Gunn"
+  },
+  {
+    "cardId": 233,
+    "cardName": "Dark Titan of Terror"
+  },
+  {
+    "cardId": 234,
+    "cardName": "Beautiful Headhuntress"
+  },
+  {
+    "cardId": 235,
+    "cardName": "Wodan the Resident of the Forest"
+  },
+  {
+    "cardId": 236,
+    "cardName": "Guardian of the Labyrinth"
+  },
+  {
+    "cardId": 237,
+    "cardName": "Haniwa"
+  },
+  {
+    "cardId": 238,
+    "cardName": "Yashinoki"
+  },
+  {
+    "cardId": 239,
+    "cardName": "Vishwar Randi"
+  },
+  {
+    "cardId": 240,
+    "cardName": "The Drdek"
+  },
+  {
+    "cardId": 241,
+    "cardName": "Dark Assailant"
+  },
+  {
+    "cardId": 242,
+    "cardName": "Candle of Fate"
+  },
+  {
+    "cardId": 243,
+    "cardName": "Water Element"
+  },
+  {
+    "cardId": 244,
+    "cardName": "Dissolverock"
+  },
+  {
+    "cardId": 245,
+    "cardName": "Meda Bat"
+  },
+  {
+    "cardId": 246,
+    "cardName": "One Who Hunts Souls"
+  },
+  {
+    "cardId": 247,
+    "cardName": "Root Water"
+  },
+  {
+    "cardId": 248,
+    "cardName": "Master & Expert"
+  },
+  {
+    "cardId": 249,
+    "cardName": "Water Omotics"
+  },
+  {
+    "cardId": 250,
+    "cardName": "Hyo"
+  },
+  {
+    "cardId": 251,
+    "cardName": "Enchanting Mermaid"
+  },
+  {
+    "cardId": 252,
+    "cardName": "Nekogal #1"
+  },
+  {
+    "cardId": 253,
+    "cardName": "Angelwitch"
+  },
+  {
+    "cardId": 254,
+    "cardName": "Embryonic Beast"
+  },
+  {
+    "cardId": 255,
+    "cardName": "Prevent Rat"
+  },
+  {
+    "cardId": 256,
+    "cardName": "Dimensional Warrior"
+  },
+  {
+    "cardId": 257,
+    "cardName": "Stone Armadiller"
+  },
+  {
+    "cardId": 258,
+    "cardName": "Beastking of the Swamps"
+  },
+  {
+    "cardId": 259,
+    "cardName": "Ancient Sorcerer"
+  },
+  {
+    "cardId": 260,
+    "cardName": "Lunar Queen Elzaim"
+  },
+  {
+    "cardId": 261,
+    "cardName": "Wicked Mirror"
+  },
+  {
+    "cardId": 262,
+    "cardName": "The Little Swordsman of Aile"
+  },
+  {
+    "cardId": 263,
+    "cardName": "Rock Ogre Grotto #2"
+  },
+  {
+    "cardId": 264,
+    "cardName": "Wing Egg Elf"
+  },
+  {
+    "cardId": 265,
+    "cardName": "The Furious Sea King"
+  },
+  {
+    "cardId": 266,
+    "cardName": "Princess of Tsurugi"
+  },
+  {
+    "cardId": 267,
+    "cardName": "Unknown Warrior of Fiend"
+  },
+  {
+    "cardId": 268,
+    "cardName": "Sectarian of Secrets"
+  },
+  {
+    "cardId": 269,
+    "cardName": "Versago the Destroyer"
+  },
+  {
+    "cardId": 270,
+    "cardName": "Wetha"
+  },
+  {
+    "cardId": 271,
+    "cardName": "Megirus Light"
+  },
+  {
+    "cardId": 272,
+    "cardName": "Mavelus"
+  },
+  {
+    "cardId": 273,
+    "cardName": "Ancient Tree of Enlightenment"
+  },
+  {
+    "cardId": 274,
+    "cardName": "Green Phantom King"
+  },
+  {
+    "cardId": 275,
+    "cardName": "Ground Attacker Bugroth"
+  },
+  {
+    "cardId": 276,
+    "cardName": "Ray & Temperature"
+  },
+  {
+    "cardId": 277,
+    "cardName": "Gorgon Egg"
+  },
+  {
+    "cardId": 278,
+    "cardName": "Petit Moth"
+  },
+  {
+    "cardId": 279,
+    "cardName": "King Fog"
+  },
+  {
+    "cardId": 280,
+    "cardName": "Protector of the Throne"
+  },
+  {
+    "cardId": 281,
+    "cardName": "Mystic Clown"
+  },
+  {
+    "cardId": 282,
+    "cardName": "Mystical Sheep #2"
+  },
+  {
+    "cardId": 283,
+    "cardName": "Holograh"
+  },
+  {
+    "cardId": 284,
+    "cardName": "Tao the Chanter"
+  },
+  {
+    "cardId": 285,
+    "cardName": "Serpent Marauder"
+  },
+  {
+    "cardId": 286,
+    "cardName": "Gatekeeper"
+  },
+  {
+    "cardId": 287,
+    "cardName": "Ogre of the Black Shadow"
+  },
+  {
+    "cardId": 288,
+    "cardName": "Dark Artist"
+  },
+  {
+    "cardId": 289,
+    "cardName": "Change Slime"
+  },
+  {
+    "cardId": 290,
+    "cardName": "Moon Envoy"
+  },
+  {
+    "cardId": 291,
+    "cardName": "Fireyarou"
+  },
+  {
+    "cardId": 292,
+    "cardName": "Psychic Kappa"
+  },
+  {
+    "cardId": 293,
+    "cardName": "Masaki the Legendary Swordsman"
+  },
+  {
+    "cardId": 294,
+    "cardName": "Dragoness the Wicked Knight"
+  },
+  {
+    "cardId": 295,
+    "cardName": "Bio Plant"
+  },
+  {
+    "cardId": 296,
+    "cardName": "One-eyed Shield Dragon"
+  },
+  {
+    "cardId": 297,
+    "cardName": "Cyber Soldier of Darkworld"
+  },
+  {
+    "cardId": 298,
+    "cardName": "Wicked Dragon with the Ersatz Head"
+  },
+  {
+    "cardId": 299,
+    "cardName": "Sonic Maid"
+  },
+  {
+    "cardId": 300,
+    "cardName": "Kurama"
+  },
+  {
+    "cardId": 301,
+    "cardName": "Legendary Sword"
+  },
+  {
+    "cardId": 302,
+    "cardName": "Sword of Dark Destruction"
+  },
+  {
+    "cardId": 303,
+    "cardName": "Dark Energy"
+  },
+  {
+    "cardId": 304,
+    "cardName": "Axe of Despair"
+  },
+  {
+    "cardId": 305,
+    "cardName": "Laser Cannon Armor"
+  },
+  {
+    "cardId": 306,
+    "cardName": "Insect Armor with Laser Cannon"
+  },
+  {
+    "cardId": 307,
+    "cardName": "Elf's Light"
+  },
+  {
+    "cardId": 308,
+    "cardName": "Beast Fangs"
+  },
+  {
+    "cardId": 309,
+    "cardName": "Steel Shell"
+  },
+  {
+    "cardId": 310,
+    "cardName": "Vile Germs"
+  },
+  {
+    "cardId": 311,
+    "cardName": "Black Pendant"
+  },
+  {
+    "cardId": 312,
+    "cardName": "Silver Bow and Arrow"
+  },
+  {
+    "cardId": 313,
+    "cardName": "Horn of Light"
+  },
+  {
+    "cardId": 314,
+    "cardName": "Horn of the Unicorn"
+  },
+  {
+    "cardId": 315,
+    "cardName": "Dragon Treasure"
+  },
+  {
+    "cardId": 316,
+    "cardName": "Electro-whip"
+  },
+  {
+    "cardId": 317,
+    "cardName": "Cyber Shield"
+  },
+  {
+    "cardId": 318,
+    "cardName": "Elegant Egotist"
+  },
+  {
+    "cardId": 319,
+    "cardName": "Mystical Moon"
+  },
+  {
+    "cardId": 320,
+    "cardName": "Stop Defense"
+  },
+  {
+    "cardId": 321,
+    "cardName": "Malevolent Nuzzler"
+  },
+  {
+    "cardId": 322,
+    "cardName": "Violet Crystal"
+  },
+  {
+    "cardId": 323,
+    "cardName": "Book of Secret Arts"
+  },
+  {
+    "cardId": 324,
+    "cardName": "Invigoration"
+  },
+  {
+    "cardId": 325,
+    "cardName": "Machine Conversion Factory"
+  },
+  {
+    "cardId": 326,
+    "cardName": "Raise Body Heat"
+  },
+  {
+    "cardId": 327,
+    "cardName": "Follow Wind"
+  },
+  {
+    "cardId": 328,
+    "cardName": "Power of Kaishin"
+  },
+  {
+    "cardId": 329,
+    "cardName": "Dragon Capture Jar"
+  },
+  {
+    "cardId": 330,
+    "cardName": "Forest"
+  },
+  {
+    "cardId": 331,
+    "cardName": "Wasteland"
+  },
+  {
+    "cardId": 332,
+    "cardName": "Mountain"
+  },
+  {
+    "cardId": 333,
+    "cardName": "Sogen"
+  },
+  {
+    "cardId": 334,
+    "cardName": "Umi"
+  },
+  {
+    "cardId": 335,
+    "cardName": "Yami"
+  },
+  {
+    "cardId": 336,
+    "cardName": "Dark Hole"
+  },
+  {
+    "cardId": 337,
+    "cardName": "Raigeki"
+  },
+  {
+    "cardId": 338,
+    "cardName": "Mooyan Curry"
+  },
+  {
+    "cardId": 339,
+    "cardName": "Red Medicine"
+  },
+  {
+    "cardId": 340,
+    "cardName": "Goblin's Secret Remedy"
+  },
+  {
+    "cardId": 341,
+    "cardName": "Soul of the Pure"
+  },
+  {
+    "cardId": 342,
+    "cardName": "Dian Keto the Cure Master"
+  },
+  {
+    "cardId": 343,
+    "cardName": "Sparks"
+  },
+  {
+    "cardId": 344,
+    "cardName": "Hinotama"
+  },
+  {
+    "cardId": 345,
+    "cardName": "Final Flame"
+  },
+  {
+    "cardId": 346,
+    "cardName": "Ookazi"
+  },
+  {
+    "cardId": 347,
+    "cardName": "Tremendous Fire"
+  },
+  {
+    "cardId": 348,
+    "cardName": "Swords of Revealing Light"
+  },
+  {
+    "cardId": 349,
+    "cardName": "Spellbinding Circle"
+  },
+  {
+    "cardId": 350,
+    "cardName": "Dark-piercing Light"
+  },
+  {
+    "cardId": 351,
+    "cardName": "Yaranzo"
+  },
+  {
+    "cardId": 352,
+    "cardName": "Kanan the Swordmistress"
+  },
+  {
+    "cardId": 353,
+    "cardName": "Takriminos"
+  },
+  {
+    "cardId": 354,
+    "cardName": "Stuffed Animal"
+  },
+  {
+    "cardId": 355,
+    "cardName": "Megasonic Eye"
+  },
+  {
+    "cardId": 356,
+    "cardName": "Super War-lion"
+  },
+  {
+    "cardId": 357,
+    "cardName": "Yamadron"
+  },
+  {
+    "cardId": 358,
+    "cardName": "Seiyaryu"
+  },
+  {
+    "cardId": 359,
+    "cardName": "Three-legged Zombies"
+  },
+  {
+    "cardId": 360,
+    "cardName": "Zera The Mant"
+  },
+  {
+    "cardId": 361,
+    "cardName": "Flying Penguin"
+  },
+  {
+    "cardId": 362,
+    "cardName": "Millennium Shield"
+  },
+  {
+    "cardId": 363,
+    "cardName": "Fairy's Gift"
+  },
+  {
+    "cardId": 364,
+    "cardName": "Black Luster Soldier"
+  },
+  {
+    "cardId": 365,
+    "cardName": "Fiend's Mirror"
+  },
+  {
+    "cardId": 366,
+    "cardName": "Labyrinth Wall"
+  },
+  {
+    "cardId": 367,
+    "cardName": "Jirai Gumo"
+  },
+  {
+    "cardId": 368,
+    "cardName": "Shadow Ghoul"
+  },
+  {
+    "cardId": 369,
+    "cardName": "Wall Shadow"
+  },
+  {
+    "cardId": 370,
+    "cardName": "Labyrinth Tank"
+  },
+  {
+    "cardId": 371,
+    "cardName": "Sanga of the Thunder"
+  },
+  {
+    "cardId": 372,
+    "cardName": "Kazejin"
+  },
+  {
+    "cardId": 373,
+    "cardName": "Suijin"
+  },
+  {
+    "cardId": 374,
+    "cardName": "Gate Guardian"
+  },
+  {
+    "cardId": 375,
+    "cardName": "Dungeon Worm"
+  },
+  {
+    "cardId": 376,
+    "cardName": "Monster Tamer"
+  },
+  {
+    "cardId": 377,
+    "cardName": "Ryu-kishin Powered"
+  },
+  {
+    "cardId": 378,
+    "cardName": "Swordstalker"
+  },
+  {
+    "cardId": 379,
+    "cardName": "La Jinn the Mystical Genie"
+  },
+  {
+    "cardId": 380,
+    "cardName": "Blue-eyes Ultimate Dragon"
+  },
+  {
+    "cardId": 381,
+    "cardName": "Toon Alligator"
+  },
+  {
+    "cardId": 382,
+    "cardName": "Rude Kaiser"
+  },
+  {
+    "cardId": 383,
+    "cardName": "Parrot Dragon"
+  },
+  {
+    "cardId": 384,
+    "cardName": "Dark Rabbit"
+  },
+  {
+    "cardId": 385,
+    "cardName": "Bickuribox"
+  },
+  {
+    "cardId": 386,
+    "cardName": "Harpie's Pet Dragon"
+  },
+  {
+    "cardId": 387,
+    "cardName": "Mystic Lamp"
+  },
+  {
+    "cardId": 388,
+    "cardName": "Pendulum Machine"
+  },
+  {
+    "cardId": 389,
+    "cardName": "Giltia the D. Knight"
+  },
+  {
+    "cardId": 390,
+    "cardName": "Launcher Spider"
+  },
+  {
+    "cardId": 391,
+    "cardName": "Zoa"
+  },
+  {
+    "cardId": 392,
+    "cardName": "Metalzoa"
+  },
+  {
+    "cardId": 393,
+    "cardName": "Zone Eater"
+  },
+  {
+    "cardId": 394,
+    "cardName": "Steel Scorpion"
+  },
+  {
+    "cardId": 395,
+    "cardName": "Dancing Elf"
+  },
+  {
+    "cardId": 396,
+    "cardName": "Ocubeam"
+  },
+  {
+    "cardId": 397,
+    "cardName": "Leghul"
+  },
+  {
+    "cardId": 398,
+    "cardName": "Ooguchi"
+  },
+  {
+    "cardId": 399,
+    "cardName": "Swordsman from a Foreign Land"
+  },
+  {
+    "cardId": 400,
+    "cardName": "Emperor of the Land and Sea"
+  },
+  {
+    "cardId": 401,
+    "cardName": "Ushi Oni"
+  },
+  {
+    "cardId": 402,
+    "cardName": "Monster Eye"
+  },
+  {
+    "cardId": 403,
+    "cardName": "Leogun"
+  },
+  {
+    "cardId": 404,
+    "cardName": "Tatsunootoshigo"
+  },
+  {
+    "cardId": 405,
+    "cardName": "Saber Slasher"
+  },
+  {
+    "cardId": 406,
+    "cardName": "Yaiba Robo"
+  },
+  {
+    "cardId": 407,
+    "cardName": "Machine King"
+  },
+  {
+    "cardId": 408,
+    "cardName": "Giant Mech-soldier"
+  },
+  {
+    "cardId": 409,
+    "cardName": "Metal Dragon"
+  },
+  {
+    "cardId": 410,
+    "cardName": "Mechanical Spider"
+  },
+  {
+    "cardId": 411,
+    "cardName": "Bat"
+  },
+  {
+    "cardId": 412,
+    "cardName": "Giga-tech Wolf"
+  },
+  {
+    "cardId": 413,
+    "cardName": "Cyber Soldier"
+  },
+  {
+    "cardId": 414,
+    "cardName": "Shovel Crusher"
+  },
+  {
+    "cardId": 415,
+    "cardName": "Mechanicalchacer"
+  },
+  {
+    "cardId": 416,
+    "cardName": "Blocker"
+  },
+  {
+    "cardId": 417,
+    "cardName": "Blast Juggler"
+  },
+  {
+    "cardId": 418,
+    "cardName": "Golgoil"
+  },
+  {
+    "cardId": 419,
+    "cardName": "Giganto"
+  },
+  {
+    "cardId": 420,
+    "cardName": "Cyber-Stein"
+  },
+  {
+    "cardId": 421,
+    "cardName": "Cyber Commander"
+  },
+  {
+    "cardId": 422,
+    "cardName": "Jinzo #7"
+  },
+  {
+    "cardId": 423,
+    "cardName": "Dice Armadillo"
+  },
+  {
+    "cardId": 424,
+    "cardName": "Sky Dragon"
+  },
+  {
+    "cardId": 425,
+    "cardName": "Thunder Dragon"
+  },
+  {
+    "cardId": 426,
+    "cardName": "Stone D."
+  },
+  {
+    "cardId": 427,
+    "cardName": "Kaiser Dragon"
+  },
+  {
+    "cardId": 428,
+    "cardName": "Magician of Faith"
+  },
+  {
+    "cardId": 429,
+    "cardName": "Goddess of Whim"
+  },
+  {
+    "cardId": 430,
+    "cardName": "Water Magician"
+  },
+  {
+    "cardId": 431,
+    "cardName": "Ice Water"
+  },
+  {
+    "cardId": 432,
+    "cardName": "Waterdragon Fairy"
+  },
+  {
+    "cardId": 433,
+    "cardName": "Ancient Elf"
+  },
+  {
+    "cardId": 434,
+    "cardName": "Beautiful Beast Trainer"
+  },
+  {
+    "cardId": 435,
+    "cardName": "Water Girl"
+  },
+  {
+    "cardId": 436,
+    "cardName": "White Dolphin"
+  },
+  {
+    "cardId": 437,
+    "cardName": "Deepsea Shark"
+  },
+  {
+    "cardId": 438,
+    "cardName": "Metal Fish"
+  },
+  {
+    "cardId": 439,
+    "cardName": "Bottom Dweller"
+  },
+  {
+    "cardId": 440,
+    "cardName": "7 Colored Fish"
+  },
+  {
+    "cardId": 441,
+    "cardName": "Mech Bass"
+  },
+  {
+    "cardId": 442,
+    "cardName": "Aqua Dragon"
+  },
+  {
+    "cardId": 443,
+    "cardName": "Sea King Dragon"
+  },
+  {
+    "cardId": 444,
+    "cardName": "Turu-Purun"
+  },
+  {
+    "cardId": 445,
+    "cardName": "Guardian of the Sea"
+  },
+  {
+    "cardId": 446,
+    "cardName": "Aqua Snake"
+  },
+  {
+    "cardId": 447,
+    "cardName": "Giant Red Seasnake"
+  },
+  {
+    "cardId": 448,
+    "cardName": "Spike Seadra"
+  },
+  {
+    "cardId": 449,
+    "cardName": "30,000-Year White Turtle"
+  },
+  {
+    "cardId": 450,
+    "cardName": "Kappa Avenger"
+  },
+  {
+    "cardId": 451,
+    "cardName": "Kanikabuto"
+  },
+  {
+    "cardId": 452,
+    "cardName": "Zarigun"
+  },
+  {
+    "cardId": 453,
+    "cardName": "Millennium Golem"
+  },
+  {
+    "cardId": 454,
+    "cardName": "Destroyer Golem"
+  },
+  {
+    "cardId": 455,
+    "cardName": "Barrel Rock"
+  },
+  {
+    "cardId": 456,
+    "cardName": "Minomushi Warrior"
+  },
+  {
+    "cardId": 457,
+    "cardName": "Stone Ghost"
+  },
+  {
+    "cardId": 458,
+    "cardName": "Kaminari Attack"
+  },
+  {
+    "cardId": 459,
+    "cardName": "Tripwire Beast"
+  },
+  {
+    "cardId": 460,
+    "cardName": "Bolt Escargot"
+  },
+  {
+    "cardId": 461,
+    "cardName": "Bolt Penguin"
+  },
+  {
+    "cardId": 462,
+    "cardName": "The Immortal of Thunder"
+  },
+  {
+    "cardId": 463,
+    "cardName": "Electric Snake"
+  },
+  {
+    "cardId": 464,
+    "cardName": "Wing Eagle"
+  },
+  {
+    "cardId": 465,
+    "cardName": "Punished Eagle"
+  },
+  {
+    "cardId": 466,
+    "cardName": "Skull Red Bird"
+  },
+  {
+    "cardId": 467,
+    "cardName": "Crimson Sunbird"
+  },
+  {
+    "cardId": 468,
+    "cardName": "Queen Bird"
+  },
+  {
+    "cardId": 469,
+    "cardName": "Armed Ninja"
+  },
+  {
+    "cardId": 470,
+    "cardName": "Magical Ghost"
+  },
+  {
+    "cardId": 471,
+    "cardName": "Soul Hunter"
+  },
+  {
+    "cardId": 472,
+    "cardName": "Air Eater"
+  },
+  {
+    "cardId": 473,
+    "cardName": "Vermillion Sparrow"
+  },
+  {
+    "cardId": 474,
+    "cardName": "Sea Kamen"
+  },
+  {
+    "cardId": 475,
+    "cardName": "Sinister Serpent"
+  },
+  {
+    "cardId": 476,
+    "cardName": "Ganigumo"
+  },
+  {
+    "cardId": 477,
+    "cardName": "Alinsection"
+  },
+  {
+    "cardId": 478,
+    "cardName": "Insect Soldiers of the Sky"
+  },
+  {
+    "cardId": 479,
+    "cardName": "Cockroach Knight"
+  },
+  {
+    "cardId": 480,
+    "cardName": "Kuwagata a"
+  },
+  {
+    "cardId": 481,
+    "cardName": "Burglar"
+  },
+  {
+    "cardId": 482,
+    "cardName": "Pragtical"
+  },
+  {
+    "cardId": 483,
+    "cardName": "Garvas"
+  },
+  {
+    "cardId": 484,
+    "cardName": "Ameba"
+  },
+  {
+    "cardId": 485,
+    "cardName": "Korogashi"
+  },
+  {
+    "cardId": 486,
+    "cardName": "Boo Koo"
+  },
+  {
+    "cardId": 487,
+    "cardName": "Flower Wolf"
+  },
+  {
+    "cardId": 488,
+    "cardName": "Rainbow Flower"
+  },
+  {
+    "cardId": 489,
+    "cardName": "Barrel Lily"
+  },
+  {
+    "cardId": 490,
+    "cardName": "Needle Ball"
+  },
+  {
+    "cardId": 491,
+    "cardName": "Peacock"
+  },
+  {
+    "cardId": 492,
+    "cardName": "Hoshiningen"
+  },
+  {
+    "cardId": 493,
+    "cardName": "Maha Vailo"
+  },
+  {
+    "cardId": 494,
+    "cardName": "Rainbow Marine Mermaid"
+  },
+  {
+    "cardId": 495,
+    "cardName": "Musician King"
+  },
+  {
+    "cardId": 496,
+    "cardName": "Wilmee"
+  },
+  {
+    "cardId": 497,
+    "cardName": "Yado Karu"
+  },
+  {
+    "cardId": 498,
+    "cardName": "Morinphen"
+  },
+  {
+    "cardId": 499,
+    "cardName": "Kattapillar"
+  },
+  {
+    "cardId": 500,
+    "cardName": "Dragon Seeker"
+  },
+  {
+    "cardId": 501,
+    "cardName": "Man-eater Bug"
+  },
+  {
+    "cardId": 502,
+    "cardName": "D. Human"
+  },
+  {
+    "cardId": 503,
+    "cardName": "Turtle Raccoon"
+  },
+  {
+    "cardId": 504,
+    "cardName": "Fungi of the Musk"
+  },
+  {
+    "cardId": 505,
+    "cardName": "Prisman"
+  },
+  {
+    "cardId": 506,
+    "cardName": "Gale Dogra"
+  },
+  {
+    "cardId": 507,
+    "cardName": "Crazy Fish"
+  },
+  {
+    "cardId": 508,
+    "cardName": "Cyber Saurus"
+  },
+  {
+    "cardId": 509,
+    "cardName": "Bracchio-raidus"
+  },
+  {
+    "cardId": 510,
+    "cardName": "Laughing Flower"
+  },
+  {
+    "cardId": 511,
+    "cardName": "Bean Soldier"
+  },
+  {
+    "cardId": 512,
+    "cardName": "Cannon Soldier"
+  },
+  {
+    "cardId": 513,
+    "cardName": "Guardian of the Throne Room"
+  },
+  {
+    "cardId": 514,
+    "cardName": "Brave Scizzar"
+  },
+  {
+    "cardId": 515,
+    "cardName": "The Statue of Easter Island"
+  },
+  {
+    "cardId": 516,
+    "cardName": "Muka Muka"
+  },
+  {
+    "cardId": 517,
+    "cardName": "Sand Stone"
+  },
+  {
+    "cardId": 518,
+    "cardName": "Boulder Tortoise"
+  },
+  {
+    "cardId": 519,
+    "cardName": "Fire Kraken"
+  },
+  {
+    "cardId": 520,
+    "cardName": "Turtle Bird"
+  },
+  {
+    "cardId": 521,
+    "cardName": "Skullbird"
+  },
+  {
+    "cardId": 522,
+    "cardName": "Monstrous Bird"
+  },
+  {
+    "cardId": 523,
+    "cardName": "The Bistro Butcher"
+  },
+  {
+    "cardId": 524,
+    "cardName": "Star Boy"
+  },
+  {
+    "cardId": 525,
+    "cardName": "Spirit of the Mountain"
+  },
+  {
+    "cardId": 526,
+    "cardName": "Neck Hunter"
+  },
+  {
+    "cardId": 527,
+    "cardName": "Milus Radiant"
+  },
+  {
+    "cardId": 528,
+    "cardName": "Togex"
+  },
+  {
+    "cardId": 529,
+    "cardName": "Flame Cerebrus"
+  },
+  {
+    "cardId": 530,
+    "cardName": "Eldeen"
+  },
+  {
+    "cardId": 531,
+    "cardName": "Mystical Sand"
+  },
+  {
+    "cardId": 532,
+    "cardName": "Gemini Elf"
+  },
+  {
+    "cardId": 533,
+    "cardName": "Kwagar Hercules"
+  },
+  {
+    "cardId": 534,
+    "cardName": "Minar"
+  },
+  {
+    "cardId": 535,
+    "cardName": "Kamakiriman"
+  },
+  {
+    "cardId": 536,
+    "cardName": "Mechaleon"
+  },
+  {
+    "cardId": 537,
+    "cardName": "Mega Thunderball"
+  },
+  {
+    "cardId": 538,
+    "cardName": "Niwatori"
+  },
+  {
+    "cardId": 539,
+    "cardName": "Corroding Shark"
+  },
+  {
+    "cardId": 540,
+    "cardName": "Skelengel"
+  },
+  {
+    "cardId": 541,
+    "cardName": "Hane-Hane"
+  },
+  {
+    "cardId": 542,
+    "cardName": "Misairuzame"
+  },
+  {
+    "cardId": 543,
+    "cardName": "Tongyo"
+  },
+  {
+    "cardId": 544,
+    "cardName": "Dharma Cannon"
+  },
+  {
+    "cardId": 545,
+    "cardName": "Skelgon"
+  },
+  {
+    "cardId": 546,
+    "cardName": "Wow Warrior"
+  },
+  {
+    "cardId": 547,
+    "cardName": "Griggle"
+  },
+  {
+    "cardId": 548,
+    "cardName": "Bone Mouse"
+  },
+  {
+    "cardId": 549,
+    "cardName": "Frog The Jam"
+  },
+  {
+    "cardId": 550,
+    "cardName": "Behegon"
+  },
+  {
+    "cardId": 551,
+    "cardName": "Dark Elf"
+  },
+  {
+    "cardId": 552,
+    "cardName": "Winged Dragon #2"
+  },
+  {
+    "cardId": 553,
+    "cardName": "Mushroom Man #2"
+  },
+  {
+    "cardId": 554,
+    "cardName": "Lava Battleguard"
+  },
+  {
+    "cardId": 555,
+    "cardName": "Tyhone #2"
+  },
+  {
+    "cardId": 556,
+    "cardName": "The Wandering Doomed"
+  },
+  {
+    "cardId": 557,
+    "cardName": "Steel Ogre Grotto #1"
+  },
+  {
+    "cardId": 558,
+    "cardName": "Pot the Trick"
+  },
+  {
+    "cardId": 559,
+    "cardName": "Oscillo Hero"
+  },
+  {
+    "cardId": 560,
+    "cardName": "Invader from Another Dimension"
+  },
+  {
+    "cardId": 561,
+    "cardName": "Lesser Dragon"
+  },
+  {
+    "cardId": 562,
+    "cardName": "Needle Worm"
+  },
+  {
+    "cardId": 563,
+    "cardName": "Wretched Ghost of the Attic"
+  },
+  {
+    "cardId": 564,
+    "cardName": "Great Mammoth of Goldfine"
+  },
+  {
+    "cardId": 565,
+    "cardName": "Man-eating Black Shark"
+  },
+  {
+    "cardId": 566,
+    "cardName": "Yormungarde"
+  },
+  {
+    "cardId": 567,
+    "cardName": "Darkworld Thorns"
+  },
+  {
+    "cardId": 568,
+    "cardName": "Anthrosaurus"
+  },
+  {
+    "cardId": 569,
+    "cardName": "Drooling Lizard"
+  },
+  {
+    "cardId": 570,
+    "cardName": "Trakadon"
+  },
+  {
+    "cardId": 571,
+    "cardName": "B. Dragon Jungle King"
+  },
+  {
+    "cardId": 572,
+    "cardName": "Empress Judge"
+  },
+  {
+    "cardId": 573,
+    "cardName": "Little D"
+  },
+  {
+    "cardId": 574,
+    "cardName": "Witch of the Black Forest"
+  },
+  {
+    "cardId": 575,
+    "cardName": "Ancient One of the Deep Forest"
+  },
+  {
+    "cardId": 576,
+    "cardName": "Giant Scorpion of the Tundra"
+  },
+  {
+    "cardId": 577,
+    "cardName": "Crow Goblin"
+  },
+  {
+    "cardId": 578,
+    "cardName": "Leo Wizard"
+  },
+  {
+    "cardId": 579,
+    "cardName": "Abyss Flower"
+  },
+  {
+    "cardId": 580,
+    "cardName": "Patrol Robo"
+  },
+  {
+    "cardId": 581,
+    "cardName": "Takuhee"
+  },
+  {
+    "cardId": 582,
+    "cardName": "Dark Witch"
+  },
+  {
+    "cardId": 583,
+    "cardName": "Weather Report"
+  },
+  {
+    "cardId": 584,
+    "cardName": "Binding Chain"
+  },
+  {
+    "cardId": 585,
+    "cardName": "Mechanical Snail"
+  },
+  {
+    "cardId": 586,
+    "cardName": "Greenkappa"
+  },
+  {
+    "cardId": 587,
+    "cardName": "Mon Larvas"
+  },
+  {
+    "cardId": 588,
+    "cardName": "Living Vase"
+  },
+  {
+    "cardId": 589,
+    "cardName": "Tentacle Plant"
+  },
+  {
+    "cardId": 590,
+    "cardName": "Beaked Snake"
+  },
+  {
+    "cardId": 591,
+    "cardName": "Morphing Jar"
+  },
+  {
+    "cardId": 592,
+    "cardName": "Muse-A"
+  },
+  {
+    "cardId": 593,
+    "cardName": "Giant Turtle Who Feeds on Flames"
+  },
+  {
+    "cardId": 594,
+    "cardName": "Rose Spectre of Dunn"
+  },
+  {
+    "cardId": 595,
+    "cardName": "Fiend Refrection #1"
+  },
+  {
+    "cardId": 596,
+    "cardName": "Ghoul with an Appetite"
+  },
+  {
+    "cardId": 597,
+    "cardName": "Pale Beast"
+  },
+  {
+    "cardId": 598,
+    "cardName": "Little Chimera"
+  },
+  {
+    "cardId": 599,
+    "cardName": "Violent Rain"
+  },
+  {
+    "cardId": 600,
+    "cardName": "Key Mace #2"
+  },
+  {
+    "cardId": 601,
+    "cardName": "Tenderness"
+  },
+  {
+    "cardId": 602,
+    "cardName": "Penguin Soldier"
+  },
+  {
+    "cardId": 603,
+    "cardName": "Fairy Dragon"
+  },
+  {
+    "cardId": 604,
+    "cardName": "Obese Marmot of Nefariousness"
+  },
+  {
+    "cardId": 605,
+    "cardName": "Liquid Beast"
+  },
+  {
+    "cardId": 606,
+    "cardName": "Twin Long Rods #2"
+  },
+  {
+    "cardId": 607,
+    "cardName": "Great Bill"
+  },
+  {
+    "cardId": 608,
+    "cardName": "Shining Friendship"
+  },
+  {
+    "cardId": 609,
+    "cardName": "Bladefly"
+  },
+  {
+    "cardId": 610,
+    "cardName": "Electric Lizard"
+  },
+  {
+    "cardId": 611,
+    "cardName": "Hiro's Shadow Scout"
+  },
+  {
+    "cardId": 612,
+    "cardName": "Lady of Faith"
+  },
+  {
+    "cardId": 613,
+    "cardName": "Twin-headed Thunder Dragon"
+  },
+  {
+    "cardId": 614,
+    "cardName": "Hunter Spider"
+  },
+  {
+    "cardId": 615,
+    "cardName": "Armored Starfish"
+  },
+  {
+    "cardId": 616,
+    "cardName": "Hourglass of Courage"
+  },
+  {
+    "cardId": 617,
+    "cardName": "Marine Beast"
+  },
+  {
+    "cardId": 618,
+    "cardName": "Warrior of Tradition"
+  },
+  {
+    "cardId": 619,
+    "cardName": "Rock Spirit"
+  },
+  {
+    "cardId": 620,
+    "cardName": "Snakeyashi"
+  },
+  {
+    "cardId": 621,
+    "cardName": "Succubus Knight"
+  },
+  {
+    "cardId": 622,
+    "cardName": "Ill Witch"
+  },
+  {
+    "cardId": 623,
+    "cardName": "The Thing That Hides in the Mud"
+  },
+  {
+    "cardId": 624,
+    "cardName": "High Tide Gyojin"
+  },
+  {
+    "cardId": 625,
+    "cardName": "Fairy of the Fountain"
+  },
+  {
+    "cardId": 626,
+    "cardName": "Amazon of the Seas"
+  },
+  {
+    "cardId": 627,
+    "cardName": "Nekogal #2"
+  },
+  {
+    "cardId": 628,
+    "cardName": "Witch's Apprentice"
+  },
+  {
+    "cardId": 629,
+    "cardName": "Armored Rat"
+  },
+  {
+    "cardId": 630,
+    "cardName": "Ancient Lizard Warrior"
+  },
+  {
+    "cardId": 631,
+    "cardName": "Maiden of the Moonlight"
+  },
+  {
+    "cardId": 632,
+    "cardName": "Stone Ogre Grotto"
+  },
+  {
+    "cardId": 633,
+    "cardName": "Winged Egg of New Life"
+  },
+  {
+    "cardId": 634,
+    "cardName": "Night Lizard"
+  },
+  {
+    "cardId": 635,
+    "cardName": "Queen's Double"
+  },
+  {
+    "cardId": 636,
+    "cardName": "Blue-winged Crown"
+  },
+  {
+    "cardId": 637,
+    "cardName": "Trent"
+  },
+  {
+    "cardId": 638,
+    "cardName": "Queen of Autumn Leaves"
+  },
+  {
+    "cardId": 639,
+    "cardName": "Amphibious Bugroth"
+  },
+  {
+    "cardId": 640,
+    "cardName": "Acid Crawler"
+  },
+  {
+    "cardId": 641,
+    "cardName": "Invader of the Throne"
+  },
+  {
+    "cardId": 642,
+    "cardName": "Mystical Sheep #1"
+  },
+  {
+    "cardId": 643,
+    "cardName": "Disk Magician"
+  },
+  {
+    "cardId": 644,
+    "cardName": "Flame Viper"
+  },
+  {
+    "cardId": 645,
+    "cardName": "Royal Guard"
+  },
+  {
+    "cardId": 646,
+    "cardName": "Gruesome Goo"
+  },
+  {
+    "cardId": 647,
+    "cardName": "Hyosube"
+  },
+  {
+    "cardId": 648,
+    "cardName": "Machine Attacker"
+  },
+  {
+    "cardId": 649,
+    "cardName": "Hibikime"
+  },
+  {
+    "cardId": 650,
+    "cardName": "Whiptail Crow"
+  },
+  {
+    "cardId": 651,
+    "cardName": "Kunai with Chain"
+  },
+  {
+    "cardId": 652,
+    "cardName": "Magical Labyrinth"
+  },
+  {
+    "cardId": 653,
+    "cardName": "Warrior Elimination"
+  },
+  {
+    "cardId": 654,
+    "cardName": "Salamandra"
+  },
+  {
+    "cardId": 655,
+    "cardName": "Cursebreaker"
+  },
+  {
+    "cardId": 656,
+    "cardName": "Eternal Rest"
+  },
+  {
+    "cardId": 657,
+    "cardName": "Megamorph"
+  },
+  {
+    "cardId": 658,
+    "cardName": "Metalmorph"
+  },
+  {
+    "cardId": 659,
+    "cardName": "Winged Trumpeter"
+  },
+  {
+    "cardId": 660,
+    "cardName": "Stain Storm"
+  },
+  {
+    "cardId": 661,
+    "cardName": "Crush Card"
+  },
+  {
+    "cardId": 662,
+    "cardName": "Eradicating Aerosol"
+  },
+  {
+    "cardId": 663,
+    "cardName": "Breath of Light"
+  },
+  {
+    "cardId": 664,
+    "cardName": "Eternal Draught"
+  },
+  {
+    "cardId": 665,
+    "cardName": "Curse of Millennium Shield"
+  },
+  {
+    "cardId": 666,
+    "cardName": "Yamadron Ritual"
+  },
+  {
+    "cardId": 667,
+    "cardName": "Gate Guardian Ritual"
+  },
+  {
+    "cardId": 668,
+    "cardName": "Bright Castle"
+  },
+  {
+    "cardId": 669,
+    "cardName": "Shadow Spell"
+  },
+  {
+    "cardId": 670,
+    "cardName": "Black Luster Ritual"
+  },
+  {
+    "cardId": 671,
+    "cardName": "Zera Ritual"
+  },
+  {
+    "cardId": 672,
+    "cardName": "Harpie's Feather Duster"
+  },
+  {
+    "cardId": 673,
+    "cardName": "War-lion Ritual"
+  },
+  {
+    "cardId": 674,
+    "cardName": "Beastry Mirror Ritual"
+  },
+  {
+    "cardId": 675,
+    "cardName": "Ultimate Dragon"
+  },
+  {
+    "cardId": 676,
+    "cardName": "Commencement Dance"
+  },
+  {
+    "cardId": 677,
+    "cardName": "Hamburger Recipe"
+  },
+  {
+    "cardId": 678,
+    "cardName": "Revival of Sennen Genjin"
+  },
+  {
+    "cardId": 679,
+    "cardName": "Novox's Prayer"
+  },
+  {
+    "cardId": 680,
+    "cardName": "Curse of Tri-Horned Dragon"
+  },
+  {
+    "cardId": 681,
+    "cardName": "House of Adhesive Tape"
+  },
+  {
+    "cardId": 682,
+    "cardName": "Eatgaboon"
+  },
+  {
+    "cardId": 683,
+    "cardName": "Bear Trap"
+  },
+  {
+    "cardId": 684,
+    "cardName": "Invisible Wire"
+  },
+  {
+    "cardId": 685,
+    "cardName": "Acid Trap Hole"
+  },
+  {
+    "cardId": 686,
+    "cardName": "Widespread Ruin"
+  },
+  {
+    "cardId": 687,
+    "cardName": "Goblin Fan"
+  },
+  {
+    "cardId": 688,
+    "cardName": "Bad Reaction to Simochi"
+  },
+  {
+    "cardId": 689,
+    "cardName": "Reverse Trap"
+  },
+  {
+    "cardId": 690,
+    "cardName": "Fake Trap"
+  },
+  {
+    "cardId": 691,
+    "cardName": "Revived of Serpent Night Dragon"
+  },
+  {
+    "cardId": 692,
+    "cardName": "Turtle Oath"
+  },
+  {
+    "cardId": 693,
+    "cardName": "Contruct of Mask"
+  },
+  {
+    "cardId": 694,
+    "cardName": "Resurrection of Chakra"
+  },
+  {
+    "cardId": 695,
+    "cardName": "Puppet Ritual"
+  },
+  {
+    "cardId": 696,
+    "cardName": "Javelin Beetle Pact"
+  },
+  {
+    "cardId": 697,
+    "cardName": "Garma Sword Oath"
+  },
+  {
+    "cardId": 698,
+    "cardName": "Cosmo Queen's Prayer"
+  },
+  {
+    "cardId": 699,
+    "cardName": "Revival of Skeleton Rider"
+  },
+  {
+    "cardId": 700,
+    "cardName": "Fortress Whale's Oath"
+  },
+  {
+    "cardId": 701,
+    "cardName": "Performance of Sword"
+  },
+  {
+    "cardId": 702,
+    "cardName": "Hungry Burger"
+  },
+  {
+    "cardId": 703,
+    "cardName": "Sengenjin"
+  },
+  {
+    "cardId": 704,
+    "cardName": "Skull Guardian"
+  },
+  {
+    "cardId": 705,
+    "cardName": "Tri-horned Dragon"
+  },
+  {
+    "cardId": 706,
+    "cardName": "Serpent Night Dragon"
+  },
+  {
+    "cardId": 707,
+    "cardName": "Skull Knight"
+  },
+  {
+    "cardId": 708,
+    "cardName": "Cosmo Queen"
+  },
+  {
+    "cardId": 709,
+    "cardName": "Chakra"
+  },
+  {
+    "cardId": 710,
+    "cardName": "Crab Turtle"
+  },
+  {
+    "cardId": 711,
+    "cardName": "Mikazukinoyaiba"
+  },
+  {
+    "cardId": 712,
+    "cardName": "Meteor Dragon"
+  },
+  {
+    "cardId": 713,
+    "cardName": "Meteor B. Dragon"
+  },
+  {
+    "cardId": 714,
+    "cardName": "Firewing Pegasus"
+  },
+  {
+    "cardId": 715,
+    "cardName": "Psycho-Puppet"
+  },
+  {
+    "cardId": 716,
+    "cardName": "Garma Sword"
+  },
+  {
+    "cardId": 717,
+    "cardName": "Javelin Beetle"
+  },
+  {
+    "cardId": 718,
+    "cardName": "Fortress Whale"
+  },
+  {
+    "cardId": 719,
+    "cardName": "Dokurorider"
+  },
+  {
+    "cardId": 720,
+    "cardName": "Mask of Shine & Dark"
+  },
+  {
+    "cardId": 721,
+    "cardName": "Dark Magic Ritual"
+  },
+  {
+    "cardId": 722,
+    "cardName": "Magician of Black Chaos"
+  }
+]

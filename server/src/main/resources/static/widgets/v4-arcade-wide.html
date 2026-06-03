@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Arcade Wide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #00ff00;
+            --border-color: #00ff00;
+            --item-bg: #001100;
+        }
+        body {
+            margin: 0;
+            padding: 15px;
+            font-family: 'Press Start 2P', cursive;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            width: 450px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+        /* CRT Scanline effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+        .acquisition-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        .acquisition-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: var(--item-bg);
+            border: 2px solid var(--border-color);
+            padding: 12px;
+            opacity: 0;
+            transform: translateX(-30px);
+            animation: slideInRetro 0.4s steps(4) forwards;
+        }
+        .acquisition-item.slide-bottom {
+            transform: translateX(30px);
+            animation: slideInRetroBottom 0.4s steps(4) forwards;
+        }
+        @keyframes slideInRetro {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInRetroBottom {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .card-image {
+            width: 60px;
+            height: 84px;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+            image-rendering: pixelated;
+            flex-shrink: 0;
+        }
+        .card-name {
+            font-size: 14px;
+            line-height: 1.4;
+            flex: 1;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const teamId = parseInt(params.get('teamId') || '0', 10);
+        const limit = parseInt(params.get('limit') || '5', 10);
+        const direction = params.get('direction') || 'top';
+
+        let cardMap = {};
+        const list = document.getElementById('acquisitionList');
+        let acquisitions = [];
+
+        async function init() {
+            try {
+                const response = await fetch('cardinfo.json');
+                const data = await response.json();
+                data.forEach(item => {
+                    cardMap[item.cardId] = item.cardName;
+                });
+                connectWebSocket();
+            } catch (error) {
+                console.error('Failed to load cardinfo.json:', error);
+            }
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/firehose/team`;
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => console.log('WebSocket connected');
+            ws.onclose = () => {
+                console.log('WebSocket closed, reconnecting in 2s...');
+                setTimeout(connectWebSocket, 2000);
+            };
+            ws.onerror = (error) => console.error('WebSocket error:', error);
+
+            ws.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    if (payload.teamId !== teamId || !payload.newAcquisitions) return;
+
+                    payload.newAcquisitions.forEach(acq => {
+                        addAcquisition(acq);
+                    });
+                } catch (e) {
+                    console.error('Failed to parse WS message:', e);
+                }
+            };
+        }
+
+        function addAcquisition(acq) {
+            const cardIdStr = String(acq.cardId).padStart(3, '0');
+            const cardName = cardMap[acq.cardId] || `UNK CARD ${acq.cardId}`;
+            const imageUrl = `https://hundo.maika.moe/nginx_managed/cards/${cardIdStr}.PNG`;
+
+            const li = document.createElement('li');
+            li.className = `acquisition-item ${direction === 'bottom' ? 'slide-bottom' : ''}`;
+            li.innerHTML = `
+                <img src="${imageUrl}" alt="${cardName}" class="card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2284%22><rect width=%2260%22 height=%2284%22 fill=%22%23001100%22 stroke=%22%2300ff00%22 stroke-width=%222%22/></svg>'">
+                <span class="card-name">${cardName}</span>
+            `;
+
+            if (direction === 'top') {
+                list.prepend(li);
+                acquisitions.unshift(acq);
+            } else {
+                list.appendChild(li);
+                acquisitions.push(acq);
+            }
+
+            if (acquisitions.length > limit) {
+                if (direction === 'top') {
+                    acquisitions.pop();
+                    list.removeChild(list.lastElementChild);
+                } else {
+                    acquisitions.shift();
+                    list.removeChild(list.firstElementChild);
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

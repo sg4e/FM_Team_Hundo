@@ -266,7 +266,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     }
 
     private Component createObsStatsWidgetLink() {
-        Anchor link = new Anchor(String.format("/widgets/stats/team/%d?cards=true&starchips=true&cost_of_buyables=true&unbuyables=true&bewds=true&dark_mode=false", teamId), "OBS Stats Widget");
+        Anchor link = new Anchor(String.format("/team_widgets/%d", teamId), "OBS Widgets");
         return link;
     }
 
