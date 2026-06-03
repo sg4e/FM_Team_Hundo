@@ -17,7 +17,7 @@ import moe.maika.fmteamhundo.livestats.model.PlayerRowState;
 import moe.maika.fmteamhundo.livestats.model.TeamPanelState;
 
 public class TeamPanelView {
-    public static final double PANEL_WIDTH = 520.0;
+    public static final double PANEL_WIDTH = 640.0;
     private static final double TABLE_ROW_HEIGHT = 28.0;
     private static final double TABLE_HEADER_HEIGHT = 24.0;
     private static final double TABLE_BORDER_HEIGHT = 2.0;
@@ -70,6 +70,10 @@ public class TeamPanelView {
         starchips.setCellValueFactory(data -> data.getValue().starchipsTextProperty());
         starchips.setPrefWidth(74);
 
+        TableColumn<PlayerRowState, String> lastAddition = new TableColumn<>("Last Addition");
+        lastAddition.setCellValueFactory(data -> data.getValue().lastAdditionTextProperty());
+        lastAddition.setPrefWidth(120);
+
         TableColumn<PlayerRowState, String> time = new TableColumn<>("Time");
         time.setCellValueFactory(data -> data.getValue().relativeTimeTextProperty());
         time.setPrefWidth(80);
@@ -79,6 +83,7 @@ public class TeamPanelView {
         table.getColumns().add(value);
         table.getColumns().add(opponent);
         table.getColumns().add(starchips);
+        table.getColumns().add(lastAddition);
         table.getColumns().add(time);
         table.setRowFactory(_ -> {
             TableRow<PlayerRowState> row = new TableRow<>();

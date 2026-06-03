@@ -16,7 +16,13 @@ When adding new entries, place them under the relevant component heading. Keep d
 
 - LiveStats player tables include a `Starchips` column between `Opponent` and `Time`.
 - `PlayerUpdate` events with source/type `starchips` update only that row's `Starchips` value and `Time` value in the player table.
-- Starchips player updates must not overwrite the row's existing `Source`, `Card`, or `Opponent` values.
+- Starchips player updates must not overwrite the row's existing `Source`, `Card`, `Opponent`, or `Last Addition` values.
+
+### Last Addition Player Column
+
+- LiveStats player tables include a `Last Addition` column between `Starchips` and `Time`.
+- `Last Addition` is populated from team-library `newAcquisitions`, the same criterion used to flash player rows.
+- The value must be the acquired card name, not the card ID.
 
 ## `commentary/obs_ws`: OBS Controller
 

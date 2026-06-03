@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import moe.maika.fmteamhundo.livestats.api.CardAcquisition;
 import moe.maika.fmteamhundo.livestats.api.LibraryUpdate;
 import moe.maika.fmteamhundo.livestats.api.MessageType;
 import moe.maika.fmteamhundo.livestats.api.PlayerJson;
@@ -63,7 +64,39 @@ class LiveStatsStateTest {
         assertEquals(String.valueOf(FMDB.getInstance().getCard(122)), row.valueTextProperty().get());
         assertEquals(String.valueOf(FMDB.getInstance().getDuelist(3).getName()), row.opponentTextProperty().get());
         assertEquals("987", row.starchipsTextProperty().get());
+        assertEquals("", row.lastAdditionTextProperty().get());
         assertEquals("4s ago", row.relativeTimeTextProperty().get());
+    }
+
+    @Test
+    void libraryUpdatesSetLastAdditionToLatestNewTeamLibraryCardName() {
+        LiveStatsState state = state();
+        LibraryUpdate update = new LibraryUpdate(
+            1,
+            NOW,
+            0,
+            2,
+            List.of(
+                new CardAcquisition(122, NOW.minusSeconds(2), MessageType.DROP, 10, 3),
+                new CardAcquisition(123, NOW.minusSeconds(1), MessageType.FUSE, 10, 3),
+                new CardAcquisition(124, NOW.minusSeconds(3), MessageType.RITUAL, 11, 3)),
+            0,
+            0,
+            0,
+            false,
+            false,
+            null,
+            0);
+
+        assertTrue(state.applyLibraryUpdate(update));
+
+        PlayerRowState amy = state.getPlayerRow(10).orElseThrow();
+        PlayerRowState zed = state.getPlayerRow(11).orElseThrow();
+        PlayerRowState ben = state.getPlayerRow(20).orElseThrow();
+
+        assertEquals(FMDB.getInstance().getCard(123).getName(), amy.lastAdditionTextProperty().get());
+        assertEquals(FMDB.getInstance().getCard(124).getName(), zed.lastAdditionTextProperty().get());
+        assertEquals("", ben.lastAdditionTextProperty().get());
     }
 
     @Test
