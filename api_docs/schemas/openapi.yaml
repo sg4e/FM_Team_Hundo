@@ -1,0 +1,412 @@
+openapi: 3.2.0
+info:
+  title: FM Team Hundo Server API
+  version: "1"
+  description: |
+    Machine-readable precursor for the public FM Team Hundo server HTTP API.
+    WebSocket firehoses are summarized with vendor extensions because OpenAPI
+    primarily models HTTP request/response APIs.
+servers:
+  - url: /api
+paths:
+  /players:
+    get:
+      summary: List team-assigned players
+      operationId: listPlayers
+      responses:
+        "200":
+          description: Players assigned to non-zero teams.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlayerJson"
+  /teams:
+    get:
+      summary: List teams
+      operationId: listTeams
+      responses:
+        "200":
+          description: Teams.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamJson"
+  /library/{teamId}:
+    get:
+      summary: Get latest library snapshot for a team
+      operationId: getLibrary
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest library update snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryUpdate"
+        "400":
+          description: Invalid teamId path value that cannot be converted to an integer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /credits:
+    get:
+      summary: Get credits-scene data
+      operationId: getCredits
+      responses:
+        "200":
+          description: Credits data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditsResponse"
+  /protocol_version:
+    get:
+      summary: Get stamped server protocol version
+      operationId: getProtocolVersion
+      responses:
+        "200":
+          description: Protocol version map; empty object when unstamped.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  protocol_version:
+                    type: string
+  /validate:
+    get:
+      summary: Validate a player API key
+      operationId: validateCredential
+      parameters:
+        - $ref: "#/components/parameters/ApiKeyHeader"
+      responses:
+        "200":
+          description: API key is valid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationOkResponse"
+        "401":
+          description: API key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /update:
+    post:
+      summary: Submit emulator updates for a player
+      operationId: submitUpdates
+      parameters:
+        - $ref: "#/components/parameters/ApiKeyHeader"
+        - name: test
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Any present value other than trimmed case-insensitive false enables test mode.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/EmuMessage"
+      responses:
+        "200":
+          description: Updates accepted, or test validation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateOkResponse"
+        "400":
+          description: Payload or domain validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not assigned to a team for a non-test update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+x-websocket-firehoses:
+  - path: /firehose/player
+    messageSchema: "#/components/schemas/PlayerUpdate"
+    description: Broadcasts one persisted player update per text frame. No snapshot is sent on connect.
+  - path: /firehose/team
+    messageSchema: "#/components/schemas/LibraryUpdate"
+    description: Broadcasts one team library update snapshot per text frame. No snapshot is sent on connect.
+components:
+  parameters:
+    ApiKeyHeader:
+      name: X-API-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Player API key.
+  schemas:
+    MessageType:
+      type: string
+      enum: [drop, fuse, ritual, starchips]
+    EmuMessage:
+      type: object
+      required: [type, value]
+      additionalProperties: true
+      properties:
+        type:
+          $ref: "#/components/schemas/MessageType"
+        value:
+          type: integer
+        last_rng:
+          type: integer
+          default: 0
+        now_rng:
+          type: integer
+          default: 0
+        opp_id:
+          type: integer
+          default: 0
+    PlayerJson:
+      type: object
+      required: [id, twitchId, name, altAccount, teamId]
+      properties:
+        id:
+          type: integer
+          format: int64
+        twitchId:
+          type: [string, "null"]
+        name:
+          type: string
+        altAccount:
+          type: [string, "null"]
+        teamId:
+          type: integer
+    TeamJson:
+      type: object
+      required: [name, id]
+      properties:
+        name:
+          type: string
+        id:
+          type: integer
+    CardAcquisition:
+      type: object
+      required: [cardId, acquisitionTime, source, playerId, opponentId]
+      properties:
+        cardId:
+          type: integer
+        acquisitionTime:
+          type: string
+          format: date-time
+        source:
+          $ref: "#/components/schemas/MessageType"
+        playerId:
+          type: integer
+          format: int64
+        opponentId:
+          type: integer
+    LibraryUpdate:
+      type: object
+      required:
+        - teamId
+        - timestamp
+        - totalStarchips
+        - uniqueCardCount
+        - newAcquisitions
+        - totalUnobtained
+        - totalUnbuyables
+        - totalCostOfBuyables
+        - canAffordRemainingBuyables
+        - hasCompletedHundo
+        - completionTime
+        - bewdCount
+      properties:
+        teamId:
+          type: integer
+        timestamp:
+          type: string
+          description: Latest update time; empty team snapshots may use Java Instant.MIN, which is outside RFC 3339 date-time range.
+        totalStarchips:
+          type: integer
+          format: int64
+        uniqueCardCount:
+          type: integer
+        newAcquisitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardAcquisition"
+        totalUnobtained:
+          type: integer
+        totalUnbuyables:
+          type: integer
+        totalCostOfBuyables:
+          type: integer
+        canAffordRemainingBuyables:
+          type: boolean
+        hasCompletedHundo:
+          type: boolean
+        completionTime:
+          type: [string, "null"]
+          format: date-time
+        bewdCount:
+          type: integer
+    PlayerUpdate:
+      type: object
+      required: [value, source, participantId, time, lastRng, nowRng, opponentId]
+      properties:
+        value:
+          type: integer
+        source:
+          $ref: "#/components/schemas/MessageType"
+        participantId:
+          type: integer
+          format: int64
+        time:
+          type: string
+          format: date-time
+        lastRng:
+          type: integer
+        nowRng:
+          type: integer
+        opponentId:
+          type: integer
+    ValidationOkResponse:
+      type: object
+      required: [result, message]
+      properties:
+        result:
+          type: string
+          const: ok
+        message:
+          type: string
+        protocol_version:
+          type: string
+    UpdateOkResponse:
+      type: object
+      required: [result, message]
+      properties:
+        result:
+          type: string
+          const: ok
+        message:
+          type: string
+        test:
+          type: boolean
+    ErrorResponse:
+      type: object
+      required: [result, message]
+      properties:
+        result:
+          type: string
+          const: error
+        message:
+          type: string
+    CreditsResponse:
+      type: object
+      required: [teams, allTeams, teamStats]
+      properties:
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditsTeam"
+        allTeams:
+          $ref: "#/components/schemas/CreditsAllTeamStats"
+        teamStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditsTeamStats"
+    CreditsTeam:
+      type: object
+      required: [id, name, completed, completionTime, players]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        completed:
+          type: boolean
+        completionTime:
+          type: [string, "null"]
+          format: date-time
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditsPlayer"
+    CreditsPlayer:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    CreditsAllTeamStats:
+      type: object
+      required: [totalDrops, totalFusions, totalRituals, twinHeadedThunderDragonFusions]
+      properties:
+        totalDrops:
+          type: integer
+          format: int64
+        totalFusions:
+          type: integer
+          format: int64
+        totalRituals:
+          type: integer
+          format: int64
+        twinHeadedThunderDragonFusions:
+          type: integer
+          format: int64
+    CreditsTeamStats:
+      type: object
+      required: [teamId, dropCardCounts, fusionCardCounts, heishinDrops, seto3Drops, duelistDropCounts]
+      properties:
+        teamId:
+          type: integer
+        dropCardCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditsCountRow"
+        fusionCardCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditsCountRow"
+        heishinDrops:
+          type: integer
+          format: int64
+        seto3Drops:
+          type: integer
+          format: int64
+        duelistDropCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditsCountRow"
+    CreditsCountRow:
+      type: object
+      required: [id, count]
+      properties:
+        id:
+          type: integer
+        count:
+          type: integer
+          format: int64

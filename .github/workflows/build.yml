@@ -209,6 +209,36 @@ jobs:
       run: python -m pytest
       working-directory: commentary/obs_ws
   
+  build-api-docs:
+    name: Build API docs
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install API docs tooling
+      run: python -m pip install mkdocs PyYAML
+
+    - name: Build API docs site
+      run: python -m mkdocs build --strict --config-file api_docs/mkdocs.yml
+
+    - name: Prepare API docs artifact
+      run: |
+        mkdir -p artifact
+        cp -R api_docs_site/. artifact/
+
+    - name: Upload API docs artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: api_docs
+        path: artifact/
+
   package-duckstation-patch:
     name: Package DuckStation patch
     runs-on: ubuntu-latest
@@ -223,6 +253,90 @@ jobs:
         name: duckstation_patch
         path: duckstation_patch/
 
+  test-api-openapi-compliance:
+    name: Test server artifact against OpenAPI spec
+    needs: build-java
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Download server artifact
+      uses: actions/download-artifact@v7
+      with:
+        name: server
+        path: downloaded-artifacts/server
+
+    - name: Setup JDK
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'corretto'
+        java-version: '25'
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Copy H2 test dependency
+      run: >-
+        ./mvnw -q dependency:copy-dependencies
+        -DincludeArtifactIds=h2
+        -DincludeScope=test
+        -DoutputDirectory="$GITHUB_WORKSPACE/openapi-test-lib"
+      working-directory: server
+
+    - name: Install OpenAPI compliance tooling
+      run: python -m pip install schemathesis
+
+    - name: Start server artifact
+      run: |
+        java -cp "downloaded-artifacts/server/server.jar:openapi-test-lib/*" \
+          org.springframework.boot.loader.launch.JarLauncher \
+          --server.port=8080 \
+          '--spring.datasource.url=jdbc:h2:mem:openapi;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1' \
+          --spring.datasource.driver-class-name=org.h2.Driver \
+          --spring.datasource.username=sa \
+          --spring.datasource.password=as \
+          --spring.jpa.hibernate.ddl-auto=create-drop \
+          --spring.jpa.database-platform=org.hibernate.dialect.H2Dialect \
+          --spring.security.oauth2.client.registration.twitch.client-id=fake \
+          --spring.security.oauth2.client.registration.twitch.client-secret=fake \
+          --hundo.twitch-vod.enabled=false \
+          > server.log 2>&1 &
+        echo $! > server.pid
+
+    - name: Wait for server API
+      run: |
+        for attempt in {1..90}; do
+          if curl --fail --silent --show-error http://127.0.0.1:8080/api/protocol_version; then
+            exit 0
+          fi
+          sleep 2
+        done
+        cat server.log
+        exit 1
+
+    - name: Run Schemathesis OpenAPI compliance tests
+      run: >-
+        st run api_docs/schemas/openapi.yaml
+        --url http://127.0.0.1:8080/api
+        --phases examples,coverage
+        --checks not_a_server_error,status_code_conformance,content_type_conformance,response_schema_conformance
+        --max-failures 1
+
+    - name: Print server logs
+      if: always()
+      run: cat server.log || true
+
+    - name: Stop server artifact
+      if: always()
+      run: |
+        if [ -f server.pid ]; then
+          kill "$(cat server.pid)" || true
+        fi
+
   release:
     name: Create GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
@@ -231,6 +345,8 @@ jobs:
       - create-rust-artifacts
       - build-java
       - build-livestats
+      - test-api-openapi-compliance
+      - build-api-docs
       - package-duckstation-patch
     runs-on: ubuntu-latest
     permissions:
@@ -254,6 +370,7 @@ jobs:
 
         (cd downloaded-artifacts/FM_Sentinel-Windows && zip -r "$GITHUB_WORKSPACE/release-assets/FM_Sentinel-Windows.zip" .)
         (cd downloaded-artifacts/FM_Sentinel-Linux && zip -r "$GITHUB_WORKSPACE/release-assets/FM_Sentinel-Linux.zip" .)
+        (cd downloaded-artifacts/api_docs && zip -r "$GITHUB_WORKSPACE/release-assets/api_docs.zip" .)
         (cd downloaded-artifacts/duckstation_patch && zip -r "$GITHUB_WORKSPACE/release-assets/duckstation_patch.zip" .)
 
         ls -la release-assets

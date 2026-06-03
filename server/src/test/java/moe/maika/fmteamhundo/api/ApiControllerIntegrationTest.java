@@ -147,6 +147,15 @@ class ApiControllerIntegrationTest {
     }
 
     @Test
+    void testLibraryEndpointWithInvalidTeamIdReturnsApiError() throws Exception {
+        mockMvc.perform(get("/api/library/not-an-integer")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.result").value("error"))
+                .andExpect(jsonPath("$.message").value("Invalid path parameter"));
+    }
+
+    @Test
     void testCreditsEndpointIsPublicAndReturnsRosterStatsShape() throws Exception {
         mockMvc.perform(get("/api/credits")
                 .accept(MediaType.APPLICATION_JSON))

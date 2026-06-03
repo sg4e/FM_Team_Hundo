@@ -1,0 +1,19 @@
+site_name: FM Team Hundo API
+site_description: Source documentation for FM Team Hundo API contracts
+docs_dir: .
+site_dir: ../api_docs_site
+nav:
+  - Overview: README.md
+  - Plugin to Middleware: plugin-middleware-protocol.md
+  - Middleware to Server: middleware-server-api.md
+  - Server API and Firehoses: server-api.md
+  - Commentary and Overlay: commentary-overlay-api.md
+  - Compatibility: compatibility.md
+  - OpenAPI: openapi.md
+plugins:
+  - search
+markdown_extensions:
+  - tables
+  - fenced_code
+  - toc:
+      permalink: true
