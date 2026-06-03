@@ -34,6 +34,7 @@ public class SecurityConfiguration {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/firehose/**").permitAll()
                 .requestMatchers("/widgets/**").permitAll()
+                .requestMatchers("/widget_previews/**").permitAll()
             )
             .oauth2Client(oauth2 -> oauth2
                 .authorizationCodeGrant(codeGrant -> codeGrant

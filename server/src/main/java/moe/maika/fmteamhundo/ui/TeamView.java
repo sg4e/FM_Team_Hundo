@@ -237,7 +237,7 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
         completionBanner.addClassName("completion-banner");
 
         content.add(title, completionBanner);
-        content.add(statsBar, createDownloadLink(), createObsStatsWidgetLink(), createLatestAcquisitionWidgetLinks(), createLatestAcquisitions(),
+        content.add(statsBar, createDownloadLink(), createObsStatsWidgetLink(), createLatestAcquisitions(),
                 createMembers(snapshot), createCardGrids(gameStateService.getLibrary(teamId).getAcquiredCards()));
         applySnapshot(snapshot);
         if(currentUI != null) {
@@ -266,23 +266,8 @@ public class TeamView extends VerticalLayout implements HasUrlParameter<String>,
     }
 
     private Component createObsStatsWidgetLink() {
-        Anchor link = new Anchor(String.format("/widgets/stats/team/%d?cards=true&starchips=true&cost_of_buyables=true&unbuyables=true&bewds=true&dark_mode=false", teamId), "OBS Stats Widget");
+        Anchor link = new Anchor(String.format("/team_widgets/%d", teamId), "OBS Widgets");
         return link;
-    }
-
-    private Component createLatestAcquisitionWidgetLinks() {
-        Div container = new Div();
-        container.addClassName("content-section");
-        container.add(new H3("Latest Acquisitions OBS Widgets"));
-        
-        UnorderedList list = new UnorderedList();
-        list.add(new ListItem(new Anchor(String.format("/widgets/v1-classic.html?teamId=%d&limit=5&direction=top", teamId), "Classic (Top Insertion)")));
-        list.add(new ListItem(new Anchor(String.format("/widgets/v2-cyberpunk.html?teamId=%d&limit=5&direction=bottom", teamId), "Cyberpunk (Bottom Insertion)")));
-        list.add(new ListItem(new Anchor(String.format("/widgets/v3-deck.html?teamId=%d&limit=5&direction=top", teamId), "Card Deck (Top Insertion)")));
-        list.add(new ListItem(new Anchor(String.format("/widgets/v4-arcade.html?teamId=%d&limit=5&direction=bottom", teamId), "Arcade Retro (Bottom Insertion)")));
-        
-        container.add(list);
-        return container;
     }
 
     private Component createLatestAcquisitions() {
