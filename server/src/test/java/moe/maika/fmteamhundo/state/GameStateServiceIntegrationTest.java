@@ -514,6 +514,7 @@ class GameStateServiceIntegrationTest {
         assertThat(snapshot.teamId()).isEqualTo(1);
         assertThat(snapshot.totalStarchips()).isEqualTo(75);
         assertThat(snapshot.uniqueCardCount()).isEqualTo(3);
+        assertThat(gameStateService.getLibrary(1).getAcquiredCardIds()).containsExactly(100, 200, 300);
         assertThat(latestAcquisitions).hasSize(3);
         assertThat(latestAcquisitions.get(0).cardId()).isEqualTo(300);
     }

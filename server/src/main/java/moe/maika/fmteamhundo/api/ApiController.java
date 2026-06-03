@@ -84,6 +84,11 @@ public class ApiController {
         return ResponseEntity.ok(gameStateService.getLatestLibraryUpdate(teamId));
     }
 
+    @GetMapping("/library_contents/{teamId}")
+    public ResponseEntity<List<Integer>> getLibraryContents(@PathVariable int teamId) {
+        return ResponseEntity.ok(gameStateService.getLibrary(teamId).getAcquiredCardIds());
+    }
+
     @GetMapping("/credits")
     public ResponseEntity<CreditsResponse> getCredits() {
         return ResponseEntity.ok(creditsService.getCredits());
