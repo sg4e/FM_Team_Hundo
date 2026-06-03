@@ -22,7 +22,7 @@ FM Team Hundo coordinates a team race/community challenge for *Yu-Gi-Oh! Forbidd
 
 | Path | What it is | Primary stack | Most relevant checks |
 | --- | --- | --- | --- |
-| `api_docs/` | Canonical source documentation for emulator/middleware/server/commentary API contracts plus OpenAPI 3.2 precursor. | Markdown, OpenAPI YAML, MkDocs. | `mkdocs build --strict --config-file api_docs/mkdocs.yml` plus `python api_docs/scripts/validate_api_docs.py`. |
+| `api_docs/` | Canonical source documentation for emulator/middleware/server/commentary API contracts plus OpenAPI 3.2 precursor. | Markdown, OpenAPI YAML, MkDocs. | `python -m mkdocs build --strict --config-file api_docs/mkdocs.yml` plus `python api_docs/scripts/check_openapi_sync.py`. |
 | `server/` | Main Spring Boot + Vaadin web app, API, persistence, security, team library state, docs pages, release JAR. | Java 25, Maven wrapper, Vaadin 25, Spring Boot, JPA, MySQL/H2 tests, Testcontainers. | `cd server && ./mvnw clean verify -Pintegration-test` |
 | `middleware/` | `FM_Sentinel`, a local TCP listener for emulator plugins that forwards authenticated player updates to the server. | Rust 2024, Tokio, Reqwest, Clap, Serde. | `cd middleware && cargo test` and `cargo build` |
 | `bizhawk_plugin/` | BizHawk external tool DLL that reads Forbidden Memories memory and emits JSON to `FM_Sentinel`. | C#/.NET Framework 4.8, BizHawk APIs. | `cd bizhawk_plugin/src && dotnet build -c Release` with BizHawk dependencies present |
@@ -54,8 +54,8 @@ cd commentary/livestats && ./gradlew build
 cd commentary/obs_ws && python -m venv .venv
 cd commentary/obs_ws && python -m pip install -e '.[dev]'
 cd commentary/obs_ws && python -m pytest
-python api_docs/scripts/validate_api_docs.py
-mkdocs build --strict --config-file api_docs/mkdocs.yml
+python api_docs/scripts/check_openapi_sync.py
+python -m mkdocs build --strict --config-file api_docs/mkdocs.yml
 ```
 
 Additional targeted checks:

@@ -13,7 +13,7 @@ Suggested build and rendering commands:
 ```bash
 # Preview Markdown docs with MkDocs.
 python -m pip install mkdocs PyYAML
-mkdocs serve --config-file api_docs/mkdocs.yml
+python -m mkdocs serve --config-file api_docs/mkdocs.yml
 
 # Render the OpenAPI precursor as a standalone HTML file.
 npx @redocly/cli build-docs api_docs/schemas/openapi.yaml -o /tmp/fm-hundo-api.html
@@ -38,4 +38,4 @@ When a change alters any request, response, emitted event, WebSocket payload, lo
 3. Update examples when field names, valid values, or error bodies change.
 4. If the change is incompatible across emulator plugins, middleware, or server release artifacts, update the compatibility doc and bump `FM_HUNDO_PROTOCOL_VERSION` in `.github/workflows/build.yml`.
 5. Update root meta docs (`AGENTS.md`, `PROJECT_CONTEXT.md`, and `DECISIONS.md`) when the API architecture or durable workflow expectations change.
-6. Run the smallest relevant tests for touched components, then broader checks when practical. For docs-only changes, run `python api_docs/scripts/validate_api_docs.py` and `mkdocs build --strict --config-file api_docs/mkdocs.yml`.
+6. Run the smallest relevant tests for touched components, then broader checks when practical. For docs-only changes, run `python api_docs/scripts/check_openapi_sync.py` and `python -m mkdocs build --strict --config-file api_docs/mkdocs.yml`.
