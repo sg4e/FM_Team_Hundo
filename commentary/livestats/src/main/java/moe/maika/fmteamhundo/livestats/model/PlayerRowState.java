@@ -9,6 +9,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import moe.maika.fmteamhundo.livestats.api.CardAcquisition;
 import moe.maika.fmteamhundo.livestats.api.MessageType;
 import moe.maika.fmteamhundo.livestats.api.PlayerJson;
 import moe.maika.fmteamhundo.livestats.api.PlayerUpdate;
@@ -25,6 +26,7 @@ public class PlayerRowState {
     private final StringProperty valueText = new SimpleStringProperty("");
     private final StringProperty opponentText = new SimpleStringProperty("");
     private final StringProperty starchipsText = new SimpleStringProperty("");
+    private final StringProperty lastAdditionText = new SimpleStringProperty("");
     private final StringProperty relativeTimeText = new SimpleStringProperty("");
     private final BooleanProperty highlighted = new SimpleBooleanProperty(false);
 
@@ -59,6 +61,10 @@ public class PlayerRowState {
         return starchipsText;
     }
 
+    public StringProperty lastAdditionTextProperty() {
+        return lastAdditionText;
+    }
+
     public StringProperty relativeTimeTextProperty() {
         return relativeTimeText;
     }
@@ -91,6 +97,10 @@ public class PlayerRowState {
         valueText.set(String.valueOf(fmdb.getCard(update.value())));
         opponentText.set(String.valueOf(fmdb.getDuelist(update.opponentId()).getName()));
         refreshRelativeTime(clock);
+    }
+
+    public void applyNewLibraryAddition(CardAcquisition acquisition) {
+        lastAdditionText.set(fmdb.getCard(acquisition.cardId()).getName());
     }
 
     public void refreshRelativeTime(Clock clock) {

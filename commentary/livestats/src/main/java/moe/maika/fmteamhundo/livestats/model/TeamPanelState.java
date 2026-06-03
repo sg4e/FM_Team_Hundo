@@ -2,6 +2,7 @@ package moe.maika.fmteamhundo.livestats.model;
 
 import java.time.Clock;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,6 +13,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import moe.maika.fmteamhundo.livestats.api.CardAcquisition;
 import moe.maika.fmteamhundo.livestats.api.LibraryUpdate;
 import moe.maika.fmteamhundo.livestats.api.PlayerJson;
 import moe.maika.fmteamhundo.livestats.api.PlayerUpdate;
@@ -67,8 +69,26 @@ public class TeamPanelState {
         if (update.teamId() != team.id()) {
             return false;
         }
+        applyNewLibraryAdditions(update);
         libraryUpdate.set(update);
         return true;
+    }
+
+    private void applyNewLibraryAdditions(LibraryUpdate update) {
+        Map<Long, CardAcquisition> latestAcquisitionsByPlayerId = new HashMap<>();
+        update.newAcquisitions().forEach(acquisition ->
+            latestAcquisitionsByPlayerId.merge(
+                acquisition.playerId(),
+                acquisition,
+                (existing, replacement) -> existing.acquisitionTime().isBefore(replacement.acquisitionTime())
+                    ? replacement
+                    : existing));
+        latestAcquisitionsByPlayerId.forEach((playerId, acquisition) -> {
+            PlayerRowState row = playerRowsById.get(playerId);
+            if (row != null) {
+                row.applyNewLibraryAddition(acquisition);
+            }
+        });
     }
 
     public void refreshRelativeTimes(Clock clock) {
