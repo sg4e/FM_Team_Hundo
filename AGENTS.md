@@ -11,7 +11,8 @@ This file is the repo-wide orientation and instruction sheet for agentic AI work
    - `AGENTS.md` for agent instructions and workflow expectations.
    - `PROJECT_CONTEXT.md` for project map, component responsibilities, or commands.
    - `DECISIONS.md` for decisions that future agents must not reverse without user confirmation.
-5. Keep generated artifacts, local credentials, virtualenvs, build outputs, and IDE state out of commits.
+5. If your change alters any API layer (emulator plugin JSON, middleware HTTP behavior, server REST endpoints, WebSocket firehoses, commentary overlay routes/events, request/response DTOs, headers, auth rules, validation rules, or protocol-version compatibility), update `api_docs/` in the same commit. Update `api_docs/schemas/openapi.yaml` for server HTTP API changes and the relevant Markdown page for narrative/firehose/local protocol changes.
+6. Keep generated artifacts, local credentials, virtualenvs, build outputs, and IDE state out of commits.
 
 ## Repository purpose in one paragraph
 
@@ -21,6 +22,7 @@ FM Team Hundo coordinates a team race/community challenge for *Yu-Gi-Oh! Forbidd
 
 | Path | What it is | Primary stack | Most relevant checks |
 | --- | --- | --- | --- |
+| `api_docs/` | Canonical source documentation for emulator/middleware/server/commentary API contracts plus OpenAPI 3.2 precursor. | Markdown, OpenAPI YAML, MkDocs. | `python -m mkdocs build --strict --config-file api_docs/mkdocs.yml`; CI also runs Schemathesis against the packaged server artifact running with an in-memory H2 database. |
 | `server/` | Main Spring Boot + Vaadin web app, API, persistence, security, team library state, docs pages, release JAR. | Java 25, Maven wrapper, Vaadin 25, Spring Boot, JPA, MySQL/H2 tests, Testcontainers. | `cd server && ./mvnw clean verify -Pintegration-test` |
 | `middleware/` | `FM_Sentinel`, a local TCP listener for emulator plugins that forwards authenticated player updates to the server. | Rust 2024, Tokio, Reqwest, Clap, Serde. | `cd middleware && cargo test` and `cargo build` |
 | `bizhawk_plugin/` | BizHawk external tool DLL that reads Forbidden Memories memory and emits JSON to `FM_Sentinel`. | C#/.NET Framework 4.8, BizHawk APIs. | `cd bizhawk_plugin/src && dotnet build -c Release` with BizHawk dependencies present |
@@ -35,7 +37,7 @@ FM Team Hundo coordinates a team race/community challenge for *Yu-Gi-Oh! Forbidd
 
 - The emulator plugins and middleware speak newline-delimited JSON over local TCP port `51155`.
 - The middleware posts authenticated updates to the server URL found in `credentials_FM_Team_Hundo.json`; that credentials file is user-local and must never be committed.
-- Release builds stamp compatible server, middleware, and plugin artifacts with `FM_HUNDO_PROTOCOL_VERSION` from `.github/workflows/build.yml`. Bump it only when the wire protocol between those components becomes incompatible.
+- Release builds stamp compatible server, middleware, and plugin artifacts with `FM_HUNDO_PROTOCOL_VERSION` from `.github/workflows/build.yml`. Bump it only when the wire protocol between those components becomes incompatible, and update `api_docs/compatibility.md` plus any affected API-layer docs in the same change.
 - Unstamped local development builds intentionally skip protocol enforcement so local components can be tested together.
 - `server/src/main/resources/application.yml` imports optional `application-private.yml`; private Twitch/OAuth/database configuration belongs there or in environment variables, not in Git.
 - The root license is AGPL-3.0-or-later for this project unless a file or third-party dependency states otherwise. The DuckStation patch payload carries its own SPDX header and upstream license constraints.
@@ -52,6 +54,7 @@ cd commentary/livestats && ./gradlew build
 cd commentary/obs_ws && python -m venv .venv
 cd commentary/obs_ws && python -m pip install -e '.[dev]'
 cd commentary/obs_ws && python -m pytest
+python -m mkdocs build --strict --config-file api_docs/mkdocs.yml
 ```
 
 Additional targeted checks:
@@ -72,6 +75,7 @@ Document any skipped checks and the reason, especially when a check requires Win
 - Prefer explicit failure for operator misconfiguration over silent fallback when startup validation already expects fail-fast behavior.
 - Preserve stable OBS source/scene names unless intentionally migrating operator setups; OBS names are external operator-facing state.
 - Do not add automated tests that load or assert on agent-facing meta files (`AGENTS.md`, `PROJECT_CONTEXT.md`, or `DECISIONS.md`); review those files directly when changed.
+- Treat `api_docs/` as the canonical project API reference. Keep it in sync with code changes to plugin/middleware/server/commentary APIs; do not commit rendered HTML output.
 - Do not commit `server/node_modules/`, `target/`, `build/`, `bin/`, `.venv/`, OBS local configs, credentials, logs, generated PDFs, or downloaded emulator/source trees.
 
 ## Updating durable decisions
