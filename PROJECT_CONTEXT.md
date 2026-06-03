@@ -51,7 +51,7 @@ Spring/Vaadin server (`server/`)
 - `openapi.md` is the MkDocs page that links to the OpenAPI YAML precursor.
 - `schemas/openapi.yaml` is the machine-readable OpenAPI 3.2 server HTTP API precursor.
 
-Review these files directly for API-only documentation changes. Validate docs with `python -m mkdocs build --strict --config-file api_docs/mkdocs.yml`; CI validates the OpenAPI spec against the packaged server artifact with Schemathesis. Optional local previews can be generated with MkDocs or Redoc, but generated HTML should be published out-of-repo and not committed.
+Review these files directly for API-only documentation changes. Validate docs with `python -m mkdocs build --strict --config-file api_docs/mkdocs.yml`; CI validates the OpenAPI spec against the packaged server artifact running with an in-memory H2 database via Schemathesis. Optional local previews can be generated with MkDocs or Redoc, but generated HTML should be published out-of-repo and not committed.
 
 ## Main server (`server/`)
 

@@ -263,19 +263,6 @@ jobs:
       - build-api-docs
       - package-duckstation-patch
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_DATABASE: fm_team_hundo
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
 
     steps:
     - name: Checkout repository
@@ -298,16 +285,28 @@ jobs:
       with:
         python-version: '3.12'
 
+    - name: Copy H2 test dependency
+      run: >-
+        ./mvnw -q dependency:copy-dependencies
+        -DincludeArtifactIds=h2
+        -DincludeScope=test
+        -DoutputDirectory="$GITHUB_WORKSPACE/openapi-test-lib"
+      working-directory: server
+
     - name: Install OpenAPI compliance tooling
       run: python -m pip install schemathesis
 
     - name: Start server artifact
       run: |
-        java -jar downloaded-artifacts/server/server.jar \
+        java -cp "downloaded-artifacts/server/server.jar:openapi-test-lib/*" \
+          org.springframework.boot.loader.launch.JarLauncher \
           --server.port=8080 \
-          --spring.datasource.url=jdbc:mysql://127.0.0.1:3306/fm_team_hundo \
-          --spring.datasource.username=root \
-          --spring.datasource.password=root \
+          '--spring.datasource.url=jdbc:h2:mem:openapi;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1' \
+          --spring.datasource.driver-class-name=org.h2.Driver \
+          --spring.datasource.username=sa \
+          --spring.datasource.password=as \
+          --spring.jpa.hibernate.ddl-auto=create-drop \
+          --spring.jpa.database-platform=org.hibernate.dialect.H2Dialect \
           --spring.security.oauth2.client.registration.twitch.client-id=fake \
           --spring.security.oauth2.client.registration.twitch.client-secret=fake \
           --hundo.twitch-vod.enabled=false \

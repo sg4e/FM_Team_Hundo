@@ -38,4 +38,4 @@ When a change alters any request, response, emitted event, WebSocket payload, lo
 3. Update examples when field names, valid values, or error bodies change.
 4. If the change is incompatible across emulator plugins, middleware, or server release artifacts, update the compatibility doc and bump `FM_HUNDO_PROTOCOL_VERSION` in `.github/workflows/build.yml`.
 5. Update root meta docs (`AGENTS.md`, `PROJECT_CONTEXT.md`, and `DECISIONS.md`) when the API architecture or durable workflow expectations change.
-6. Run the smallest relevant tests for touched components, then broader checks when practical. For docs-only changes, run `python -m mkdocs build --strict --config-file api_docs/mkdocs.yml`. Server API changes are also checked in CI by running Schemathesis against the packaged server artifact.
+6. Run the smallest relevant tests for touched components, then broader checks when practical. For docs-only changes, run `python -m mkdocs build --strict --config-file api_docs/mkdocs.yml`. Server API changes are also checked in CI by running Schemathesis against the packaged server artifact running with an in-memory H2 database.
