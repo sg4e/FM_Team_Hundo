@@ -239,7 +239,7 @@ components:
           type: integer
         timestamp:
           type: string
-          format: date-time
+          description: Latest update time; empty team snapshots may use Java Instant.MIN, which is outside RFC 3339 date-time range.
         totalStarchips:
           type: integer
           format: int64
