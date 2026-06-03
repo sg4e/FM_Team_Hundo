@@ -255,13 +255,7 @@ jobs:
 
   test-api-openapi-compliance:
     name: Test server artifact against OpenAPI spec
-    needs:
-      - build-bizhawk
-      - create-rust-artifacts
-      - build-java
-      - build-livestats
-      - build-api-docs
-      - package-duckstation-patch
+    needs: build-java
     runs-on: ubuntu-latest
 
     steps:
