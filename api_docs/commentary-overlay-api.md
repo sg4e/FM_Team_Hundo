@@ -22,12 +22,16 @@ The Python OBS/MediaMTX controller uses:
 
 | Contract | Purpose |
 | --- | --- |
-| `GET /api/players` | Build player/team stream mappings and profile-cache lookup data. |
+| `GET /api/players` | Build player/team stream mappings and profile-cache lookup data; `twitchId` is treated as a numeric Twitch ID and resolved through Twitch Helix to the lowercase main-account login used as the MediaMTX path. |
 | `GET /api/teams` | Build managed OBS team scenes. |
 | `GET /api/credits` | Build credits-scene scroll payloads. |
 | `WS /firehose/team` | Watch `LibraryUpdate.newAcquisitions` and schedule acquisition alerts. |
 
-The OBS controller currently does not subscribe to `/firehose/player`.
+The OBS controller currently does not subscribe to `/firehose/player`. MediaMTX
+paths are lowercase main Twitch logins. The restream helper publishes alternate
+Twitch sources into the lowercase main-login path so the OBS controller can keep
+one stable per-player RTSP URL. If Helix login resolution is unavailable, the
+controller logs a warning and falls back to the lowercase player display name.
 
 ## Local overlay HTTP routes
 

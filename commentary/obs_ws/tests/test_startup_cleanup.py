@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fm_hundo_obs.config import AppConfig, ObsConfig
 from fm_hundo_obs.main import Application
+from fm_hundo_obs.models import Player
 from fm_hundo_obs.obs import ObsError
 from fm_hundo_obs.overlay import OverlayClientTimeout, OverlayServer
 
@@ -384,3 +385,19 @@ async def test_ensure_overlay_obs_setup_creates_alert_audio_source(tmp_path):
     assert alert_audio[3]["restart_on_activate"] is True
     assert alert_audio[3]["close_when_inactive"] is False
     assert alert_audio[4] is False
+
+
+@pytest.mark.asyncio
+async def test_resolve_stream_paths_falls_back_to_lowercase_player_name_on_twitch_failure(caplog):
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=False)  # type: ignore[arg-type]
+
+    class FailingProfileCache:
+        async def resolve_player_logins(self, players):
+            raise RuntimeError("Twitch unavailable")
+
+    app.profile_cache = FailingProfileCache()  # type: ignore[assignment]
+
+    paths = await app._resolve_stream_paths([Player(1, "123456", "RunnerOne", None, 1)])
+
+    assert paths == {1: "runnerone"}
+    assert "falling back to lowercase player display names" in caplog.text

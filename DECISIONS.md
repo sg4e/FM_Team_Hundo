@@ -57,6 +57,13 @@ When adding new entries, place them under the relevant component heading. Keep d
 - The existing intro card CSS (background, padding, border-left, box-shadow) is kept exactly as-is; images bookend it outside the card background.
 - The intro WebSocket payload was extended with `playerId`, `opponentId`, and `useTwitchProfile`.
 
+### MediaMTX Stream Identity
+
+- Production MediaMTX paths are lowercase Twitch main-account logins, not numeric Twitch IDs.
+- The OBS controller resolves `/api/players` numeric `twitchId` values through Twitch Helix `Get Users` by ID and uses the returned `login` lowercased as the stream path.
+- If Helix login resolution fails, the OBS controller logs a warning and falls back to the lowercase player display name rather than failing startup.
+- Restream helper alternate-account mode is source-only: `ALT_CHANNEL` may be tried first, but FFmpeg still publishes into the lowercase `MAIN_CHANNEL` path.
+
 ### Twitch Profile Image Cache
 
 - Profile images are fetched via the Twitch API `Get Users` endpoint using an App Access Token (`client_credentials` grant).
@@ -64,7 +71,7 @@ When adding new entries, place them under the relevant component heading. Keep d
 - Images are fetched once per player at startup or when they first appear as streaming, and never refreshed during the app lifetime.
 - Only currently-streaming players (from MediaMTX `StreamRegistry`) are pre-fetched — not the full roster.
 - A periodic sync loop (every 10 seconds) checks for new streaming players and fetches their profiles.
-- Batch requests (up to 100 logins per Twitch API call) are used at startup; on-demand fetches use `asyncio.Semaphore(1)` to prevent rate-limit bursts.
+- Batch requests (up to 100 numeric Twitch IDs per Twitch API call) are used at startup; on-demand fetches use `asyncio.Semaphore(1)` to prevent rate-limit bursts.
 
 ### Simulation Mode & Image Fallbacks
 

@@ -17,7 +17,7 @@ from .credits import CreditsConfigError, build_credits_payload, load_credits_sce
 from .logging_setup import setup_logging
 from .managed_layout import ObsLayoutManager
 from .mapping import NameResolver, load_card_names, load_duelist_names
-from .mediamtx import MediaMtxClient, StreamRegistry
+from .mediamtx import MediaMtxClient, StreamRegistry, canonical_mediamtx_path
 from .models import CardAcquisition
 from .obs import DryRunObsController, ObsError, SimpleObsController
 from .overlay import OverlayClientTimeout, OverlayEvents, OverlayServer
@@ -72,18 +72,19 @@ class Application:
             else:
                 players = await api.get_players()
                 teams = await api.get_teams()
-                self.streams = StreamRegistry(players, mediamtx)
-                await self.streams.refresh()
-            names = NameResolver(players, duelists, teams)
-            self.names = names
-
-            if not self.simulate_mediamtx and self.config.twitch.client_id and self.config.twitch.client_secret:
                 self.profile_cache = TwitchProfileCache(
                     self.config.twitch.client_id,
                     self.config.twitch.client_secret,
                     session,
                 )
                 await self.profile_cache.start()
+                stream_paths = await self._resolve_stream_paths(players)
+                self.streams = StreamRegistry(players, mediamtx, stream_paths_by_player_id=stream_paths)
+                await self.streams.refresh()
+            names = NameResolver(players, duelists, teams)
+            self.names = names
+
+            if self.profile_cache is not None:
                 active_ids = self.streams.active_player_ids()
                 await self.profile_cache.sync_streaming_players(active_ids, names)
                 self.overlay_server.profile_cache = self.profile_cache
@@ -263,6 +264,37 @@ class Application:
         except Exception:
             LOGGER.exception("Unable to reconcile managed scene audio focus")
             return False
+
+    async def _resolve_stream_paths(self, players) -> dict[int, str]:
+        assert self.profile_cache is not None
+        fallback_paths = {
+            player.id: canonical_mediamtx_path(player.name)
+            for player in players
+            if player.name
+        }
+        try:
+            resolved_paths = await self.profile_cache.resolve_player_logins(players)
+        except Exception:
+            LOGGER.warning(
+                "Unable to resolve Twitch logins from numeric Twitch IDs; falling back to lowercase "
+                "player display names for MediaMTX paths. Verify restream paths manually.",
+                exc_info=True,
+            )
+            return fallback_paths
+
+        missing = [player for player in players if player.id not in resolved_paths]
+        for player in missing:
+            fallback = fallback_paths.get(player.id)
+            if fallback:
+                LOGGER.warning(
+                    "Unable to resolve Twitch login for player %s (Twitch ID %s); falling back to lowercase "
+                    "player display name %r for MediaMTX path.",
+                    player.name,
+                    player.twitch_id or "unknown",
+                    fallback,
+                )
+                resolved_paths[player.id] = fallback
+        return resolved_paths
 
     async def _profile_cache_sync_loop(self) -> None:
         """Periodically sync the Twitch profile cache with active streaming players."""

@@ -48,15 +48,14 @@ async def test_fetch_token_on_start():
 
 
 @pytest.mark.asyncio
-async def test_sync_streaming_players_fetches_new_profiles():
-    """sync_streaming_players() fetches profiles for uncached players."""
+async def test_sync_streaming_players_fetches_new_profiles_by_numeric_id():
+    """sync_streaming_players() fetches profiles for uncached numeric Twitch IDs."""
     session = mock.AsyncMock(spec=ClientSession)
 
-    # Simulate Twitch /users response
     users_resp = _fake_json_response({
         "data": [
-            {"id": "id1", "login": "twitch_1", "display_name": "S1", "profile_image_url": "http://fake/img1"},
-            {"id": "id2", "login": "twitch_2", "display_name": "S2", "profile_image_url": "http://fake/img2"},
+            {"id": "111", "login": "twitch_1", "display_name": "S1", "profile_image_url": "http://fake/img1"},
+            {"id": "222", "login": "twitch_2", "display_name": "S2", "profile_image_url": "http://fake/img2"},
         ],
     })
     session.get.return_value = FakeContextManager(users_resp)
@@ -65,14 +64,10 @@ async def test_sync_streaming_players_fetches_new_profiles():
     cache._token = "test_token"
 
     names = NameResolver(
-        [Player(1, "twitch_1", "Streamer One", None, 1), Player(2, "twitch_2", "Streamer Two", None, 1)],
+        [Player(1, "111", "Streamer One", None, 1), Player(2, "222", "Streamer Two", None, 1)],
         {},
         [Team(1, "Alpha")],
     )
-
-    # The profile image download requests need to succeed after the users lookup.
-    # Override _download_profile to avoid needing HTTP server for image URLs.
-    original_download = cache._download_profile
 
     async def fake_download(pid, url):
         cache._cache[pid] = b"img_bytes"
@@ -83,6 +78,32 @@ async def test_sync_streaming_players_fetches_new_profiles():
 
     assert cache.get_image(1) == b"img_bytes"
     assert cache.get_image(2) == b"img_bytes"
+    users_call = session.get.call_args_list[0]
+    assert users_call.kwargs["params"] == [("id", "111"), ("id", "222")]
+
+
+@pytest.mark.asyncio
+async def test_resolve_player_logins_uses_numeric_ids_and_lowercases_logins():
+    session = mock.AsyncMock(spec=ClientSession)
+    users_resp = _fake_json_response({
+        "data": [
+            {"id": "111", "login": "StreamerOne", "display_name": "StreamerOne"},
+            {"id": "222", "login": "streamertwo", "display_name": "StreamerTwo"},
+        ],
+    })
+    session.get.return_value = FakeContextManager(users_resp)
+
+    cache = TwitchProfileCache("test_client", "test_secret", session)
+    cache._token = "test_token"
+
+    resolved = await cache.resolve_player_logins([
+        Player(1, "111", "Streamer One", None, 1),
+        Player(2, "222", "Streamer Two", None, 1),
+    ])
+
+    assert resolved == {1: "streamerone", 2: "streamertwo"}
+    users_call = session.get.call_args
+    assert users_call.kwargs["params"] == [("id", "111"), ("id", "222")]
 
 
 @pytest.mark.asyncio
@@ -95,19 +116,20 @@ async def test_sync_streaming_players_skips_cached():
     cache = TwitchProfileCache("test_client", "test_secret", session)
     cache._token = "test_token"
     cache._cache[1] = b"existing"
-    cache._cached_twitch_ids.add("twitch_1")
+    cache._cached_twitch_ids.add("111")
 
     names = NameResolver(
-        [Player(1, "twitch_1", "Streamer One", None, 1), Player(2, "twitch_2", "Streamer Two", None, 1)],
+        [Player(1, "111", "Streamer One", None, 1), Player(2, "222", "Streamer Two", None, 1)],
         {},
         [Team(1, "Alpha")],
     )
 
     await cache.sync_streaming_players({1, 2}, names)
 
-    # Player 1 should keep its cached image
     assert cache.get_image(1) == b"existing"
     assert session.get.called, "Request should have been made for player 2"
+    users_call = session.get.call_args
+    assert users_call.kwargs["params"] == [("id", "222")]
 
 
 @pytest.mark.asyncio
@@ -156,26 +178,22 @@ async def test_rate_limiting_semaphore_used():
     cache = TwitchProfileCache("test_client", "test_secret", session)
     cache._token = "test_token"
 
-    # Verify the semaphore exists and is a bounded semaphore with value 1
     assert isinstance(cache._semaphore, type(asyncio.Semaphore(1)))
     assert cache._semaphore._value == 1  # noqa: SLF001
 
     names = NameResolver(
-        [Player(1, "twitch_1", "Streamer One", None, 1)],
+        [Player(1, "111", "Streamer One", None, 1)],
         {},
         [Team(1, "Alpha")],
     )
 
     await cache.sync_streaming_players({1}, names)
 
-    # If we got here without hanging, the semaphore was released properly
-
 
 @pytest.mark.asyncio
 async def test_download_profile_failure_does_not_raise():
     """A failed profile image download is logged and skipped, not raised."""
     session = mock.AsyncMock(spec=ClientSession)
-    # Simulate an HTTP error when downloading the image.
     bad_resp = mock.AsyncMock()
     bad_resp.status = 404
     bad_resp.raise_for_status = mock.MagicMock()
@@ -185,7 +203,6 @@ async def test_download_profile_failure_does_not_raise():
     cache = TwitchProfileCache("test_client", "test_secret", session)
     cache._token = "test_token"
 
-    # This should not raise — the error is logged and the player is skipped.
     await cache._download_profile(42, "http://fake/image.png")
 
     assert cache.get_image(42) is None, "Image should not be cached on failure"
@@ -196,7 +213,6 @@ async def test_fetch_batch_retries_on_401():
     """_fetch_batch retries on 401 by re-authenticating."""
     session = mock.AsyncMock(spec=ClientSession)
 
-    # First call returns 401 (expired token), second returns success.
     first_resp = mock.AsyncMock()
     first_resp.status = 401
     first_resp.__aenter__.return_value = first_resp
@@ -209,15 +225,13 @@ async def test_fetch_batch_retries_on_401():
 
     session.get.side_effect = [first_resp, second_resp]
 
-    # Token refresh succeeds.
     token_resp = _fake_json_response({"access_token": "new_token", "expires_in": 50000})
     session.post.return_value = FakeContextManager(token_resp)
 
     cache = TwitchProfileCache("test_client", "test_secret", session)
     cache._token = "expired_token"
 
-    await cache._fetch_batch([(1, "twitch_1")])
+    await cache._fetch_batch([(1, "111")])
 
     assert cache._token == "new_token", "Token should have been refreshed"
     assert session.get.call_count == 2, "Should have retried after 401"
-

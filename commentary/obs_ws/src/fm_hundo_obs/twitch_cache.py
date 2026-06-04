@@ -6,19 +6,24 @@ import logging
 from aiohttp import ClientSession
 
 from .mapping import NameResolver
+from .models import Player
 
 LOGGER = logging.getLogger(__name__)
 TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 TWITCH_USERS_URL = "https://api.twitch.tv/helix/users"
-TWITCH_MAX_LOGINS_PER_REQUEST = 100
+TWITCH_MAX_USERS_PER_REQUEST = 100
 
 
 class TwitchProfileCache:
     """Fetches and caches Twitch profile images for streaming players.
 
     Fetches profile images once per player at startup/join; images are never
-    refreshed during the lifetime of the application.  Uses a single in-flight
+    refreshed during the lifetime of the application. Uses a single in-flight
     semaphore to avoid accidental rate-limit bursts.
+
+    The website API exposes ``Player.twitch_id`` as Twitch's numeric user ID.
+    Helix profile and login lookups therefore use ``id`` parameters, not
+    ``login`` parameters.
     """
 
     def __init__(
@@ -51,6 +56,30 @@ class TwitchProfileCache:
         async with self._semaphore:
             await self._fetch_token()
 
+    async def resolve_player_logins(self, players: list[Player]) -> dict[int, str]:
+        """Return player id -> canonical lowercase Twitch login for players with Twitch IDs."""
+        needed = [(player.id, player.twitch_id) for player in players if player.twitch_id]
+        if not needed:
+            return {}
+
+        resolved: dict[int, str] = {}
+        async with self._semaphore:
+            for i in range(0, len(needed), TWITCH_MAX_USERS_PER_REQUEST):
+                batch = needed[i: i + TWITCH_MAX_USERS_PER_REQUEST]
+                data = await self._fetch_users_by_ids([twitch_id for _, twitch_id in batch])
+                twitch_id_to_player: dict[str, int] = {
+                    twitch_id: player_id
+                    for player_id, twitch_id in batch
+                    if twitch_id
+                }
+                for user in data.get("data", ()):
+                    twitch_id = str(user.get("id", ""))
+                    login = str(user.get("login", "")).strip().lower()
+                    player_id = twitch_id_to_player.get(twitch_id)
+                    if player_id is not None and login:
+                        resolved[player_id] = login
+        return resolved
+
     async def sync_streaming_players(
         self,
         active_player_ids: set[int],
@@ -63,7 +92,7 @@ class TwitchProfileCache:
         """
         needed: list[tuple[int, str]] = []
         for player_id in active_player_ids:
-            twitch_id = self._twitch_login(names, player_id)
+            twitch_id = self._twitch_id(names, player_id)
             if twitch_id is not None and twitch_id not in self._cached_twitch_ids:
                 needed.append((player_id, twitch_id))
 
@@ -72,8 +101,8 @@ class TwitchProfileCache:
 
         LOGGER.info("Fetching %d Twitch profile(s) not yet cached", len(needed))
         async with self._semaphore:
-            for i in range(0, len(needed), TWITCH_MAX_LOGINS_PER_REQUEST):
-                batch = needed[i: i + TWITCH_MAX_LOGINS_PER_REQUEST]
+            for i in range(0, len(needed), TWITCH_MAX_USERS_PER_REQUEST):
+                batch = needed[i: i + TWITCH_MAX_USERS_PER_REQUEST]
                 await self._fetch_batch(batch)
 
     def get_image(self, player_id: int) -> bytes | None:
@@ -99,8 +128,8 @@ class TwitchProfileCache:
             self._token = str(body["access_token"])
             LOGGER.info("Twitch App Access Token obtained (expires in %s s)", body.get("expires_in", "?"))
 
-    async def _fetch_batch(self, batch: list[tuple[int, str]]) -> None:
-        logins = [tw_id for _, tw_id in batch]
+    async def _fetch_users_by_ids(self, twitch_ids: list[str]) -> dict:
+        params = [("id", twitch_id) for twitch_id in twitch_ids]
         headers = {
             "Client-ID": self._client_id,
             "Authorization": f"Bearer {self._token}",
@@ -108,7 +137,7 @@ class TwitchProfileCache:
         }
         async with self._session.get(
             TWITCH_USERS_URL,
-            params={"login": logins},
+            params=params,
             headers=headers,
         ) as resp:
             if resp.status == 401:
@@ -117,24 +146,26 @@ class TwitchProfileCache:
                 headers["Authorization"] = f"Bearer {self._token}"
                 async with self._session.get(
                     TWITCH_USERS_URL,
-                    params={"login": logins},
+                    params=params,
                     headers=headers,
                 ) as retry_resp:
                     retry_resp.raise_for_status()
-                    data = await retry_resp.json()
-            else:
-                resp.raise_for_status()
-                data = await resp.json()
+                    return await retry_resp.json()
+            resp.raise_for_status()
+            return await resp.json()
 
-        twitch_id_to_player: dict[str, int] = {tw_id: pid for pid, tw_id in batch}
+    async def _fetch_batch(self, batch: list[tuple[int, str]]) -> None:
+        data = await self._fetch_users_by_ids([twitch_id for _, twitch_id in batch])
+
+        twitch_id_to_player: dict[str, int] = {twitch_id: pid for pid, twitch_id in batch}
         for user in data.get("data", ()):
-            tw_login = str(user.get("login", ""))
+            twitch_id = str(user.get("id", ""))
             profile_url = user.get("profile_image_url")
-            pid = twitch_id_to_player.get(tw_login)
+            pid = twitch_id_to_player.get(twitch_id)
             if pid is not None and profile_url:
                 await self._download_profile(pid, profile_url)
-            if tw_login:
-                self._cached_twitch_ids.add(tw_login)
+            if twitch_id:
+                self._cached_twitch_ids.add(twitch_id)
 
     async def _download_profile(self, player_id: int, url: str) -> None:
         try:
@@ -148,6 +179,6 @@ class TwitchProfileCache:
             LOGGER.warning("Failed to download Twitch profile image for player %s from %s", player_id, url)
 
     @staticmethod
-    def _twitch_login(names: NameResolver, player_id: int) -> str | None:
-        """Return the Twitch login for *player_id*, or *None* if unknown."""
+    def _twitch_id(names: NameResolver, player_id: int) -> str | None:
+        """Return the numeric Twitch ID for *player_id*, or *None* if unknown."""
         return names.twitch_id_for(player_id)

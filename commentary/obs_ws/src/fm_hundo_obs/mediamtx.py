@@ -8,6 +8,10 @@ from aiohttp import ClientSession
 from .config import MediaMtxConfig
 from .models import Player
 
+
+def canonical_mediamtx_path(value: str) -> str:
+    return value.strip().lower()
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -33,10 +37,15 @@ class MediaMtxClient:
 
 
 class StreamRegistry:
-    def __init__(self, players: list[Player], mediamtx: MediaMtxClient) -> None:
+    def __init__(
+        self,
+        players: list[Player],
+        mediamtx: MediaMtxClient,
+        stream_paths_by_player_id: dict[int, str] | None = None,
+    ) -> None:
         self.mediamtx = mediamtx
         self.paths_by_player_id: dict[int, str] = {}
-        self.update_players(players)
+        self.update_players(players, stream_paths_by_player_id=stream_paths_by_player_id)
         self._active_paths: set[str] = set()
 
     async def refresh(self) -> bool:
@@ -45,15 +54,21 @@ class StreamRegistry:
         self._active_paths = next_paths
         return changed
 
-    def update_players(self, players: list[Player]) -> None:
-        self.paths_by_player_id = {
-            player.id: player.twitch_id
-            for player in players
-            if player.twitch_id
-        }
+    def update_players(
+        self,
+        players: list[Player],
+        *,
+        stream_paths_by_player_id: dict[int, str] | None = None,
+    ) -> None:
+        stream_paths_by_player_id = stream_paths_by_player_id or {}
+        self.paths_by_player_id = {}
+        for player in players:
+            path = stream_paths_by_player_id.get(player.id) or player.twitch_id
+            if path:
+                self.paths_by_player_id[player.id] = canonical_mediamtx_path(path)
 
     def set_active_paths_for_tests(self, paths: set[str]) -> None:
-        self._active_paths = set(paths)
+        self._active_paths = {canonical_mediamtx_path(path) for path in paths}
 
     def active_paths_snapshot(self) -> set[str]:
         return set(self._active_paths)
@@ -84,7 +99,7 @@ def parse_active_paths(payload: dict) -> set[str]:
         if not name:
             continue
         if _path_is_active(item):
-            paths.add(str(name))
+            paths.add(canonical_mediamtx_path(str(name)))
     return paths
 
 
