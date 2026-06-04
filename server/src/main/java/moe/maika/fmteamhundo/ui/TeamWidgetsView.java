@@ -180,6 +180,30 @@ public class TeamWidgetsView extends VerticalLayout implements HasUrlParameter<S
                         String.format("/widgets/v4-arcade.html?teamId=%d&limit=5&direction=bottom", teamId),
                         String.format("/widgets/v4-arcade-wide.html?teamId=%d&limit=5&direction=bottom", teamId),
                         "/widget_previews/v4.png"
+                ),
+                new WidgetRow(
+                        "Parchment",
+                        String.format("/widgets/v5-parchment.html?teamId=%d&limit=5&direction=top", teamId),
+                        String.format("/widgets/v5-parchment-wide.html?teamId=%d&limit=5&direction=top", teamId),
+                        "/widget_previews/v5.png"
+                ),
+                new WidgetRow(
+                        "Hologram",
+                        String.format("/widgets/v6-hologram.html?teamId=%d&limit=5&direction=bottom", teamId),
+                        String.format("/widgets/v6-hologram-wide.html?teamId=%d&limit=5&direction=bottom", teamId),
+                        "/widget_previews/v6.png"
+                ),
+                new WidgetRow(
+                        "Manga",
+                        String.format("/widgets/v7-manga.html?teamId=%d&limit=5&direction=top", teamId),
+                        String.format("/widgets/v7-manga-wide.html?teamId=%d&limit=5&direction=top", teamId),
+                        "/widget_previews/v7.png"
+                ),
+                new WidgetRow(
+                        "Minimalist",
+                        String.format("/widgets/v8-minimalist.html?teamId=%d&limit=5&direction=top", teamId),
+                        String.format("/widgets/v8-minimalist-wide.html?teamId=%d&limit=5&direction=top", teamId),
+                        "/widget_previews/v8.png"
                 )
         );
 

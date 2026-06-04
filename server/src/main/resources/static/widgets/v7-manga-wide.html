@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Manga Wide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Kanit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --text-color: #ffffff;
+            --border-color: #ff2d55;
+            --item-bg: #1a1a1a;
+            --accent: #ffcc00;
+        }
+        body {
+            margin: 0;
+            padding: 15px;
+            font-family: 'Kanit', 'Bangers', sans-serif;
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 20% 10%, rgba(255,45,85,0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 90%, rgba(255,204,0,0.08) 0%, transparent 50%);
+            color: var(--text-color);
+            width: 450px;
+            box-sizing: border-box;
+            border: 3px solid #2a2a2a;
+            border-image: repeating-linear-gradient(-45deg, #2a2a2a, #2a2a2a 4px, #3a3a3a 4px, #3a3a3a 8px) 3;
+        }
+        .acquisition-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .acquisition-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: var(--item-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 0;
+            padding: 10px;
+            opacity: 0;
+            transform: translateX(-100%) skewX(-5deg);
+            animation: dashIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            box-shadow: 5px 5px 0px #000000;
+            position: relative;
+            clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+        }
+        .acquisition-item.slide-bottom {
+            transform: translateX(100%) skewX(5deg);
+            animation: dashInBottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        @keyframes dashIn {
+            to { opacity: 1; transform: translateX(0) skewX(0); }
+        }
+        @keyframes dashInBottom {
+            to { opacity: 1; transform: translateX(0) skewX(0); }
+        }
+        .card-image {
+            width: 60px;
+            height: 84px;
+            object-fit: cover;
+            border-radius: 0;
+            border: 2px solid var(--accent);
+            box-shadow: 3px 3px 0px #000000;
+            flex-shrink: 0;
+        }
+        .card-name {
+            font-size: 17px;
+            font-weight: 800;
+            line-height: 1.2;
+            flex: 1;
+            word-break: break-word;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+        }
+        .card-name::after {
+            content: " ★";
+            color: var(--accent);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const teamId = parseInt(params.get('teamId') || '0', 10);
+        const limit = parseInt(params.get('limit') || '5', 10);
+        const direction = params.get('direction') || 'top';
+
+        let cardMap = {};
+        const list = document.getElementById('acquisitionList');
+        let acquisitions = [];
+
+        async function init() {
+            try {
+                const response = await fetch('cardinfo.json');
+                const data = await response.json();
+                data.forEach(item => {
+                    cardMap[item.cardId] = item.cardName;
+                });
+                connectWebSocket();
+            } catch (error) {
+                console.error('Failed to load cardinfo.json:', error);
+            }
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/firehose/team`;
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => console.log('WebSocket connected');
+            ws.onclose = () => {
+                console.log('WebSocket closed, reconnecting in 2s...');
+                setTimeout(connectWebSocket, 2000);
+            };
+            ws.onerror = (error) => console.error('WebSocket error:', error);
+
+            ws.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    if (payload.teamId !== teamId || !payload.newAcquisitions) return;
+
+                    payload.newAcquisitions.forEach(acq => {
+                        addAcquisition(acq);
+                    });
+                } catch (e) {
+                    console.error('Failed to parse WS message:', e);
+                }
+            };
+        }
+
+        function addAcquisition(acq) {
+            const cardIdStr = String(acq.cardId).padStart(3, '0');
+            const cardName = cardMap[acq.cardId] || `??? (${acq.cardId})`;
+            const imageUrl = `https://hundo.maika.moe/nginx_managed/cards/${cardIdStr}.PNG`;
+
+            const li = document.createElement('li');
+            li.className = `acquisition-item ${direction === 'bottom' ? 'slide-bottom' : ''}`;
+            li.innerHTML = `
+                <img src="${imageUrl}" alt="${cardName}" class="card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2284%22><rect width=%2260%22 height=%2284%22 fill=%22%231a1a1a%22 stroke=%22%23ffcc00%22 stroke-width=%222%22/></svg>'">
+                <span class="card-name">${cardName}</span>
+            `;
+
+            if (direction === 'top') {
+                list.prepend(li);
+                acquisitions.unshift(acq);
+            } else {
+                list.appendChild(li);
+                acquisitions.push(acq);
+            }
+
+            if (acquisitions.length > limit) {
+                if (direction === 'top') {
+                    acquisitions.pop();
+                    list.removeChild(list.lastElementChild);
+                } else {
+                    acquisitions.shift();
+                    list.removeChild(list.firstElementChild);
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
