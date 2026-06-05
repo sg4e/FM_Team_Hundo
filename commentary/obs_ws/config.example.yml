@@ -97,9 +97,10 @@ portraits:
   directory: ""
 
 twitch:
-  # Required in production mode. Used to fetch player Twitch profile images for the cut-in popup.
+  # Required in production and simulation modes. Used to resolve logins and fetch Twitch profile images.
   client_id: ""
   client_secret: ""
 
-# Player stream paths are derived from /api/players twitchId:
-# rtsp://127.0.0.1:8554/{twitchId}
+# Player stream paths are resolved from /api/players numeric twitchId through Twitch Helix:
+# rtsp://127.0.0.1:8554/{lowercaseMainTwitchLogin}
+# If Helix lookup fails, obs_ws logs a warning and falls back to the lowercase player display name.

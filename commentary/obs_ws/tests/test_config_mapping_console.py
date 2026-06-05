@@ -251,7 +251,7 @@ def test_validate_config_raises_on_missing_portraits_dir(tmp_path):
     config_path = tmp_path / "config.yml"
     config = AppConfig(portraits=PortraitsConfig(directory=str(tmp_path / "nonexistent")))
     with pytest.raises(ValueError, match="does not exist"):
-        _validate_config(config, config_path, simulate_mediamtx=False)
+        _validate_config(config, config_path)
 
 
 def test_validate_config_raises_on_empty_portraits_dir(tmp_path):
@@ -261,7 +261,7 @@ def test_validate_config_raises_on_empty_portraits_dir(tmp_path):
     empty_dir.mkdir()
     config = AppConfig(portraits=PortraitsConfig(directory=str(empty_dir)))
     with pytest.raises(ValueError, match="contains no duelist"):
-        _validate_config(config, config_path, simulate_mediamtx=False)
+        _validate_config(config, config_path)
 
 
 def test_validate_config_passes_with_valid_portraits_dir(tmp_path):
@@ -275,8 +275,9 @@ def test_validate_config_passes_with_valid_portraits_dir(tmp_path):
     config = AppConfig(
         obs=ObsConfig(alert_audio_path=str(audio_file), stream_volume_mul=0.5),
         portraits=PortraitsConfig(directory=str(portraits_dir)),
+        twitch=TwitchConfig(client_id="test_id", client_secret="test_secret"),
     )
-    _validate_config(config, config_path, simulate_mediamtx=True)
+    _validate_config(config, config_path)
 
 
 def test_validate_config_raises_on_missing_stream_volume_mul(tmp_path):
@@ -293,7 +294,7 @@ def test_validate_config_raises_on_missing_stream_volume_mul(tmp_path):
         portraits=PortraitsConfig(directory=str(portraits_dir)),
     )
     with pytest.raises(ValueError, match="stream_volume_mul"):
-        _validate_config(config, config_path, simulate_mediamtx=True)
+        _validate_config(config, config_path)
 
 
 def test_validate_config_raises_on_missing_alert_audio_path(tmp_path):
@@ -304,7 +305,7 @@ def test_validate_config_raises_on_missing_alert_audio_path(tmp_path):
     (portraits_dir / "duelist_001.png").write_bytes(b"fake")
     config = AppConfig(portraits=PortraitsConfig(directory=str(portraits_dir)))
     with pytest.raises(ValueError, match="alert_audio_path"):
-        _validate_config(config, config_path, simulate_mediamtx=True)
+        _validate_config(config, config_path)
 
 
 def test_validate_config_raises_on_missing_twitch_creds_in_production(tmp_path):
@@ -321,11 +322,11 @@ def test_validate_config_raises_on_missing_twitch_creds_in_production(tmp_path):
         twitch=TwitchConfig(),
     )
     with pytest.raises(ValueError, match="twitch.client_id"):
-        _validate_config(config, config_path, simulate_mediamtx=False)
+        _validate_config(config, config_path)
 
 
-def test_validate_config_skips_twitch_check_in_simulation(tmp_path):
-    """_validate_config does not check Twitch creds in simulation mode."""
+def test_validate_config_requires_twitch_creds_in_simulation(tmp_path):
+    """Simulation requires Twitch credentials for feature parity with production."""
     config_path = tmp_path / "config.yml"
     portraits_dir = tmp_path / "portraits"
     portraits_dir.mkdir()
@@ -337,4 +338,5 @@ def test_validate_config_skips_twitch_check_in_simulation(tmp_path):
         portraits=PortraitsConfig(directory=str(portraits_dir)),
         twitch=TwitchConfig(),
     )
-    _validate_config(config, config_path, simulate_mediamtx=True)
+    with pytest.raises(ValueError, match="twitch.client_id"):
+        _validate_config(config, config_path)

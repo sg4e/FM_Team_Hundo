@@ -57,6 +57,13 @@ When adding new entries, place them under the relevant component heading. Keep d
 - The existing intro card CSS (background, padding, border-left, box-shadow) is kept exactly as-is; images bookend it outside the card background.
 - The intro WebSocket payload was extended with `playerId`, `opponentId`, and `useTwitchProfile`.
 
+### MediaMTX Stream Identity
+
+- Production MediaMTX paths are lowercase Twitch main-account logins, not numeric Twitch IDs.
+- The OBS controller resolves `/api/players` numeric `twitchId` values through Twitch Helix `Get Users` by ID and uses the returned `login` lowercased as the stream path.
+- If Helix login resolution fails, the OBS controller logs a warning and falls back to the lowercase player display name rather than failing startup.
+- Restream helper alternate-account mode is source-only: `ALT_CHANNEL` may be tried first, but FFmpeg still publishes into the lowercase `MAIN_CHANNEL` path.
+
 ### Twitch Profile Image Cache
 
 - Profile images are fetched via the Twitch API `Get Users` endpoint using an App Access Token (`client_credentials` grant).
@@ -64,12 +71,13 @@ When adding new entries, place them under the relevant component heading. Keep d
 - Images are fetched once per player at startup or when they first appear as streaming, and never refreshed during the app lifetime.
 - Only currently-streaming players (from MediaMTX `StreamRegistry`) are pre-fetched — not the full roster.
 - A periodic sync loop (every 10 seconds) checks for new streaming players and fetches their profiles.
-- Batch requests (up to 100 logins per Twitch API call) are used at startup; on-demand fetches use `asyncio.Semaphore(1)` to prevent rate-limit bursts.
+- Batch requests (up to 100 numeric Twitch IDs per Twitch API call) are used at startup; on-demand fetches use `asyncio.Semaphore(1)` to prevent rate-limit bursts.
 
 ### Simulation Mode & Image Fallbacks
 
-- In simulation mode (`--simulate-mediamtx`), no `TwitchProfileCache` is created; `useTwitchProfile: false` is sent in every intro payload.
-- When `useTwitchProfile` is false, the browser loads `/profile/0`, which serves `duelist_000.png`.
+- Simulation mode (`--simulate-mediamtx`) maintains parity with production for implemented Twitch features: it creates a `TwitchProfileCache`, queries active MediaMTX paths as Twitch logins, and sends `useTwitchProfile: true` in intro payloads.
+- Twitch credentials are required in both production and simulation modes.
+- When no Twitch profile image is available, the profile route serves `duelist_000.png` as a fallback.
 - Opponent portraits are served from the `portraits.directory` path: `duelist_{opponent_id:03d}.png`.
 - If the specific portrait file doesn't exist, `duelist_000.png` is served as a fallback.
 - Both fallback behaviors are handled server-side; the browser overlay is unaware of fallback logic.
@@ -86,7 +94,7 @@ When adding new entries, place them under the relevant component heading. Keep d
 - The path is resolved as-is (relative paths are relative to the CWD when the app starts).
 - At startup, the app validates that the directory exists and contains at least one `duelist_*.png` file, raising a clear error if not.
 - The `ygofm_portraits/` directory is gitignored (listed in `obs_ws/.gitignore`).
-- Twitch credentials (`twitch.client_id`, `twitch.client_secret`) are validated at startup in production mode and raise a clear error if missing. Not checked in simulation mode.
+- Twitch credentials (`twitch.client_id`, `twitch.client_secret`) are validated at startup in both production and simulation modes and raise a clear error if missing.
 
 ### Alert Audio
 

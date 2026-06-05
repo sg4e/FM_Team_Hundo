@@ -82,7 +82,6 @@ class AcquisitionScheduler:
         timing: TimingConfig,
         scene_lock: Callable[[], Awaitable[bool]] | None = None,
         *,
-        simulate_mediamtx: bool = False,
         alert_audio_source: str | None = None,
         overlay_scene: str | None = None,
     ) -> None:
@@ -93,7 +92,6 @@ class AcquisitionScheduler:
         self.features = features
         self.timing = timing
         self.scene_lock = scene_lock
-        self.simulate_mediamtx = simulate_mediamtx
         self._active_task: asyncio.Task[None] | None = None
         self._alert_audio_source = alert_audio_source
         self._overlay_scene = overlay_scene
@@ -203,7 +201,7 @@ class AcquisitionScheduler:
                 self.timing.intro_seconds,
                 player_id=acquisition.player_id,
                 opponent_id=acquisition.opponent_id,
-                use_twitch_profile=not self.simulate_mediamtx,
+                use_twitch_profile=True,
             )
 
         if not visible_action:

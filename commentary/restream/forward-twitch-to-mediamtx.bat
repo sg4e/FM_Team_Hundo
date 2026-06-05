@@ -11,7 +11,7 @@ REM   forward-twitch-to-mediamtx.bat MAIN_CHANNEL ALT_CHANNEL
 REM   MAIN_CHANNEL and ALT_CHANNEL may also be Twitch URLs.
 REM
 REM Behavior:
-REM   - MediaMTX path always uses MAIN_CHANNEL.
+REM   - MediaMTX path always uses MAIN_CHANNEL lowercased.
 REM   - If ALT_CHANNEL is provided:
 REM       1. Try ALT_CHANNEL first.
 REM       2. When ALT_CHANNEL is offline or ends, wait 5 seconds.
@@ -132,5 +132,18 @@ set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:http://twitch.tv/=!"
 set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:www.twitch.tv/=!"
 set "NORMALIZED_CHANNEL=!NORMALIZED_CHANNEL:twitch.tv/=!"
 for /f "tokens=1 delims=/?" %%A in ("!NORMALIZED_CHANNEL!") do set "NORMALIZED_CHANNEL=%%A"
+call :Lowercase NORMALIZED_CHANNEL
 endlocal & set "%~2=%NORMALIZED_CHANNEL%"
+exit /b 0
+
+
+:Lowercase
+set "LOWER_VALUE=!%~1!"
+for %%P in (
+    "A=a" "B=b" "C=c" "D=d" "E=e" "F=f" "G=g" "H=h" "I=i" "J=j" "K=k" "L=l" "M=m"
+    "N=n" "O=o" "P=p" "Q=q" "R=r" "S=s" "T=t" "U=u" "V=v" "W=w" "X=x" "Y=y" "Z=z"
+) do (
+    for /f "tokens=1,2 delims==" %%A in (%%P) do set "LOWER_VALUE=!LOWER_VALUE:%%A=%%B!"
+)
+set "%~1=!LOWER_VALUE!"
 exit /b 0

@@ -3,8 +3,9 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from fm_hundo_obs.config import AppConfig, ObsConfig
+from fm_hundo_obs.config import AppConfig, ObsConfig, TwitchConfig
 from fm_hundo_obs.main import Application
+from fm_hundo_obs.models import Player
 from fm_hundo_obs.obs import ObsError
 from fm_hundo_obs.overlay import OverlayClientTimeout, OverlayServer
 
@@ -14,6 +15,20 @@ class FakeSession:
         return self
 
     async def __aexit__(self, *_):
+        return None
+
+
+class FakeTwitchProfileCache:
+    def __init__(self, *_):
+        pass
+
+    async def start(self) -> None:
+        pass
+
+    async def sync_streaming_players(self, *_args, **_kwargs) -> None:
+        pass
+
+    def get_image(self, player_id: int):
         return None
 
 
@@ -136,7 +151,10 @@ class CapturingLayoutManager:
 def _valid_config(tmp_path: Path) -> AppConfig:
     audio_file = tmp_path / "alert.wav"
     audio_file.write_bytes(b"fake audio")
-    return AppConfig(obs=ObsConfig(alert_audio_path=str(audio_file)))
+    return AppConfig(
+        obs=ObsConfig(alert_audio_path=str(audio_file)),
+        twitch=TwitchConfig(client_id="test_id", client_secret="test_secret"),
+    )
 
 
 @pytest.mark.asyncio
@@ -159,6 +177,7 @@ async def test_preflight_failure_stops_overlay_and_disconnects_obs(monkeypatch, 
 
     monkeypatch.setattr("fm_hundo_obs.main.ClientSession", lambda: FakeSession())
     monkeypatch.setattr("fm_hundo_obs.main.MediaMtxClient", FakeMediaMtxClient)
+    monkeypatch.setattr("fm_hundo_obs.main.TwitchProfileCache", FakeTwitchProfileCache)
 
     with pytest.raises(ObsError):
         await app.run()
@@ -192,6 +211,7 @@ async def test_overlay_timeout_stops_overlay_and_disconnects_obs(monkeypatch, tm
 
     monkeypatch.setattr("fm_hundo_obs.main.ClientSession", lambda: FakeSession())
     monkeypatch.setattr("fm_hundo_obs.main.MediaMtxClient", FakeMediaMtxClient)
+    monkeypatch.setattr("fm_hundo_obs.main.TwitchProfileCache", FakeTwitchProfileCache)
 
     with pytest.raises(OverlayClientTimeout):
         await app.run()
@@ -384,3 +404,19 @@ async def test_ensure_overlay_obs_setup_creates_alert_audio_source(tmp_path):
     assert alert_audio[3]["restart_on_activate"] is True
     assert alert_audio[3]["close_when_inactive"] is False
     assert alert_audio[4] is False
+
+
+@pytest.mark.asyncio
+async def test_resolve_stream_paths_falls_back_to_lowercase_player_name_on_twitch_failure(caplog):
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=False)  # type: ignore[arg-type]
+
+    class FailingProfileCache:
+        async def resolve_player_logins(self, players):
+            raise RuntimeError("Twitch unavailable")
+
+    app.profile_cache = FailingProfileCache()  # type: ignore[assignment]
+
+    paths = await app._resolve_stream_paths([Player(1, "123456", "RunnerOne", None, 1)])
+
+    assert paths == {1: "runnerone"}
+    assert "falling back to lowercase player display names" in caplog.text

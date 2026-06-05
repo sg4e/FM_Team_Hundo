@@ -24,11 +24,18 @@ py -3.12 -m venv .venv
 ```
 
 Enable the MediaMTX Control API on localhost and keep RTSP enabled. The
-controller expects player paths to match `/api/players` Twitch IDs:
+controller resolves each `/api/players` numeric Twitch ID through Twitch Helix,
+uses the returned main-account login lowercased, and expects MediaMTX paths to
+match that lowercase login:
 
 ```text
-rtsp://127.0.0.1:8554/{twitchId}
+rtsp://127.0.0.1:8554/{lowercaseMainTwitchLogin}
 ```
+
+If Twitch login resolution fails, the controller logs a startup warning and
+falls back to the lowercase player display name. The restream helper publishes
+both main and alternate Twitch sources into the lowercase main-account path, so
+OBS does not need to know whether a player is currently live on main or alt.
 
 OBS should contain one reusable overlay scene with a Browser Source pointed at:
 
@@ -70,10 +77,11 @@ http://127.0.0.1:8765/credits
 - `FM Hundo - Player - {player name}`
 - `FM Hundo - Credits`
 
-Media Sources are stable per player and use MediaMTX RTSP URLs. Inactive streams
-are hidden and configured to close when inactive where OBS supports that Media
-Source setting. Acquisition alerts cut to a player scene; inactive players show a
-managed placeholder rather than a dead RTSP source.
+Media Sources are stable per player and use MediaMTX RTSP URLs based on the
+lowercase main Twitch login resolved from each numeric Twitch ID. Inactive
+streams are hidden and configured to close when inactive where OBS supports that
+Media Source setting. Acquisition alerts cut to a player scene; inactive players
+show a managed placeholder rather than a dead RTSP source.
 
 The `credits` command reloads `credits_scene.yml`, fetches `/api/credits`, cuts
 to `FM Hundo - Credits`, and starts the roll from the beginning. While that
@@ -206,7 +214,10 @@ fm-hundo-obs --config config.yml --simulate-mediamtx
 Simulation mode bypasses the website API and firehose. It discovers active
 MediaMTX paths, creates simulated players from those paths, puts them all on a
 single `Simulation` team, and keeps the normal managed OBS scenes updated as
-paths appear or disappear.
+paths appear or disappear. Implemented Twitch features remain enabled: active
+MediaMTX paths are queried as Twitch logins, and simulated alerts use the cached
+Twitch avatar when the path is a valid Twitch login. Twitch credentials are
+therefore required in simulation mode as well as production mode.
 
 Use `status` to see active paths, then trigger rehearsal alerts with:
 

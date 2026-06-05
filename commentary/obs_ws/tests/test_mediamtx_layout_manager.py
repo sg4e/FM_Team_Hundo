@@ -21,14 +21,18 @@ class FakeMediaMtx:
 
 def players() -> list[Player]:
     return [
-        Player(10, "runner10", "Runner Ten", None, 1),
-        Player(11, "runner11", "Runner Eleven", None, 1),
-        Player(20, "runner20", "Runner Twenty", None, 2),
+        Player(10, "100010", "Runner Ten", None, 1),
+        Player(11, "100011", "Runner Eleven", None, 1),
+        Player(20, "100020", "Runner Twenty", None, 2),
     ]
 
 
+def stream_paths() -> dict[int, str]:
+    return {10: "runner10", 11: "runner11", 20: "runner20"}
+
+
 def registry(active: set[str], roster: list[Player] | None = None) -> StreamRegistry:
-    streams = StreamRegistry(roster or players(), FakeMediaMtx())  # type: ignore[arg-type]
+    streams = StreamRegistry(roster or players(), FakeMediaMtx(), stream_paths_by_player_id=stream_paths())  # type: ignore[arg-type]
     streams.set_active_paths_for_tests(active)
     return streams
 
@@ -67,7 +71,7 @@ def latest_enabled(obs: FakeObs, scene: str, source: str) -> bool:
 def test_parse_active_paths_handles_ready_and_source_shapes():
     payload = {
         "items": [
-            {"name": "runner10", "ready": True},
+            {"name": "Runner10", "ready": True},
             {"name": "runner11", "ready": False, "source": {"type": "rtmpSource"}},
             {"name": "runner20", "source": {"type": "rtmpSource"}},
             {"name": "empty"},
@@ -77,13 +81,21 @@ def test_parse_active_paths_handles_ready_and_source_shapes():
     assert parse_active_paths(payload) == {"runner10", "runner20"}
 
 
-def test_stream_registry_maps_twitch_id_to_rtsp_url_and_active_state():
-    streams = registry({"runner10"})
+def test_stream_registry_maps_resolved_login_to_rtsp_url_and_active_state():
+    streams = registry({"Runner10"})
 
     assert streams.path_for_player(10) == "runner10"
     assert streams.rtsp_url_for_player(10) == "rtsp://127.0.0.1:8554/runner10"
     assert streams.is_player_active(10) is True
     assert streams.is_player_active(11) is False
+
+
+def test_stream_registry_falls_back_to_twitch_id_when_no_resolved_path_is_supplied():
+    streams = StreamRegistry([Player(10, "FallbackLogin", "Runner Ten", None, 1)], FakeMediaMtx())  # type: ignore[arg-type]
+    streams.set_active_paths_for_tests({"fallbacklogin"})
+
+    assert streams.path_for_player(10) == "fallbacklogin"
+    assert streams.is_player_active(10) is True
 
 
 def test_layout_math_fit_inside_and_grid():

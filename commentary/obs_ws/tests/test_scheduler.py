@@ -356,8 +356,8 @@ async def test_intro_uses_twitch_profile_in_production():
 
 
 @pytest.mark.asyncio
-async def test_intro_disables_twitch_profile_in_simulation():
-    """In simulation mode, intro sends use_twitch_profile=False."""
+async def test_intro_uses_twitch_profile_in_simulation():
+    """Simulation alerts keep Twitch profile behavior at production parity."""
     obs = FakeObs(current_scene="Main")
     overlay = FakeOverlay()
     names = NameResolver([Player(10, "ten", "Runner Ten", None, 1)], {5: "Villager2"}, [Team(1, "Alpha")])
@@ -368,13 +368,12 @@ async def test_intro_disables_twitch_profile_in_simulation():
         {10: "Player Ten"},
         FeatureFlags(),
         TimingConfig(acquisition_window_seconds=0.01, intro_seconds=3),
-        simulate_mediamtx=True,
     )
 
     result = await subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5))
 
     assert result.accepted is True
-    assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5, use_twitch_profile=False)]
+    assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5, use_twitch_profile=True)]
 
 
 @pytest.mark.asyncio

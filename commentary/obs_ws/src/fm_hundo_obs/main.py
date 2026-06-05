@@ -17,7 +17,7 @@ from .credits import CreditsConfigError, build_credits_payload, load_credits_sce
 from .logging_setup import setup_logging
 from .managed_layout import ObsLayoutManager
 from .mapping import NameResolver, load_card_names, load_duelist_names
-from .mediamtx import MediaMtxClient, StreamRegistry
+from .mediamtx import MediaMtxClient, StreamRegistry, canonical_mediamtx_path
 from .models import CardAcquisition
 from .obs import DryRunObsController, ObsError, SimpleObsController
 from .overlay import OverlayClientTimeout, OverlayEvents, OverlayServer
@@ -62,6 +62,12 @@ class Application:
             duelists = load_duelist_names(PROJECT_DIR / "duelistinfo.json")
             self.duelist_names = duelists
             mediamtx = MediaMtxClient(self.config.mediamtx, session)
+            self.profile_cache = TwitchProfileCache(
+                self.config.twitch.client_id,
+                self.config.twitch.client_secret,
+                session,
+            )
+            await self.profile_cache.start()
             if self.simulate_mediamtx:
                 self.streams = StreamRegistry([], mediamtx)
                 await self.streams.refresh()
@@ -72,20 +78,14 @@ class Application:
             else:
                 players = await api.get_players()
                 teams = await api.get_teams()
-                self.streams = StreamRegistry(players, mediamtx)
+                stream_paths = await self._resolve_stream_paths(players)
+                self.streams = StreamRegistry(players, mediamtx, stream_paths_by_player_id=stream_paths)
                 await self.streams.refresh()
             names = NameResolver(players, duelists, teams)
             self.names = names
 
-            if not self.simulate_mediamtx and self.config.twitch.client_id and self.config.twitch.client_secret:
-                self.profile_cache = TwitchProfileCache(
-                    self.config.twitch.client_id,
-                    self.config.twitch.client_secret,
-                    session,
-                )
-                await self.profile_cache.start()
-                active_ids = self.streams.active_player_ids()
-                await self.profile_cache.sync_streaming_players(active_ids, names)
+            if self.profile_cache is not None:
+                await self._sync_profile_cache_once()
                 self.overlay_server.profile_cache = self.profile_cache
 
             startup_complete = False
@@ -115,7 +115,6 @@ class Application:
                 self.config.features,
                 self.config.timing,
                 scene_lock=self._credits_scene_active,
-                simulate_mediamtx=self.simulate_mediamtx,
                 alert_audio_source=self.config.obs.alert_audio_source_name,
                 overlay_scene=self.config.obs.overlay_scene,
             )
@@ -264,18 +263,58 @@ class Application:
             LOGGER.exception("Unable to reconcile managed scene audio focus")
             return False
 
+    async def _resolve_stream_paths(self, players) -> dict[int, str]:
+        assert self.profile_cache is not None
+        fallback_paths = {
+            player.id: canonical_mediamtx_path(player.name)
+            for player in players
+            if player.name
+        }
+        try:
+            resolved_paths = await self.profile_cache.resolve_player_logins(players)
+        except Exception:
+            LOGGER.warning(
+                "Unable to resolve Twitch logins from numeric Twitch IDs; falling back to lowercase "
+                "player display names for MediaMTX paths. Verify restream paths manually.",
+                exc_info=True,
+            )
+            return fallback_paths
+
+        missing = [player for player in players if player.id not in resolved_paths]
+        for player in missing:
+            fallback = fallback_paths.get(player.id)
+            if fallback:
+                LOGGER.warning(
+                    "Unable to resolve Twitch login for player %s (Twitch ID %s); falling back to lowercase "
+                    "player display name %r for MediaMTX path.",
+                    player.name,
+                    player.twitch_id or "unknown",
+                    fallback,
+                )
+                resolved_paths[player.id] = fallback
+        return resolved_paths
+
     async def _profile_cache_sync_loop(self) -> None:
         """Periodically sync the Twitch profile cache with active streaming players."""
         assert self.profile_cache is not None
         assert self.names is not None
         assert self.streams is not None
         while True:
-            try:
-                active_ids = self.streams.active_player_ids()
-                await self.profile_cache.sync_streaming_players(active_ids, self.names)
-            except Exception:
-                LOGGER.exception("Twitch profile cache sync failed; will retry")
+            await self._sync_profile_cache_once()
             await asyncio.sleep(10)
+
+    async def _sync_profile_cache_once(self) -> None:
+        assert self.profile_cache is not None
+        assert self.names is not None
+        assert self.streams is not None
+        try:
+            await self.profile_cache.sync_streaming_players(
+                self.streams.active_player_ids(),
+                self.names,
+                twitch_ids_are_logins=self.simulate_mediamtx,
+            )
+        except Exception:
+            LOGGER.exception("Twitch profile cache sync failed; will retry")
 
     async def _simulation_layout_loop(self) -> None:
         assert self.streams is not None
@@ -288,6 +327,8 @@ class Application:
                 if self.names is not None:
                     self.names.update_players(self.simulation_roster.players)
                     self.names.update_teams(self.simulation_roster.teams)
+                if self.profile_cache is not None:
+                    await self._sync_profile_cache_once()
                 await self.layout_manager.update_roster(self.simulation_roster.players, self.simulation_roster.teams)
             await asyncio.sleep(self.config.mediamtx.poll_seconds)
 
@@ -475,7 +516,7 @@ class Application:
         return player_id
 
 
-def _validate_config(config: AppConfig, config_path: Path, simulate_mediamtx: bool) -> None:
+def _validate_config(config: AppConfig, config_path: Path) -> None:
     """Validate config at startup before connecting to anything."""
     portraits_dir = config.portraits.directory
     if not portraits_dir:
@@ -524,17 +565,16 @@ def _validate_config(config: AppConfig, config_path: Path, simulate_mediamtx: bo
             "(e.g. 0.25 for approximately -12 dB, or 1.0 for default volume)."
         )
 
-    if not simulate_mediamtx:
-        if not config.twitch.client_id:
-            raise ValueError(
-                "twitch.client_id is not configured. Set it in config.yml to enable "
-                "Twitch profile image fetching for the cut-in popup."
-            )
-        if not config.twitch.client_secret:
-            raise ValueError(
-                "twitch.client_secret is not configured. Set it in config.yml to enable "
-                "Twitch profile image fetching for the cut-in popup."
-            )
+    if not config.twitch.client_id:
+        raise ValueError(
+            "twitch.client_id is not configured. Set it in config.yml to enable "
+            "Twitch profile image fetching for the cut-in popup."
+        )
+    if not config.twitch.client_secret:
+        raise ValueError(
+            "twitch.client_secret is not configured. Set it in config.yml to enable "
+            "Twitch profile image fetching for the cut-in popup."
+        )
 
 
 def _stream_filter_sidechain_sources(config: AppConfig) -> list[str]:
@@ -562,7 +602,7 @@ async def async_main() -> int:
     args = parse_args()
     setup_logging(PROJECT_DIR)
     config = load_config(args.config)
-    _validate_config(config, args.config, args.simulate_mediamtx)
+    _validate_config(config, args.config)
     app = Application(config, args.config, simulate_mediamtx=args.simulate_mediamtx)
     try:
         await app.run()
