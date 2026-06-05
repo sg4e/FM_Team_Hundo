@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Terminal Wide</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        :root { --bg:#021006; --green:#71ff8a; --dim:#2bbb55; }
+        body { margin:0; padding:10px; width:450px; box-sizing:border-box; color:var(--green); font-family:'Share Tech Mono', monospace; background:linear-gradient(rgba(113,255,138,.06) 50%, transparent 50%), #021006; background-size:100% 4px; text-shadow:0 0 6px rgba(113,255,138,.7); }
+        .acquisition-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+        .acquisition-item { display:grid; grid-template-columns:40px 76px 1fr; gap:10px; align-items:center; padding:6px 10px; border:1px solid rgba(113,255,138,.45); border-left:6px solid var(--green); background:rgba(0,0,0,.6); opacity:0; transform:translateX(-30px); animation:bootWide .32s steps(5,end) forwards; }
+        .acquisition-item.slide-top, .acquisition-item.slide-bottom { transform:translateX(30px); }
+        @keyframes bootWide { to { opacity:1; transform:translateX(0); } }
+        .card-image { width:36px; height:50px; object-fit:cover; filter:grayscale(1) contrast(1.35) sepia(1) hue-rotate(65deg) saturate(4); border:1px solid var(--dim); }
+        .code { color:var(--dim); font-size:13px; } .card-name { font-size:16px; text-transform:uppercase; }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script src="acquisition-widget-core.js"></script>
+    <script>
+        FmAcquisitionWidget.create({
+            defaultDirection: 'bottom',
+            renderItem(acq, { cardName, imageUrl, direction, placeholder, createCardImage }) {
+            const li = document.createElement('li');
+                        li.className = `acquisition-item ${direction === 'top' ? 'slide-top' : ''}`;
+                        const img = createCardImage({ src: imageUrl, alt: cardName, className: 'card-image', fallbackSrc: placeholder('#021006', '#71ff8a', 'ERR') });
+                        const code = document.createElement('span'); code.className = 'code'; code.textContent = `CARD_${String(acq.cardId).padStart(3, '0')}`;
+                        const name = document.createElement('span'); name.className = 'card-name'; name.textContent = `LOAD ${cardName}`;
+                        li.append(img, code, name);
+                        return li;
+            }
+        });
+    </script>
+</body>
+</html>

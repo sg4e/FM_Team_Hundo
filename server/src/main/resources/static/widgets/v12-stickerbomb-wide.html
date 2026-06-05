@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Stickerbomb Wide</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@800&display=swap');
+        :root { --pink:#ff4db8; --cyan:#32f6ff; --yellow:#ffe14d; --ink:#141019; }
+        body { margin:0; padding:12px; width:450px; box-sizing:border-box; font-family:Inter, sans-serif; color:var(--ink); background:linear-gradient(135deg, #ff8fd3 0 32%, #7af7ff 32% 66%, #fff06b 66%); }
+        .acquisition-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+        .acquisition-item { display:grid; grid-template-columns:50px 78px 1fr; gap:12px; align-items:center; padding:7px 14px 7px 8px; background:#fffdf4; border:3px solid var(--ink); border-radius:999px 10px 999px 10px; box-shadow:6px 6px 0 var(--pink); opacity:0; transform:translateX(38px) rotate(2deg); animation:slapWide .42s cubic-bezier(.18,1.35,.5,1) forwards; }
+        .acquisition-item:nth-child(even) { box-shadow:6px 6px 0 var(--cyan); }
+        .acquisition-item.slide-top, .acquisition-item.slide-bottom { transform:translateX(-38px) rotate(-2deg); }
+        @keyframes slapWide { to { opacity:1; transform:translateX(0) rotate(0); } }
+        .card-image { width:44px; height:61px; object-fit:cover; border:3px solid var(--ink); border-radius:999px; }
+        .tag { font-family:Bangers, Inter, sans-serif; font-size:20px; color:var(--pink); -webkit-text-stroke:1px var(--ink); } .card-name { font-family:Bangers, Inter, sans-serif; font-size:25px; text-transform:uppercase; letter-spacing:.04em; }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script src="acquisition-widget-core.js"></script>
+    <script>
+        FmAcquisitionWidget.create({
+            defaultDirection: 'bottom',
+            renderItem(acq, { cardName, imageUrl, direction, placeholder, createCardImage }) {
+            const li = document.createElement('li');
+                        li.className = `acquisition-item ${direction === 'top' ? 'slide-top' : ''}`;
+                        const img = createCardImage({ src: imageUrl, alt: cardName, className: 'card-image', fallbackSrc: placeholder('#fffdf4', '#141019', 'POW') });
+                        const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'NEW!';
+                        const name = document.createElement('span'); name.className = 'card-name'; name.textContent = cardName;
+                        li.append(img, tag, name);
+                        return li;
+            }
+        });
+    </script>
+</body>
+</html>

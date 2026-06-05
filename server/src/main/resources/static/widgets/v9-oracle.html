@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Oracle</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Spectral:wght@500&display=swap');
+        :root { --void:#120817; --plum:#2a1232; --gold:#f5d47a; --rose:#f59fbc; --ink:#fff4d1; }
+        body { margin:0; padding:14px; width:240px; box-sizing:border-box; color:var(--ink); font-family:'Spectral', serif; background:radial-gradient(circle at 50% -20%, #6a3a85 0, var(--void) 56%, #060208 100%); overflow:hidden; }
+        body::before { content:'✦ ✧ ✦'; position:fixed; inset:4px 0 auto 0; text-align:center; color:rgba(245,212,122,.55); letter-spacing:14px; font-size:12px; pointer-events:none; }
+        .acquisition-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:13px; }
+        .acquisition-item { position:relative; display:grid; grid-template-columns:46px 1fr; gap:10px; align-items:center; min-height:68px; padding:9px 10px; border:1px solid rgba(245,212,122,.75); border-radius:999px 14px 999px 14px; background:linear-gradient(145deg, rgba(42,18,50,.92), rgba(11,5,16,.94)); box-shadow:0 0 0 2px rgba(245,212,122,.12), 0 13px 30px rgba(0,0,0,.45), inset 0 0 24px rgba(245,159,188,.10); opacity:0; transform:translateY(-24px) rotate(-2deg); animation:oracleDrop .55s ease-out forwards; }
+        .acquisition-item::after { content:attr(data-sigil); position:absolute; right:10px; top:4px; color:rgba(245,212,122,.35); font-size:18px; }
+        .acquisition-item.slide-bottom { transform:translateY(24px) rotate(2deg); }
+        @keyframes oracleDrop { to { opacity:1; transform:translateY(0) rotate(0deg); } }
+        .card-image { width:42px; height:59px; object-fit:cover; border-radius:50% 50% 8px 8px; border:2px solid var(--gold); box-shadow:0 0 14px rgba(245,212,122,.45); }
+        .card-name { font-family:'Cinzel', serif; font-weight:800; font-size:12px; line-height:1.25; text-transform:uppercase; letter-spacing:.06em; text-shadow:0 0 10px rgba(245,159,188,.45); }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script src="acquisition-widget-core.js"></script>
+    <script>
+        FmAcquisitionWidget.create({
+            defaultDirection: 'top',
+            renderItem(acq, { cardName, imageUrl, direction, placeholder, createCardImage }) {
+            const li = document.createElement('li');
+                        li.className = `acquisition-item ${direction === 'bottom' ? 'slide-bottom' : ''}`;
+                        li.dataset.sigil = '✦';
+                        const img = createCardImage({ src: imageUrl, alt: cardName, className: 'card-image', fallbackSrc: placeholder('#120817', '#f5d47a', '✦') });
+                        const name = document.createElement('span'); name.className = 'card-name'; name.textContent = cardName;
+                        li.append(img, name);
+                        return li;
+            }
+        });
+    </script>
+</body>
+</html>
