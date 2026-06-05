@@ -83,6 +83,31 @@ async def test_sync_streaming_players_fetches_new_profiles_by_numeric_id():
 
 
 @pytest.mark.asyncio
+async def test_sync_simulation_players_fetches_profiles_by_case_insensitive_login():
+    session = mock.AsyncMock(spec=ClientSession)
+    users_resp = _fake_json_response({
+        "data": [
+            {"id": "111", "login": "streamerone", "profile_image_url": "http://fake/img1"},
+        ],
+    })
+    session.get.return_value = FakeContextManager(users_resp)
+    cache = TwitchProfileCache("test_client", "test_secret", session)
+    cache._token = "test_token"
+    names = NameResolver([Player(9001, "StreamerOne", "StreamerOne", None, 1)], {})
+
+    async def fake_download(pid, url):
+        cache._cache[pid] = b"simulation_img"
+
+    cache._download_profile = fake_download  # type: ignore[method-assign]
+
+    await cache.sync_streaming_players({9001}, names, twitch_ids_are_logins=True)
+
+    assert cache.get_image(9001) == b"simulation_img"
+    assert session.get.call_args.kwargs["params"] == [("login", "StreamerOne")]
+    assert "login:streamerone" in cache._cached_twitch_identifiers
+
+
+@pytest.mark.asyncio
 async def test_resolve_player_logins_uses_numeric_ids_and_lowercases_logins():
     session = mock.AsyncMock(spec=ClientSession)
     users_resp = _fake_json_response({
@@ -116,7 +141,7 @@ async def test_sync_streaming_players_skips_cached():
     cache = TwitchProfileCache("test_client", "test_secret", session)
     cache._token = "test_token"
     cache._cache[1] = b"existing"
-    cache._cached_twitch_ids.add("111")
+    cache._cached_twitch_identifiers.add("id:111")
 
     names = NameResolver(
         [Player(1, "111", "Streamer One", None, 1), Player(2, "222", "Streamer Two", None, 1)],

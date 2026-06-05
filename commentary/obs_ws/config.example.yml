@@ -97,7 +97,7 @@ portraits:
   directory: ""
 
 twitch:
-  # Required in production mode. Used to fetch player Twitch profile images for the cut-in popup.
+  # Required in production and simulation modes. Used to resolve logins and fetch Twitch profile images.
   client_id: ""
   client_secret: ""
 

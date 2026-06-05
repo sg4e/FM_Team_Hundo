@@ -140,7 +140,7 @@ Important areas:
 - `overlay.py`, `static/overlay.html`, `static/credits.html`: local browser overlay server and assets.
 - `scheduler.py`, `console.py`, `simulation.py`: alert scheduling, operator console, and simulated stream mode.
 - `mediamtx.py`: MediaMTX Control API integration; production stream paths are lowercase main Twitch logins.
-- `twitch_cache.py`: Twitch Get Users/App Access Token profile image cache and numeric-ID-to-login resolution.
+- `twitch_cache.py`: Twitch Get Users/App Access Token profile image cache, numeric-ID-to-login resolution for production, and login-based profile lookup for simulation.
 - `tests/`: fake OBS/MediaMTX/API tests for managed layouts and behavior.
 
 Useful commands (run the test suite from an activated virtual environment; install test dependencies with `python -m pip install -e '.[dev]'`):

@@ -144,3 +144,27 @@ async def test_layout_update_roster_adds_and_retires_simulated_paths():
     ]
     assert retired_item_ids
     assert ("FM Hundo - All Streamers", retired_item_ids[0], False) in obs.enabled
+
+
+@pytest.mark.asyncio
+async def test_simulation_profile_sync_queries_active_paths_as_twitch_logins():
+    app = Application(AppConfig(), config_path=None, simulate_mediamtx=True)  # type: ignore[arg-type]
+    roster = build_simulation_roster({"streamerone"})
+    streams = StreamRegistry(roster.players, FakeMediaMtx())  # type: ignore[arg-type]
+    streams.set_active_paths_for_tests({"streamerone"})
+    app.streams = streams
+    app.names = NameResolver(roster.players, {}, roster.teams)
+
+    class CapturingProfileCache:
+        def __init__(self):
+            self.calls = []
+
+        async def sync_streaming_players(self, active_ids, names, *, twitch_ids_are_logins=False):
+            self.calls.append((active_ids, names, twitch_ids_are_logins))
+
+    cache = CapturingProfileCache()
+    app.profile_cache = cache  # type: ignore[assignment]
+
+    await app._sync_profile_cache_once()
+
+    assert cache.calls == [({simulated_player_id("streamerone")}, app.names, True)]

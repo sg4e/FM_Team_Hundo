@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from fm_hundo_obs.config import AppConfig, ObsConfig
+from fm_hundo_obs.config import AppConfig, ObsConfig, TwitchConfig
 from fm_hundo_obs.main import Application
 from fm_hundo_obs.models import Player
 from fm_hundo_obs.obs import ObsError
@@ -15,6 +15,20 @@ class FakeSession:
         return self
 
     async def __aexit__(self, *_):
+        return None
+
+
+class FakeTwitchProfileCache:
+    def __init__(self, *_):
+        pass
+
+    async def start(self) -> None:
+        pass
+
+    async def sync_streaming_players(self, *_args, **_kwargs) -> None:
+        pass
+
+    def get_image(self, player_id: int):
         return None
 
 
@@ -137,7 +151,10 @@ class CapturingLayoutManager:
 def _valid_config(tmp_path: Path) -> AppConfig:
     audio_file = tmp_path / "alert.wav"
     audio_file.write_bytes(b"fake audio")
-    return AppConfig(obs=ObsConfig(alert_audio_path=str(audio_file)))
+    return AppConfig(
+        obs=ObsConfig(alert_audio_path=str(audio_file)),
+        twitch=TwitchConfig(client_id="test_id", client_secret="test_secret"),
+    )
 
 
 @pytest.mark.asyncio
@@ -160,6 +177,7 @@ async def test_preflight_failure_stops_overlay_and_disconnects_obs(monkeypatch, 
 
     monkeypatch.setattr("fm_hundo_obs.main.ClientSession", lambda: FakeSession())
     monkeypatch.setattr("fm_hundo_obs.main.MediaMtxClient", FakeMediaMtxClient)
+    monkeypatch.setattr("fm_hundo_obs.main.TwitchProfileCache", FakeTwitchProfileCache)
 
     with pytest.raises(ObsError):
         await app.run()
@@ -193,6 +211,7 @@ async def test_overlay_timeout_stops_overlay_and_disconnects_obs(monkeypatch, tm
 
     monkeypatch.setattr("fm_hundo_obs.main.ClientSession", lambda: FakeSession())
     monkeypatch.setattr("fm_hundo_obs.main.MediaMtxClient", FakeMediaMtxClient)
+    monkeypatch.setattr("fm_hundo_obs.main.TwitchProfileCache", FakeTwitchProfileCache)
 
     with pytest.raises(OverlayClientTimeout):
         await app.run()

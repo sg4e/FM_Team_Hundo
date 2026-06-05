@@ -214,7 +214,10 @@ fm-hundo-obs --config config.yml --simulate-mediamtx
 Simulation mode bypasses the website API and firehose. It discovers active
 MediaMTX paths, creates simulated players from those paths, puts them all on a
 single `Simulation` team, and keeps the normal managed OBS scenes updated as
-paths appear or disappear.
+paths appear or disappear. Implemented Twitch features remain enabled: active
+MediaMTX paths are queried as Twitch logins, and simulated alerts use the cached
+Twitch avatar when the path is a valid Twitch login. Twitch credentials are
+therefore required in simulation mode as well as production mode.
 
 Use `status` to see active paths, then trigger rehearsal alerts with:
 

@@ -75,8 +75,9 @@ When adding new entries, place them under the relevant component heading. Keep d
 
 ### Simulation Mode & Image Fallbacks
 
-- In simulation mode (`--simulate-mediamtx`), no `TwitchProfileCache` is created; `useTwitchProfile: false` is sent in every intro payload.
-- When `useTwitchProfile` is false, the browser loads `/profile/0`, which serves `duelist_000.png`.
+- Simulation mode (`--simulate-mediamtx`) maintains parity with production for implemented Twitch features: it creates a `TwitchProfileCache`, queries active MediaMTX paths as Twitch logins, and sends `useTwitchProfile: true` in intro payloads.
+- Twitch credentials are required in both production and simulation modes.
+- When no Twitch profile image is available, the profile route serves `duelist_000.png` as a fallback.
 - Opponent portraits are served from the `portraits.directory` path: `duelist_{opponent_id:03d}.png`.
 - If the specific portrait file doesn't exist, `duelist_000.png` is served as a fallback.
 - Both fallback behaviors are handled server-side; the browser overlay is unaware of fallback logic.
@@ -93,7 +94,7 @@ When adding new entries, place them under the relevant component heading. Keep d
 - The path is resolved as-is (relative paths are relative to the CWD when the app starts).
 - At startup, the app validates that the directory exists and contains at least one `duelist_*.png` file, raising a clear error if not.
 - The `ygofm_portraits/` directory is gitignored (listed in `obs_ws/.gitignore`).
-- Twitch credentials (`twitch.client_id`, `twitch.client_secret`) are validated at startup in production mode and raise a clear error if missing. Not checked in simulation mode.
+- Twitch credentials (`twitch.client_id`, `twitch.client_secret`) are validated at startup in both production and simulation modes and raise a clear error if missing.
 
 ### Alert Audio
 

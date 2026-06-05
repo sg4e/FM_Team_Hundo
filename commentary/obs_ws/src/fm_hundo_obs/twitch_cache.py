@@ -21,9 +21,9 @@ class TwitchProfileCache:
     refreshed during the lifetime of the application. Uses a single in-flight
     semaphore to avoid accidental rate-limit bursts.
 
-    The website API exposes ``Player.twitch_id`` as Twitch's numeric user ID.
-    Helix profile and login lookups therefore use ``id`` parameters, not
-    ``login`` parameters.
+    Production players expose numeric Twitch IDs and are queried with Helix
+    ``id`` parameters. Simulation players use MediaMTX paths as Twitch logins
+    and are queried with Helix ``login`` parameters.
     """
 
     def __init__(
@@ -39,7 +39,7 @@ class TwitchProfileCache:
         self._fallback_image = fallback_image
         self._token: str | None = None
         self._cache: dict[int, bytes] = {}
-        self._cached_twitch_ids: set[str] = set()
+        self._cached_twitch_identifiers: set[str] = set()
         self._semaphore = asyncio.Semaphore(1)
 
     @property
@@ -84,17 +84,21 @@ class TwitchProfileCache:
         self,
         active_player_ids: set[int],
         names: NameResolver,
+        *,
+        twitch_ids_are_logins: bool = False,
     ) -> None:
-        """Fetch profiles for any actively-streaming players not yet cached.
+        """Fetch profiles for actively-streaming players not yet cached.
 
-        Safe to call repeatedly — it compares against the internal set of
-        already-fetched Twitch IDs and only fetches what is missing.
+        Production roster values are numeric Twitch IDs. Simulation roster
+        values are lowercase MediaMTX paths, which follow Twitch login names.
         """
+        parameter = "login" if twitch_ids_are_logins else "id"
         needed: list[tuple[int, str]] = []
         for player_id in active_player_ids:
-            twitch_id = self._twitch_id(names, player_id)
-            if twitch_id is not None and twitch_id not in self._cached_twitch_ids:
-                needed.append((player_id, twitch_id))
+            identifier = self._twitch_id(names, player_id)
+            cache_key = self._cache_key(parameter, identifier) if identifier is not None else None
+            if identifier is not None and cache_key not in self._cached_twitch_identifiers:
+                needed.append((player_id, identifier))
 
         if not needed:
             return
@@ -103,7 +107,7 @@ class TwitchProfileCache:
         async with self._semaphore:
             for i in range(0, len(needed), TWITCH_MAX_USERS_PER_REQUEST):
                 batch = needed[i: i + TWITCH_MAX_USERS_PER_REQUEST]
-                await self._fetch_batch(batch)
+                await self._fetch_batch(batch, parameter=parameter)
 
     def get_image(self, player_id: int) -> bytes | None:
         """Return cached profile image bytes for *player_id*, or *None*."""
@@ -129,7 +133,10 @@ class TwitchProfileCache:
             LOGGER.info("Twitch App Access Token obtained (expires in %s s)", body.get("expires_in", "?"))
 
     async def _fetch_users_by_ids(self, twitch_ids: list[str]) -> dict:
-        params = [("id", twitch_id) for twitch_id in twitch_ids]
+        return await self._fetch_users("id", twitch_ids)
+
+    async def _fetch_users(self, parameter: str, identifiers: list[str]) -> dict:
+        params = [(parameter, identifier) for identifier in identifiers]
         headers = {
             "Client-ID": self._client_id,
             "Authorization": f"Bearer {self._token}",
@@ -154,18 +161,31 @@ class TwitchProfileCache:
             resp.raise_for_status()
             return await resp.json()
 
-    async def _fetch_batch(self, batch: list[tuple[int, str]]) -> None:
-        data = await self._fetch_users_by_ids([twitch_id for _, twitch_id in batch])
+    async def _fetch_batch(self, batch: list[tuple[int, str]], *, parameter: str = "id") -> None:
+        data = await self._fetch_users(parameter, [identifier for _, identifier in batch])
 
-        twitch_id_to_player: dict[str, int] = {twitch_id: pid for pid, twitch_id in batch}
+        identifier_to_player: dict[str, int] = {
+            self._canonical_identifier(parameter, identifier): pid
+            for pid, identifier in batch
+        }
         for user in data.get("data", ()):
-            twitch_id = str(user.get("id", ""))
+            identifier = self._canonical_identifier(parameter, str(user.get(parameter, "")))
             profile_url = user.get("profile_image_url")
-            pid = twitch_id_to_player.get(twitch_id)
+            pid = identifier_to_player.get(identifier)
             if pid is not None and profile_url:
                 await self._download_profile(pid, profile_url)
-            if twitch_id:
-                self._cached_twitch_ids.add(twitch_id)
+        self._cached_twitch_identifiers.update(
+            self._cache_key(parameter, identifier)
+            for _, identifier in batch
+        )
+
+    @staticmethod
+    def _canonical_identifier(parameter: str, identifier: str) -> str:
+        return identifier.strip().lower() if parameter == "login" else identifier.strip()
+
+    @classmethod
+    def _cache_key(cls, parameter: str, identifier: str) -> str:
+        return f"{parameter}:{cls._canonical_identifier(parameter, identifier)}"
 
     async def _download_profile(self, player_id: int, url: str) -> None:
         try:
@@ -180,5 +200,5 @@ class TwitchProfileCache:
 
     @staticmethod
     def _twitch_id(names: NameResolver, player_id: int) -> str | None:
-        """Return the numeric Twitch ID for *player_id*, or *None* if unknown."""
+        """Return the roster's Twitch identifier for *player_id*, or *None*."""
         return names.twitch_id_for(player_id)

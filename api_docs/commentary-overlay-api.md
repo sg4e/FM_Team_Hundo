@@ -32,6 +32,8 @@ paths are lowercase main Twitch logins. The restream helper publishes alternate
 Twitch sources into the lowercase main-login path so the OBS controller can keep
 one stable per-player RTSP URL. If Helix login resolution is unavailable, the
 controller logs a warning and falls back to the lowercase player display name.
+Simulation mode queries active MediaMTX paths as Twitch logins and caches their
+profile images so simulated alerts retain production Twitch-avatar behavior.
 
 ## Local overlay HTTP routes
 
@@ -106,7 +108,7 @@ Sent on `/events`:
 | `durationSeconds` | number | Total visible duration. |
 | `playerId` | integer | Used by browser to request `/profile/{player_id}`. |
 | `opponentId` | integer | Used by browser to request `/duelist/{opponent_id}`. |
-| `useTwitchProfile` | boolean | If false, browser requests `/profile/0` and receives the duelist fallback when configured. |
+| `useTwitchProfile` | boolean | Whether the browser requests the player's cached Twitch profile. Production and simulation alerts set this true; the profile route serves the duelist fallback when no cached image is available. |
 
 ### Credits event
 
