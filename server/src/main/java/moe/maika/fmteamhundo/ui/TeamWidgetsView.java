@@ -157,60 +157,43 @@ public class TeamWidgetsView extends VerticalLayout implements HasUrlParameter<S
                 .setFlexGrow(1);
 
         grid.setItems(
-                new WidgetRow(
-                        "Classic",
-                        String.format("/widgets/v1-classic.html?teamId=%d&limit=5&direction=top", teamId),
-                        String.format("/widgets/v1-classic-wide.html?teamId=%d&limit=5&direction=top", teamId),
-                        "/widget_previews/v1.png"
-                ),
-                new WidgetRow(
-                        "Neon",
-                        String.format("/widgets/v2-cyberpunk.html?teamId=%d&limit=5&direction=bottom", teamId),
-                        String.format("/widgets/v2-cyberpunk-wide.html?teamId=%d&limit=5&direction=bottom", teamId),
-                        "/widget_previews/v2.png"
-                ),
-                new WidgetRow(
-                        "Card Deck",
-                        String.format("/widgets/v3-deck.html?teamId=%d&limit=5&direction=top", teamId),
-                        String.format("/widgets/v3-deck-wide.html?teamId=%d&limit=5&direction=top", teamId),
-                        "/widget_previews/v3.png"
-                ),
-                new WidgetRow(
-                        "CRT",
-                        String.format("/widgets/v4-arcade.html?teamId=%d&limit=5&direction=bottom", teamId),
-                        String.format("/widgets/v4-arcade-wide.html?teamId=%d&limit=5&direction=bottom", teamId),
-                        "/widget_previews/v4.png"
-                ),
-                new WidgetRow(
-                        "Parchment",
-                        String.format("/widgets/v5-parchment.html?teamId=%d&limit=5&direction=top", teamId),
-                        String.format("/widgets/v5-parchment-wide.html?teamId=%d&limit=5&direction=top", teamId),
-                        "/widget_previews/v5.png"
-                ),
-                new WidgetRow(
-                        "Hologram",
-                        String.format("/widgets/v6-hologram.html?teamId=%d&limit=5&direction=bottom", teamId),
-                        String.format("/widgets/v6-hologram-wide.html?teamId=%d&limit=5&direction=bottom", teamId),
-                        "/widget_previews/v6.png"
-                ),
-                new WidgetRow(
-                        "Manga",
-                        String.format("/widgets/v7-manga.html?teamId=%d&limit=5&direction=top", teamId),
-                        String.format("/widgets/v7-manga-wide.html?teamId=%d&limit=5&direction=top", teamId),
-                        "/widget_previews/v7.png"
-                ),
-                new WidgetRow(
-                        "Minimalist",
-                        String.format("/widgets/v8-minimalist.html?teamId=%d&limit=5&direction=top", teamId),
-                        String.format("/widgets/v8-minimalist-wide.html?teamId=%d&limit=5&direction=top", teamId),
-                        "/widget_previews/v8.png"
-                )
+                widgetRow("Classic", "v1-classic", 5, "top"),
+                widgetRow("Neon", "v2-cyberpunk", 5, "bottom"),
+                widgetRow("Card Deck", "v3-deck", 5, "top"),
+                widgetRow("CRT", "v4-arcade", 5, "bottom"),
+                widgetRow("Parchment", "v5-parchment", 5, "top"),
+                widgetRow("Hologram", "v6-hologram", 5, "bottom"),
+                widgetRow("Manga", "v7-manga", 5, "top"),
+                widgetRow("Minimalist", "v8-minimalist", 5, "top"),
+                widgetRow("Oracle", "v9-oracle", 5, "top"),
+                widgetRow("Terminal", "v10-terminal", 5, "bottom"),
+                widgetRow("Blueprint", "v11-blueprint", 5, "top"),
+                widgetRow("Stickerbomb", "v12-stickerbomb", 5, "bottom")
         );
 
         grid.addClassName("widget-gallery-grid");
         grid.setAllRowsVisible(true);
 
         return grid;
+    }
+
+    private WidgetRow widgetRow(String name, String slug, int limit, String direction) {
+        String compactUrl = String.format(
+                "/widgets/%s.html?teamId=%d&limit=%d&direction=%s",
+                slug,
+                teamId,
+                limit,
+                direction
+        );
+        String wideUrl = String.format(
+                "/widgets/%s-wide.html?teamId=%d&limit=%d&direction=%s",
+                slug,
+                teamId,
+                limit,
+                direction
+        );
+        String previewUrl = String.format("/widget_previews/%s.png", slug.substring(0, slug.indexOf('-')));
+        return new WidgetRow(name, compactUrl, wideUrl, previewUrl);
     }
 
     private Anchor createWidgetLink(String url, String text) {
