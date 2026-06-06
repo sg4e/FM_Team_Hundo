@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Stickerbomb</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@800&display=swap');
+        :root { --pink:#ff4db8; --cyan:#32f6ff; --yellow:#ffe14d; --ink:#141019; }
+        body { margin:0; padding:12px; width:240px; box-sizing:border-box; font-family:Inter, sans-serif; color:var(--ink); background:radial-gradient(circle at 20% 20%, var(--yellow) 0 9%, transparent 10%), radial-gradient(circle at 80% 0, var(--cyan) 0 11%, transparent 12%), linear-gradient(135deg, #ff8fd3, #7af7ff); }
+        .acquisition-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:12px; }
+        .acquisition-item { display:grid; grid-template-columns:48px 1fr; gap:9px; align-items:center; padding:8px 10px; background:#fffdf4; border:3px solid var(--ink); border-radius:18px 6px 18px 6px; box-shadow:5px 5px 0 var(--pink), -3px -3px 0 var(--yellow); opacity:0; transform:translateY(26px) rotate(4deg) scale(.92); animation:slap .45s cubic-bezier(.18,1.35,.5,1) forwards; }
+        .acquisition-item:nth-child(even) { rotate:-2deg; box-shadow:5px 5px 0 var(--cyan), -3px -3px 0 var(--yellow); }
+        .acquisition-item.slide-top, .acquisition-item.slide-bottom { transform:translateY(-26px) rotate(-4deg) scale(.92); }
+        @keyframes slap { to { opacity:1; transform:translateY(0) rotate(0) scale(1); } }
+        .card-image { width:44px; height:61px; object-fit:cover; border:3px solid var(--ink); border-radius:10px; }
+        .card-name { font-family:Bangers, Inter, sans-serif; font-size:18px; line-height:.95; letter-spacing:.04em; text-transform:uppercase; }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script src="acquisition-widget-core.js"></script>
+    <script>
+        FmAcquisitionWidget.create({
+            defaultDirection: 'bottom',
+            renderItem(acq, { cardName, imageUrl, direction, placeholder, createCardImage }) {
+            const li = document.createElement('li');
+                        li.className = `acquisition-item ${direction === 'top' ? 'slide-top' : ''}`;
+                        const img = createCardImage({ src: imageUrl, alt: cardName, className: 'card-image', fallbackSrc: placeholder('#fffdf4', '#141019', 'POW') });
+                        const name = document.createElement('span'); name.className = 'card-name'; name.textContent = cardName;
+                        li.append(img, name);
+                        return li;
+            }
+        });
+    </script>
+</body>
+</html>

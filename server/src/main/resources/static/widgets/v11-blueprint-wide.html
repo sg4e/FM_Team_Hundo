@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Blueprint Wide</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+        :root { --blue:#09274d; --line:#72c7ff; --paper:#d6f2ff; }
+        body { margin:0; padding:12px; width:450px; box-sizing:border-box; font-family:'Rajdhani', sans-serif; color:var(--paper); background-color:var(--blue); background-image:linear-gradient(rgba(114,199,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(114,199,255,.12) 1px, transparent 1px); background-size:18px 18px; }
+        .acquisition-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; counter-reset:bp; }
+        .acquisition-item { counter-increment:bp; position:relative; display:grid; grid-template-columns:48px 72px 1fr 36px; gap:12px; align-items:center; padding:7px 12px; background:rgba(9,39,77,.82); border:1px dashed rgba(214,242,255,.9); box-shadow:7px 7px 0 rgba(114,199,255,.16); opacity:0; transform:scaleX(.85); transform-origin:left; animation:draw .42s ease-out forwards; }
+        .acquisition-item.slide-bottom { transform-origin:right; }
+        @keyframes draw { to { opacity:1; transform:scaleX(1); } }
+        .card-image { width:42px; height:59px; object-fit:cover; filter:grayscale(1) contrast(1.4) brightness(1.15) sepia(1) hue-rotate(165deg) saturate(2.8); border:1px solid var(--paper); }
+        .figure { color:rgba(214,242,255,.65); font-size:13px; } .card-name { font-weight:700; font-size:18px; text-transform:uppercase; letter-spacing:.05em; } .measure { color:rgba(214,242,255,.65); font-size:11px; }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script src="acquisition-widget-core.js"></script>
+    <script>
+        FmAcquisitionWidget.create({
+            defaultDirection: 'top',
+            renderItem(acq, { cardName, imageUrl, direction, placeholder, createCardImage }) {
+            const li = document.createElement('li');
+                        li.className = `acquisition-item ${direction === 'bottom' ? 'slide-bottom' : ''}`;
+                        const img = createCardImage({ src: imageUrl, alt: cardName, className: 'card-image', fallbackSrc: placeholder('#09274d', '#d6f2ff', 'N/A') });
+                        const figure = document.createElement('span'); figure.className = 'figure'; figure.textContent = `FIG ${String(acq.cardId).padStart(3, '0')}`;
+                        const name = document.createElement('span'); name.className = 'card-name'; name.textContent = cardName;
+                        const measure = document.createElement('span'); measure.className = 'measure'; measure.textContent = 'ACQ';
+                        li.append(img, figure, name, measure);
+                        return li;
+            }
+        });
+    </script>
+</body>
+</html>

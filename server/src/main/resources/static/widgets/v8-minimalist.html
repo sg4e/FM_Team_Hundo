@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Minimalist</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --text-color: #1a1a1a;
+            --dot-color: #d4d4d4;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #111111;
+                --text-color: #e5e5e5;
+                --dot-color: #333333;
+            }
+        }
+        body {
+            margin: 0;
+            padding: 14px 10px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            width: 240px;
+            box-sizing: border-box;
+        }
+        .acquisition-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .acquisition-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 4px;
+            border-bottom: 1px solid var(--dot-color);
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+            position: relative;
+        }
+        .acquisition-item:last-child {
+            border-bottom: none;
+        }
+        .acquisition-item::before {
+            content: "";
+            position: absolute;
+            left: -4px;
+            top: 50%;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--text-color);
+            opacity: 0.3;
+            transform: translateY(-50%);
+        }
+        .acquisition-item.slide-bottom {
+            animation: fadeIn 0.8s ease forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        .card-image {
+            width: 34px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 1px;
+            flex-shrink: 0;
+            filter: grayscale(0.3);
+            opacity: 0.85;
+        }
+        .card-name {
+            font-size: 13px;
+            font-weight: 200;
+            line-height: 1.4;
+            flex: 1;
+            word-break: break-word;
+            letter-spacing: -0.2px;
+        }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const teamId = parseInt(params.get('teamId') || '0', 10);
+        const limit = parseInt(params.get('limit') || '5', 10);
+        const direction = params.get('direction') || 'top';
+
+        let cardMap = {};
+        const list = document.getElementById('acquisitionList');
+        let acquisitions = [];
+
+        async function init() {
+            try {
+                const response = await fetch('cardinfo.json');
+                const data = await response.json();
+                data.forEach(item => {
+                    cardMap[item.cardId] = item.cardName;
+                });
+                connectWebSocket();
+            } catch (error) {
+                console.error('Failed to load cardinfo.json:', error);
+            }
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/firehose/team`;
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => console.log('WebSocket connected');
+            ws.onclose = () => {
+                console.log('WebSocket closed, reconnecting in 2s...');
+                setTimeout(connectWebSocket, 2000);
+            };
+            ws.onerror = (error) => console.error('WebSocket error:', error);
+
+            ws.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    if (payload.teamId !== teamId || !payload.newAcquisitions) return;
+
+                    payload.newAcquisitions.forEach(acq => {
+                        addAcquisition(acq);
+                    });
+                } catch (e) {
+                    console.error('Failed to parse WS message:', e);
+                }
+            };
+        }
+
+        function addAcquisition(acq) {
+            const cardIdStr = String(acq.cardId).padStart(3, '0');
+            const cardName = cardMap[acq.cardId] || `Unknown Card (${acq.cardId})`;
+            const imageUrl = `https://hundo.maika.moe/nginx_managed/cards/${cardIdStr}.PNG`;
+
+            const li = document.createElement('li');
+            li.className = `acquisition-item ${direction === 'bottom' ? 'slide-bottom' : ''}`;
+            li.innerHTML = `
+                <img src="${imageUrl}" alt="${cardName}" class="card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2234%22 height=%2248%22><rect width=%2234%22 height=%2248%22 fill=%22%23e5e5e5%22/></svg>'">
+                <span class="card-name">${cardName}</span>
+            `;
+
+            if (direction === 'top') {
+                list.prepend(li);
+                acquisitions.unshift(acq);
+            } else {
+                list.appendChild(li);
+                acquisitions.push(acq);
+            }
+
+            if (acquisitions.length > limit) {
+                if (direction === 'top') {
+                    acquisitions.pop();
+                    list.removeChild(list.lastElementChild);
+                } else {
+                    acquisitions.shift();
+                    list.removeChild(list.firstElementChild);
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Acquisitions - Oracle Wide</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Spectral:wght@500&display=swap');
+        :root { --void:#120817; --plum:#2a1232; --gold:#f5d47a; --rose:#f59fbc; --ink:#fff4d1; }
+        body { margin:0; padding:14px; width:450px; box-sizing:border-box; color:var(--ink); font-family:'Spectral', serif; background:linear-gradient(90deg, #060208, var(--void) 35%, #33183d 50%, var(--void) 65%, #060208); overflow:hidden; }
+        .acquisition-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+        .acquisition-item { position:relative; display:grid; grid-template-columns:54px 1fr auto; gap:14px; align-items:center; min-height:64px; padding:8px 16px 8px 9px; border:1px solid rgba(245,212,122,.78); border-radius:999px; background:linear-gradient(90deg, rgba(42,18,50,.96), rgba(11,5,16,.85)); box-shadow:0 0 0 2px rgba(245,212,122,.10), inset 0 0 30px rgba(245,159,188,.12); opacity:0; transform:translateX(-42px); animation:oracleWide .5s ease-out forwards; }
+        .acquisition-item.slide-bottom { transform:translateX(42px); }
+        .sigil { font-size:24px; color:rgba(245,212,122,.55); }
+        @keyframes oracleWide { to { opacity:1; transform:translateX(0); } }
+        .card-image { width:46px; height:64px; object-fit:cover; border-radius:50% 50% 9px 9px; border:2px solid var(--gold); box-shadow:0 0 14px rgba(245,212,122,.45); }
+        .card-name { font-family:'Cinzel', serif; font-weight:800; font-size:15px; text-transform:uppercase; letter-spacing:.08em; text-shadow:0 0 10px rgba(245,159,188,.45); }
+    </style>
+</head>
+<body>
+    <ul class="acquisition-list" id="acquisitionList"></ul>
+
+    <script src="acquisition-widget-core.js"></script>
+    <script>
+        FmAcquisitionWidget.create({
+            defaultDirection: 'top',
+            renderItem(acq, { cardName, imageUrl, direction, placeholder, createCardImage }) {
+            const li = document.createElement('li');
+                        li.className = `acquisition-item ${direction === 'bottom' ? 'slide-bottom' : ''}`;
+                        const img = createCardImage({ src: imageUrl, alt: cardName, className: 'card-image', fallbackSrc: placeholder('#120817', '#f5d47a', '✦') });
+                        const name = document.createElement('span'); name.className = 'card-name'; name.textContent = cardName;
+                        const sigil = document.createElement('span'); sigil.className = 'sigil'; sigil.textContent = '✦';
+                        li.append(img, name, sigil);
+                        return li;
+            }
+        });
+    </script>
+</body>
+</html>
