@@ -130,6 +130,7 @@ cd commentary/livestats && ./gradlew run
 ### OBS WebSocket controller (`commentary/obs_ws/`)
 
 A Python 3.12+ package named `fm-hundo-obs`. It automates OBS scenes, MediaMTX stream discovery, browser overlays, acquisition scheduling, alert audio, Twitch profile image caching, credits scenes, and simulation-mode testing.
+Acquisition scheduling can reserve a window immediately while an optional `timing.acquisition_delay_seconds` postpones every OBS transition, overlay animation, and alert sound; the post-delay portion uses the configured window length minus that delay.
 
 Important areas:
 

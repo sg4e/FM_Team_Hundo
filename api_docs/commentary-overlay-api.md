@@ -35,6 +35,14 @@ controller logs a warning and falls back to the lowercase player display name.
 Simulation mode queries active MediaMTX paths as Twitch logins and caches their
 profile images so simulated alerts retain production Twitch-avatar behavior.
 
+Optional `timing.acquisition_delay_seconds` marks an acquisition window active as
+soon as the team firehose event is accepted, but postpones OBS scene transitions,
+overlay WebSocket events, and alert audio until the delay elapses. The remaining
+window and default banner `durationSeconds` use
+`acquisition_window_seconds - acquisition_delay_seconds` (minus the configured
+banner end buffer for the banner), preserving the acquisition window's original
+absolute end time.
+
 ## Local overlay HTTP routes
 
 The OBS controller starts a local aiohttp server for OBS browser sources.

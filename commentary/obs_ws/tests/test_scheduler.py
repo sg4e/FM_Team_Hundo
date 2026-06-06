@@ -43,6 +43,7 @@ def scheduler(
     features: FeatureFlags | None = None,
     player_scenes: dict[int, str] | None = None,
     window_seconds: float = 0.01,
+    acquisition_delay_seconds: float = 0.0,
 ) -> AcquisitionScheduler:
     names = NameResolver(
         [Player(10, "ten", "Runner Ten", None, 1), Player(11, "eleven", "Runner Eleven", None, 1)],
@@ -57,6 +58,7 @@ def scheduler(
         features or FeatureFlags(),
         TimingConfig(
             acquisition_window_seconds=window_seconds,
+            acquisition_delay_seconds=acquisition_delay_seconds,
             banner_end_buffer_seconds=0,
             intro_seconds=3,
         ),
@@ -81,6 +83,37 @@ async def test_uses_first_acquisition_only_and_switches_then_restores():
     assert result.accepted is True
     assert obs.scene_changes == ["Player Ten"]
     assert overlay.banners == [("Big Drop Alert", MessageType.DROP, 0.01)]
+    assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5)]
+    assert subject._active_task is not None
+    await subject._active_task
+    assert obs.scene_changes == ["Player Ten", "Main"]
+
+
+@pytest.mark.asyncio
+async def test_acquisition_delay_locks_immediately_then_delays_all_actions():
+    obs = FakeObs(current_scene="Main")
+    overlay = FakeOverlay()
+    subject = scheduler(obs=obs, overlay=overlay, window_seconds=0.2, acquisition_delay_seconds=0.05)
+
+    pending = asyncio.create_task(subject.handle_acquisition(CardAcquisition.test_event(10, "drop", 5)))
+    await asyncio.sleep(0)
+
+    assert subject.acquisition_active()
+    assert obs.scene_changes == []
+    assert overlay.banners == []
+    assert overlay.intros == []
+
+    blocked = await subject.handle_acquisition(CardAcquisition.test_event(11, "ritual", 5))
+    assert blocked.accepted is False
+    assert blocked.reason == "active acquisition window"
+
+    result = await pending
+
+    assert result.accepted is True
+    assert obs.scene_changes == ["Player Ten"]
+    assert len(overlay.banners) == 1
+    assert overlay.banners[0][:2] == ("Big Drop Alert", MessageType.DROP)
+    assert overlay.banners[0][2] == pytest.approx(0.15)
     assert overlay.intros == [IntroCall("Alpha - Runner Ten", "Villager2", 3, player_id=10, opponent_id=5)]
     assert subject._active_task is not None
     await subject._active_task

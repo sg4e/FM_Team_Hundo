@@ -82,11 +82,17 @@ When adding new entries, place them under the relevant component heading. Keep d
 - If the specific portrait file doesn't exist, `duelist_000.png` is served as a fallback.
 - Both fallback behaviors are handled server-side; the browser overlay is unaware of fallback logic.
 
+### Acquisition Window Delay
+
+- Optional `timing.acquisition_delay_seconds` (default `0`) marks the acquisition window active immediately but postpones all scene transitions, overlay animations, and alert audio until the delay elapses.
+- The post-delay acquisition-window duration is `timing.acquisition_window_seconds - timing.acquisition_delay_seconds`, preserving the original absolute end of the window.
+- Banner default/max timing is calculated against that post-delay duration, and delays longer than the acquisition window are fatal startup configuration errors.
+
 ### Intro Popup Delay
 
-- A configurable `timing.intro_delay_seconds` (default 0) delays the intro card + images after the scene switch and banner alert.
+- A configurable `timing.intro_delay_seconds` (default 0) delays the intro card + images after the scene switch and banner alert; it begins after any acquisition-wide delay.
 - The delay is applied server-side in `AcquisitionScheduler` via `await asyncio.sleep(delay)`.
-- The scene switch and banner alert are not delayed — only the intro pop-up is.
+- Relative to the start of visible acquisition actions, the scene switch and banner alert are not delayed by `intro_delay_seconds` — only the intro pop-up is.
 
 ### Portraits Directory Configuration
 
@@ -111,8 +117,8 @@ When adding new entries, place them under the relevant component heading. Keep d
 ### Banner Animation Timing
 
 - Banner animation timing is backend-configured via `timing.banner_delay_seconds`, `timing.banner_enter_seconds`, `timing.banner_exit_seconds`, `timing.banner_end_buffer_seconds`, and optional `timing.banner_total_seconds`.
-- Banner display always starts at the beginning of the acquisition window.
-- Default end timing is the acquisition window end minus `timing.banner_end_buffer_seconds`, so exit animation completes shortly before the window closes.
+- Banner display starts when the acquisition-wide delay ends; with no acquisition delay, it starts at the beginning of the acquisition window.
+- Default banner duration is the post-delay acquisition duration minus `timing.banner_end_buffer_seconds`, so exit animation completes shortly before the window closes.
 - Optional `timing.banner_total_seconds` may end banners earlier than the acquisition window; it is never clamped upward/downward.
 - Invalid banner timing configuration is a fatal startup error (fail loudly; operator must fix config and restart).
 - Drop, fusion, and ritual banners share the same animation timing model.
