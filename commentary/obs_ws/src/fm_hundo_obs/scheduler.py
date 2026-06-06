@@ -93,12 +93,15 @@ class AcquisitionScheduler:
         self.timing = timing
         self.scene_lock = scene_lock
         self._active_task: asyncio.Task[None] | None = None
+        self._pending_acquisitions = 0
         self._alert_audio_source = alert_audio_source
         self._overlay_scene = overlay_scene
         self._alert_audio_task: asyncio.Task[None] | None = None
 
     def acquisition_active(self) -> bool:
-        return self._active_task is not None and not self._active_task.done()
+        return self._pending_acquisitions > 0 or (
+            self._active_task is not None and not self._active_task.done()
+        )
 
     def cancel_active_window(self) -> None:
         if self._active_task is not None and not self._active_task.done():
@@ -147,6 +150,15 @@ class AcquisitionScheduler:
         visible_action = False
         switched_scene = False
 
+        if self.timing.acquisition_delay_seconds > 0:
+            # Reserve the acquisition window as soon as the API event arrives,
+            # but defer every visible/audible OBS action until the delay ends.
+            self._pending_acquisitions += 1
+            try:
+                await asyncio.sleep(self.timing.acquisition_delay_seconds)
+            finally:
+                self._pending_acquisitions -= 1
+
         if scene_name is None:
             LOGGER.warning("No OBS scene configured for player id %s", acquisition.player_id)
         else:
@@ -172,7 +184,9 @@ class AcquisitionScheduler:
             banner_duration = (
                 self.timing.banner_total_seconds
                 if self.timing.banner_total_seconds is not None
-                else self.timing.acquisition_window_seconds - self.timing.banner_end_buffer_seconds
+                else self.timing.acquisition_window_seconds
+                - self.timing.acquisition_delay_seconds
+                - self.timing.banner_end_buffer_seconds
             )
             visible_action = (
                 await self.overlay.banner(
@@ -221,7 +235,7 @@ class AcquisitionScheduler:
 
     async def _window(self, previous_scene: str | None, automated_scene: str | None, player_id: int) -> None:
         try:
-            await asyncio.sleep(self.timing.acquisition_window_seconds)
+            await asyncio.sleep(self.timing.acquisition_window_seconds - self.timing.acquisition_delay_seconds)
             if previous_scene and automated_scene and self.obs.connected:
                 current_scene = await self.obs.get_current_program_scene()
                 if current_scene == automated_scene:

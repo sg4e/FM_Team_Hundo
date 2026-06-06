@@ -172,6 +172,8 @@ obs:
   alert_audio_path: "C:/path/to/alert.wav"  # required to enable; absolute or relative to config.yml
   alert_audio_source: null                   # defaults to "{managed_scene_prefix} Alert Audio"
 timing:
+  acquisition_window_seconds: 30.0
+  acquisition_delay_seconds: 0.0
   alert_audio_duration_seconds: 3.0
   banner_delay_seconds: 0.0
   banner_enter_seconds: 0.3
@@ -187,6 +189,15 @@ features:
 - The source appears in OBS's audio mixer, allowing the production team to tweak volume manually.
 - Use `alert on|off` in the console to toggle at runtime.
 
+## Acquisition Window Delay
+
+Set optional `timing.acquisition_delay_seconds` (default `0`) to reserve an
+acquisition window immediately while delaying all scene transitions, banner and
+intro animations, and alert audio. The visible portion of the window lasts
+`acquisition_window_seconds - acquisition_delay_seconds`, so the configured
+window still ends at the same time it would without a delay. The delay cannot
+exceed `acquisition_window_seconds`.
+
 ## Banner Timing
 
 Banner timing is backend-configured under `timing`:
@@ -197,9 +208,9 @@ Banner timing is backend-configured under `timing`:
 - `banner_end_buffer_seconds`: default gap between banner exit completion and acquisition window end.
 - `banner_total_seconds` (optional): explicitly end banner earlier than the acquisition window.
 
-The banner always starts at the beginning of the acquisition window. If
-`banner_total_seconds` is set, it must be less than or equal to
-`acquisition_window_seconds - banner_end_buffer_seconds`; invalid values are
+The banner starts after the acquisition delay. If `banner_total_seconds` is set,
+it must be less than or equal to `acquisition_window_seconds -
+acquisition_delay_seconds - banner_end_buffer_seconds`; invalid values are
 treated as startup configuration errors.
 
 ## MediaMTX Simulation Mode

@@ -196,6 +196,41 @@ def test_parse_commands():
     assert parse_on_off(("maybe",)) is None
 
 
+def test_timing_config_includes_acquisition_delay(tmp_path):
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "timing:\n  acquisition_window_seconds: 30\n  acquisition_delay_seconds: 5\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.timing.acquisition_delay_seconds == 5
+
+
+def test_timing_config_rejects_acquisition_delay_longer_than_window(tmp_path):
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "timing:\n  acquisition_window_seconds: 5\n  acquisition_delay_seconds: 6\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="acquisition_delay_seconds cannot exceed"):
+        load_config(config_path)
+
+
+def test_timing_config_validates_banner_against_delayed_window_end(tmp_path):
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "timing:\n  acquisition_window_seconds: 10\n  acquisition_delay_seconds: 4\n"
+        "  banner_end_buffer_seconds: 1\n  banner_total_seconds: 6\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="banner_total_seconds exceeds"):
+        load_config(config_path)
+
+
 def test_timing_config_includes_intro_delay(tmp_path):
     """TimingConfig loads intro_delay_seconds from YAML."""
     config_path = tmp_path / "config.yml"
@@ -213,6 +248,7 @@ def test_timing_config_defaults_intro_delay_to_zero(tmp_path):
     config_path.write_text("obs:\n  password: secret\n", encoding="utf-8")
     config = load_config(config_path)
     assert config.timing.intro_delay_seconds == 0.0
+    assert config.timing.acquisition_delay_seconds == 0.0
 
 
 def test_portraits_config_loads_from_yaml(tmp_path):
